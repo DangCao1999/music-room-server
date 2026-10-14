@@ -1,59 +1,19 @@
 import { z } from 'zod';
 import {
+  DJ_SOUNDS,
+  LIMITS,
+  PIN_PATTERN,
+  PLAYER_ERROR_CODES,
+  REACTIONS,
+  VOICE_PRESETS,
+} from './constants';
+import {
   cleanLine,
   cleanMultiline,
   normalizeRoomCode,
   ROOM_CODE_PATTERN,
 } from './text';
 import { parseYouTubePlaylist } from './youtube';
-
-/** Limits from the requirements doc (R-03 … R-47). */
-export const LIMITS = {
-  roomName: 50,
-  displayName: 30,
-  setupPassword: 200,
-  input: 2048,
-  query: 100,
-  wish: 200,
-  chat: 500,
-  rawText: 4000,
-} as const;
-
-export const VOICE_PRESETS = [
-  'radio',
-  'drama',
-  'baby',
-  'panic',
-  'chipmunk',
-  'sleepy',
-] as const;
-export type VoicePreset = (typeof VOICE_PRESETS)[number];
-
-export const REACTIONS = [
-  '❤️',
-  '🔥',
-  '👏',
-  '😂',
-  '🎉',
-  '😍',
-  '🤘',
-  '💃',
-] as const;
-export type Reaction = (typeof REACTIONS)[number];
-
-export const DJ_SOUNDS = [
-  'build',
-  'drop',
-  'clap',
-  'horn',
-  'airhorn',
-  'laugh',
-  'applause',
-] as const;
-export type DjSound = (typeof DJ_SOUNDS)[number];
-
-/** YouTube IFrame player error codes that mean "this video cannot be played". */
-export const PLAYER_ERROR_CODES = [2, 5, 100, 101, 150] as const;
 
 const line = (max: number, min = 1) =>
   z
@@ -76,7 +36,7 @@ export const RoomCodeSchema = z
   .max(32)
   .transform(normalizeRoomCode)
   .pipe(z.string().regex(ROOM_CODE_PATTERN));
-export const PinSchema = z.string().regex(/^[0-9]{4,8}$/);
+export const PinSchema = z.string().regex(PIN_PATTERN);
 const Id = z.string().min(1).max(64);
 
 export const RoomSettingsSchema = z.strictObject({
