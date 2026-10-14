@@ -1,0 +1,62 @@
+# Music Room self-host (spec §13). Usage: cp .env.example .env && docker compose up -d
+name: music-room
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+      # Domain + HTTPS mode (SITE_ADDRESS=music.congty.vn): Caddy listens on 80/443.
+      # Replace the line above with these two:
+      # - "80:80"
+      # - "443:443"
+    environment:
+      SITE_ADDRESS: "${SITE_ADDRESS:-:8080}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - web
+      - api
+
+  web:
+    image: "ghcr.io/${IMAGE_OWNER:-hungnm-developer}/music-room-client:${TAG:-latest}"
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  api:
+    image: "ghcr.io/${IMAGE_OWNER:-hungnm-developer}/music-room-server:${TAG:-latest}"
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # PORT in .env is the public Caddy port; the API always listens on 3001 inside.
+      PORT: "3001"
+      DATABASE_URL: "postgresql://musicroom:${POSTGRES_PASSWORD:-musicroom}@db:5432/musicroom"
+      TRUST_PROXY: "true"
+    volumes:
+      - api-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: musicroom
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-musicroom}"
+      POSTGRES_DB: musicroom
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U musicroom"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  caddy-data:
+  api-data:
+  db-data:
