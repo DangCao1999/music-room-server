@@ -1,4 +1,5 @@
-import type { DjSound, Reaction, RoomSettings, VoicePreset } from './schemas';
+import type { DjSound, Reaction, VoicePreset } from './constants';
+import type { RoomSettings } from './schemas';
 
 export type Role = 'ADMIN' | 'USER';
 export type PlaybackStatus = 'IDLE' | 'PLAYING' | 'PAUSED';
