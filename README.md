@@ -6,7 +6,6 @@ Phòng nhạc chung cho văn phòng: mọi người dùng điện thoại thêm 
 - **Deploy miễn phí (Vercel + Render + Neon):** [`deploy/README.md` §8](deploy/README.md)
 - **Thiết kế:** [`docs/specs/2026-10-14-music-room-mvp-design.md`](docs/specs/2026-10-14-music-room-mvp-design.md)
 - **Yêu cầu và mô hình nghiệp vụ:** [`docs/requirements/2026-10-14-music-room-v2-yeu-cau.md`](docs/requirements/2026-10-14-music-room-v2-yeu-cau.md)
-- **Ma trận case:** [`docs/qa/2026-10-14-music-room-v2-test-matrix.md`](docs/qa/2026-10-14-music-room-v2-test-matrix.md)
 
 ## Phát triển
 
@@ -15,7 +14,7 @@ docker run -d --name musicroom-dev-db -e POSTGRES_USER=musicroom -e POSTGRES_PAS
   -e POSTGRES_DB=musicroom -p 55432:5432 postgres:16-alpine
 cp deploy/.env.example .env   # rồi sửa: DATABASE_URL=postgresql://musicroom:musicroom@localhost:55432/musicroom
                               #          PUBLIC_URL=http://localhost:3000, CORS_ORIGINS=http://localhost:3000
-                              #          YOUTUBE_FAKE=1 (không gọi YouTube thật), DATA_DIR=./.data
+                              #          DATA_DIR=./.data
 npm ci
 npx prisma migrate dev
 npm run start:dev             # http://localhost:3001/api/health
@@ -23,8 +22,6 @@ npm run start:dev             # http://localhost:3001/api/health
 
 | Lệnh | Việc |
 |---|---|
-| `npm test` | Unit test (Jest) |
-| `npm run test:int` | Integration test với Postgres thật (Testcontainers, cần Docker) |
 | `npm run lint` · `npm run typecheck` | ESLint · TypeScript |
 | `npm run build` | `prisma generate` + `nest build` |
 

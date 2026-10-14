@@ -137,8 +137,6 @@ Cài đặt khác:
 - *Health Check Path:* `/api/health`
 - *Region:* **Singapore**, cùng khu vực với Neon.
 
-Tuyệt đối **không** đặt `YOUTUBE_FAKE`.
-
 Kiểm tra: mở `https://<api>.onrender.com/api/health`, phải thấy `"db":"up"`.
 
 Nếu đang dùng Render Postgres, sau khi Neon chạy ổn bạn có thể xóa database cũ trên Render. Dữ liệu v1 chỉ nằm trong RAM nên không có gì cần chuyển.
@@ -151,7 +149,7 @@ Nếu đang dùng Render Postgres, sau khi Neon chạy ổn bạn có thể xóa
 |---|---|
 | `NEXT_PUBLIC_SERVER_URL` | `https://<api>.onrender.com` (không có `/` ở cuối) |
 
-Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đặt. Không đặt `NEXT_PUBLIC_E2E`.
+Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đặt.
 
 ### 8.4 Lưu ý
 
