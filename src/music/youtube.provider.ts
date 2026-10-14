@@ -53,24 +53,7 @@ export class YouTubeProvider {
   constructor(@Inject(ENV) private readonly env: Env) {}
 
   get searchEnabled(): boolean {
-    if (this.env.YOUTUBE_FAKE) return true;
     return Boolean(this.env.YOUTUBE_API_KEY) && !this.keyInvalid;
-  }
-
-  /**
-   * YOUTUBE_FAKE: deterministic 5-minute tracks so dev/E2E never call YouTube. Long enough
-   * that the server-side advance timer never fires during a test on a slow CI runner.
-   */
-  private fake(videoId: string): TrackInfo {
-    return {
-      externalId: videoId,
-      title: `Bài thử ${videoId}`,
-      channel: 'Music Room',
-      durationSec: 300,
-      thumbnailUrl: null,
-      embeddable: true,
-      live: false,
-    };
   }
 
   private get apiUsable(): boolean {
@@ -213,7 +196,6 @@ export class YouTubeProvider {
 
   /** Metadata for one video: Data API, else oEmbed (no key / quota / API failure). */
   async getTrack(videoId: string): Promise<TrackInfo> {
-    if (this.env.YOUTUBE_FAKE) return this.fake(videoId);
     if (this.apiUsable) {
       try {
         const found = (await this.videos([videoId])).get(videoId);
@@ -229,13 +211,6 @@ export class YouTubeProvider {
 
   /** Up to 10 embeddable, non-live videos (R-35). */
   async search(q: string): Promise<TrackInfo[]> {
-    if (this.env.YOUTUBE_FAKE) {
-      return Array.from({ length: 5 }, (_, i) =>
-        this.fake(
-          `Fake${String(i).padStart(3, '0')}${q.length.toString().padStart(4, '0')}`,
-        ),
-      );
-    }
     if (!this.searchEnabled) throw new AppError('SEARCH_UNAVAILABLE');
     if (!this.apiUsable) throw new AppError('QUOTA_EXCEEDED');
     try {

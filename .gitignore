@@ -28,5 +28,3 @@ src/generated/
 coverage/
 .env.*
 !.env.example
-test/integration/.db-url
-test/integration/.db-container
