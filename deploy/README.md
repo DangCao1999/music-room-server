@@ -90,38 +90,60 @@ Các mục này cần thiết bị thật nên không tự động hóa được
 - [ ] Tắt Wi-Fi của máy phát 30 giây rồi bật lại: điện thoại hiện banner, sau đó nhạc phát tiếp đúng chỗ.
 - [ ] Khởi động lại container `api` trong lúc đang phát: phòng, hàng chờ và chat vẫn còn nguyên.
 
-## 8. Deploy lên cloud: Vercel (web) + Render (API)
+## 8. Deploy miễn phí: Vercel (web) + Render (API) + Neon (database)
 
-Cách này dùng khi bạn không có máy luôn bật trong văn phòng. Web và API nằm ở hai domain khác nhau, nên **bắt buộc** khai báo cho hai bên biết nhau.
+Cả ba nền tảng đều có gói miễn phí không cần thẻ. Neon thay cho Render Postgres vì database miễn phí của Render bị xóa sau 30 ngày, còn Neon thì không.
 
-### 8.1 Render (repo `music-room-server`)
+| Phần | Nền tảng | Giới hạn của gói free (10/2026) |
+|---|---|---|
+| Web (Next.js) | Vercel | Đủ dùng |
+| API (NestJS, WebSocket) | Render | 750 giờ/tháng; **ngủ sau 15 phút** không có request, mất khoảng 1 phút để thức dậy |
+| Database (PostgreSQL) | Neon | 0,5 GB, 100 CU-giờ/tháng; tự ngủ sau 5 phút không dùng, lần truy vấn đầu sau khi ngủ chậm vài giây |
 
-**Cách A, dùng Blueprint (khuyên dùng):** chọn *Dashboard → New → Blueprint*, trỏ tới repo và nhánh muốn deploy. File [`render.yaml`](../render.yaml) tự tạo web service cùng Postgres, tự sinh `JWT_SECRET` và đặt health check `/api/health`. Render sẽ hỏi 4 biến đánh dấu `sync: false` ở bảng dưới.
+Ước tính: một văn phòng nghe khoảng 8 giờ/ngày tốn chừng 45 CU-giờ Neon mỗi tháng, nằm trong hạn mức free. Dung lượng dữ liệu nhỏ, vì chat và nhật ký chỉ giữ 200 dòng mỗi phòng.
 
-**Cách B, service tạo bằng tay trên dashboard:** `render.yaml` không được dùng. Bạn tự tạo Postgres (Render, Neon hoặc Supabase) và đặt **toàn bộ** biến sau trong *Environment*:
+### 8.1 Neon: tạo database (5 phút)
+
+1. Đăng ký tại https://neon.com, chọn **Create project**, chọn region **AWS Asia Pacific (Singapore)** để gần Việt Nam.
+2. Ở **Connect**, chọn *Branch: main*, *Database: neondb*, rồi copy **2 chuỗi kết nối**:
+   - Bật **Connection pooling**: chuỗi có `-pooler` trong tên host. Đây là `DATABASE_URL`.
+   - Tắt **Connection pooling**: chuỗi không có `-pooler`. Đây là `DIRECT_URL`, chỉ dùng để chạy migration.
+3. Giữ nguyên phần đuôi `?sslmode=require&channel_binding=require` mà Neon thêm sẵn.
+
+Không cần tự tạo bảng: server tự chạy migration mỗi lần khởi động.
+
+### 8.2 Render: chạy API
+
+**Cách A, dùng Blueprint:** chọn *Dashboard → New → Blueprint*, trỏ tới repo `music-room-server`, nhánh `develop`. File [`render.yaml`](../render.yaml) tự cấu hình lệnh build/start, health check, `NODE_VERSION`, `TRUST_PROXY` và tự sinh `JWT_SECRET`. Render sẽ hỏi các biến ở bảng dưới.
+
+**Cách B, service đã tạo tay trên dashboard:** `render.yaml` không được dùng; vào *Environment* và đặt **toàn bộ** biến sau:
 
 | Biến | Giá trị | Bắt buộc |
 |---|---|---|
-| `DATABASE_URL` | URL Postgres (Render: dùng *Internal Database URL*) | ✅ |
+| `DATABASE_URL` | Chuỗi Neon **có** `-pooler` | ✅ |
+| `DIRECT_URL` | Chuỗi Neon **không có** `-pooler` | ✅ với Neon |
 | `PUBLIC_URL` | `https://<app>.vercel.app` | ✅ |
-| `CORS_ORIGINS` | `https://<app>.vercel.app` (nhiều domain thì ngăn bằng dấu phẩy) | ✅ khi web và API khác domain |
-| `JWT_SECRET` | `openssl rand -base64 48` | ✅ trên Render free (không có ổ đĩa lưu lâu dài) |
-| `SETUP_PASSWORD` | mật khẩu tạo phòng | ✅ vì server công khai trên internet |
+| `CORS_ORIGINS` | `https://<app>.vercel.app` (nhiều domain thì ngăn bằng dấu phẩy) | ✅ |
+| `JWT_SECRET` | `openssl rand -base64 48` | ✅ (Render free không có ổ đĩa lưu lâu dài) |
+| `SETUP_PASSWORD` | mật khẩu tạo phòng | ✅ vì server công khai |
 | `TRUST_PROXY` | `true` | ✅ |
 | `NODE_VERSION` | `22` | ✅ |
 | `DATA_DIR` | `/tmp/music-room` | nên đặt |
 | `YOUTUBE_API_KEY` | key YouTube Data API | tùy chọn |
 
-Giữ nguyên lệnh build và start:
+Cài đặt khác:
 - *Build:* `npm install --include=dev && npm run build`
-- *Start:* `npm run start:prod` (lệnh này tự chạy migration)
+- *Start:* `npm run start:prod` (tự chạy migration bằng `DIRECT_URL`)
 - *Health Check Path:* `/api/health`
+- *Region:* **Singapore**, cùng khu vực với Neon.
 
-Tuyệt đối **không** đặt `YOUTUBE_FAKE`; nếu đặt, server sẽ từ chối khởi động ở môi trường production.
+Tuyệt đối **không** đặt `YOUTUBE_FAKE`.
 
 Kiểm tra: mở `https://<api>.onrender.com/api/health`, phải thấy `"db":"up"`.
 
-### 8.2 Vercel (repo `music-room-client`)
+Nếu đang dùng Render Postgres, sau khi Neon chạy ổn bạn có thể xóa database cũ trên Render. Dữ liệu v1 chỉ nằm trong RAM nên không có gì cần chuyển.
+
+### 8.3 Vercel: chạy web
 
 *Project → Settings → Environment Variables*, mục Production:
 
@@ -129,14 +151,25 @@ Kiểm tra: mở `https://<api>.onrender.com/api/health`, phải thấy `"db":"u
 |---|---|
 | `NEXT_PUBLIC_SERVER_URL` | `https://<api>.onrender.com` (không có `/` ở cuối) |
 
-Biến này được nhúng vào lúc **build**, nên sau khi đặt phải bấm **Redeploy**. Không đặt `NEXT_PUBLIC_E2E`.
+Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đặt. Không đặt `NEXT_PUBLIC_E2E`.
 
-### 8.3 Lưu ý
+### 8.4 Lưu ý
 
-- **Deploy server và client cùng lúc.** Nếu lệch phiên bản giao thức, người dùng sẽ thấy banner "Có phiên bản mới. Hãy tải lại trang."
-- **Link Preview của Vercel** có domain riêng, nên bị server chặn. Muốn dùng thì thêm domain đó vào `CORS_ORIGINS`.
-- **Render free** ngủ sau 15 phút không có request và mất khoảng 1 phút để khởi động lại. Trong lúc ngủ, server không tự chuyển bài. Nếu dùng cả ngày, nên chọn gói trả phí hoặc self-host (§1).
-- **Postgres miễn phí của Render** bị xóa sau 30 ngày. Muốn dùng lâu dài thì chuyển sang gói trả phí hoặc dùng Neon/Supabase.
+- **Deploy API trước, web sau.** Lệch phiên bản thì người dùng thấy banner "Có phiên bản mới. Hãy tải lại trang."
+- **Link Preview của Vercel** bị API chặn, trừ khi bạn thêm domain đó vào `CORS_ORIGINS`.
+- **Render ngủ sau 15 phút** không có request. Khi có người mở trang, kết nối mất khoảng 1 phút; trong lúc ngủ, server không tự chuyển bài. Muốn chạy suốt ngày làm việc, xem §8.5.
+
+### 8.5 Các lựa chọn khác
+
+| Lựa chọn | Ưu điểm | Nhược điểm |
+|---|---|---|
+| **Self-host trên máy văn phòng** (§1–§6) | Hoàn toàn miễn phí, chạy liên tục, độ trễ thấp trong LAN, dùng luôn Postgres trong Docker | Cần một máy luôn bật. Muốn truy cập từ ngoài văn phòng thì dùng Cloudflare Tunnel (miễn phí) |
+| **Northflank** (free sandbox) | 2 service không bao giờ ngủ, chạy được WebSocket | Cần thẻ để xác minh |
+| **Koyeb** (free) | 1 web service 512 MB | Chỉ có máy chủ ở Frankfurt/Washington (xa Việt Nam); từ 2/2026 cần thẻ và tạm giữ $29; ngủ sau 1 giờ không dùng |
+| **Render Starter** (khoảng $7/tháng) | Không ngủ, giữ nguyên toàn bộ cấu hình §8.2 | Có phí |
+| Supabase (database) | Free 500 MB | Project tự tạm dừng sau 1 tuần không hoạt động |
+
+Không dùng Vercel Functions, Netlify hay Cloudflare Workers cho API: server cần giữ kết nối WebSocket và hẹn giờ chạy liên tục.
 
 ## Bản quyền
 
