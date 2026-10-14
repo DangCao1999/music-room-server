@@ -15,6 +15,7 @@ import { QueueService } from './queue/queue.service';
 import { Broadcaster } from './realtime/broadcaster.service';
 import { PresenceService } from './realtime/presence.service';
 import { RealtimeGateway } from './realtime/realtime.gateway';
+import { RoomsController } from './rooms/rooms.controller';
 import { ActivityService } from './social/activity.service';
 import { SocialService } from './social/social.service';
 import { RoomStateService } from './state/room-state.service';
@@ -25,7 +26,7 @@ export class AppModule {
   static forRoot(env: Env, timing: Timing = DEFAULT_TIMING): DynamicModule {
     return {
       module: AppModule,
-      controllers: [HealthController],
+      controllers: [HealthController, RoomsController],
       providers: [
         { provide: ENV, useValue: env },
         { provide: TIMING, useValue: timing },

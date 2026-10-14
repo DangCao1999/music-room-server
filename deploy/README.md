@@ -145,8 +145,9 @@ Nếu đang dùng Render Postgres, sau khi Neon chạy ổn bạn có thể xóa
 | Biến | Giá trị |
 |---|---|
 | `NEXT_PUBLIC_SERVER_URL` | `https://<api>.onrender.com` (không có `/` ở cuối) |
+| `PUBLIC_APP_URL` | `https://<app>.vercel.app`: domain chính thức dùng cho link và mã QR trong ảnh xem trước. Nên đặt, vì nếu thiếu thì app phải đoán domain từ header của request, và ảnh xem trước sẽ không được CDN cache |
 
-Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đặt.
+Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đặt. Ảnh xem trước khi chia sẻ link phòng (tên bài, ảnh bìa, mã QR) cũng lấy dữ liệu qua địa chỉ này.
 
 ### 8.4 Lưu ý
 
