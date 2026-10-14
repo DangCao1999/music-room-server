@@ -3,6 +3,7 @@
 Phòng nhạc chung cho văn phòng: mọi người dùng điện thoại thêm bài YouTube, một máy phát nhạc ra loa. Đây là server **NestJS 11 + Socket.IO + PostgreSQL (Prisma 7)**. Giao diện nằm ở repo [`music-room-client`](https://github.com/hungnm-developer/music-room-client).
 
 - **Cài cho văn phòng (Docker):** [`deploy/README.md`](deploy/README.md)
+- **Deploy lên cloud (Vercel + Render):** [`deploy/README.md` §8](deploy/README.md#8-deploy-lên-cloud-vercel-web--render-api)
 - **Thiết kế:** [`docs/specs/2026-10-14-music-room-mvp-design.md`](docs/specs/2026-10-14-music-room-mvp-design.md)
 - **Yêu cầu và mô hình nghiệp vụ:** [`docs/requirements/2026-10-14-music-room-v2-yeu-cau.md`](docs/requirements/2026-10-14-music-room-v2-yeu-cau.md)
 - **Ma trận case:** [`docs/qa/2026-10-14-music-room-v2-test-matrix.md`](docs/qa/2026-10-14-music-room-v2-test-matrix.md)

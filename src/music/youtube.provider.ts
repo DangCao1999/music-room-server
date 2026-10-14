@@ -57,13 +57,16 @@ export class YouTubeProvider {
     return Boolean(this.env.YOUTUBE_API_KEY) && !this.keyInvalid;
   }
 
-  /** YOUTUBE_FAKE: deterministic 30-second tracks so dev/E2E never call YouTube. */
+  /**
+   * YOUTUBE_FAKE: deterministic 5-minute tracks so dev/E2E never call YouTube. Long enough
+   * that the server-side advance timer never fires during a test on a slow CI runner.
+   */
   private fake(videoId: string): TrackInfo {
     return {
       externalId: videoId,
       title: `Bài thử ${videoId}`,
       channel: 'Music Room',
-      durationSec: 30,
+      durationSec: 300,
       thumbnailUrl: null,
       embeddable: true,
       live: false,
