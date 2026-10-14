@@ -102,3 +102,16 @@ export interface DjEvent {
   memberId: string;
   displayName: string;
 }
+
+/** GET /api/rooms/:code/preview — public card for link previews and the share dialog. */
+export interface RoomPreview {
+  code: string;
+  name: string;
+  memberCount: number;
+  nowPlaying: {
+    title: string;
+    channel: string | null;
+    thumbnailUrl: string | null;
+    addedBy: string | null;
+  } | null;
+}

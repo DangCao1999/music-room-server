@@ -16,7 +16,6 @@ Sửa file `.env`:
 | Biến | Ghi gì |
 |---|---|
 | `PUBLIC_URL` | Địa chỉ mọi người sẽ dùng, ví dụ `http://192.168.1.20:8080`. Đây là IP trong mạng LAN của máy chạy Docker. Xem IP bằng `ipconfig getifaddr en0` (macOS) hoặc `hostname -I` (Linux) |
-| `SETUP_PASSWORD` | Mật khẩu để được tạo phòng. Hãy đổi giá trị mặc định |
 | `YOUTUBE_API_KEY` | Không bắt buộc. Có key thì dùng được **tìm kiếm** và **playlist dự phòng**; không có thì chỉ dán link YouTube |
 
 ```bash
@@ -24,14 +23,13 @@ docker compose up -d
 docker compose ps        # các service đều "Up", api và db hiện "healthy"
 ```
 
-Mở `PUBLIC_URL` trên trình duyệt, chọn **Tạo phòng**, nhập tên, tên phòng, mã PIN quản trị và mật khẩu cài đặt.
+Mở `PUBLIC_URL` trên trình duyệt, chọn **Tạo phòng**, nhập tên của bạn và tên phòng. Người tạo phòng là quản trị viên.
 
 ## 2. Nối loa
 
-1. Trên máy nối loa Bluetooth, mở `PUBLIC_URL/r/<MÃ PHÒNG>/host`.
-2. Nhập **mã PIN quản trị**, rồi bấm **Mở máy phát**.
-3. Nếu trang hiện nút **▶ Bắt đầu phát**, bấm một lần. Trình duyệt bắt buộc phải có một lần bấm thì mới cho tự phát nhạc.
-4. Để trang ở chế độ toàn màn hình (F11). Mọi người quét mã QR trên màn hình để vào phòng.
+1. Trên máy nối loa Bluetooth, mở `PUBLIC_URL/r/<MÃ PHÒNG>/host`. Không cần mật khẩu hay PIN: ai có mã phòng đều mở được trang máy phát.
+2. Nếu trang hiện nút **▶ Bắt đầu phát**, bấm một lần. Trình duyệt bắt buộc phải có một lần bấm thì mới cho tự phát nhạc.
+3. Để trang ở chế độ toàn màn hình (F11). Mọi người quét mã QR trên màn hình để vào phòng.
 
 Mẹo:
 - Tắt chế độ ngủ của máy nối loa.
@@ -125,7 +123,6 @@ Không cần tự tạo bảng: server tự chạy migration mỗi lần khởi 
 | `PUBLIC_URL` | `https://<app>.vercel.app` | ✅ |
 | `CORS_ORIGINS` | `https://<app>.vercel.app` (nhiều domain thì ngăn bằng dấu phẩy) | ✅ |
 | `JWT_SECRET` | `openssl rand -base64 48` | ✅ (Render free không có ổ đĩa lưu lâu dài) |
-| `SETUP_PASSWORD` | mật khẩu tạo phòng | ✅ vì server công khai |
 | `TRUST_PROXY` | `true` | ✅ |
 | `NODE_VERSION` | `22` | ✅ |
 | `DATA_DIR` | `/tmp/music-room` | nên đặt |
@@ -148,8 +145,9 @@ Nếu đang dùng Render Postgres, sau khi Neon chạy ổn bạn có thể xóa
 | Biến | Giá trị |
 |---|---|
 | `NEXT_PUBLIC_SERVER_URL` | `https://<api>.onrender.com` (không có `/` ở cuối) |
+| `PUBLIC_APP_URL` | `https://<app>.vercel.app`: domain chính thức dùng cho link và mã QR trong ảnh xem trước. Nên đặt, vì nếu thiếu thì app phải đoán domain từ header của request, và ảnh xem trước sẽ không được CDN cache |
 
-Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đặt.
+Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đặt. Ảnh xem trước khi chia sẻ link phòng (tên bài, ảnh bìa, mã QR) cũng lấy dữ liệu qua địa chỉ này.
 
 ### 8.4 Lưu ý
 
@@ -177,4 +175,4 @@ Music Room chỉ nhúng trình phát YouTube chính thức. Người cài đặt
 
 ### English summary
 
-`cp .env.example .env`, set `PUBLIC_URL` (LAN address), `SETUP_PASSWORD` and optionally `YOUTUBE_API_KEY`, then run `docker compose up -d`. Open `PUBLIC_URL` to create a room, and open `PUBLIC_URL/r/<CODE>/host` on the computer connected to the speaker. Backups are plain `pg_dump`. Updates are `docker compose pull && docker compose up -d`.
+`cp .env.example .env`, set `PUBLIC_URL` (LAN address) and optionally `YOUTUBE_API_KEY`, then run `docker compose up -d`. Open `PUBLIC_URL` to create a room, and open `PUBLIC_URL/r/<CODE>/host` on the computer connected to the speaker. Backups are plain `pg_dump`. Updates are `docker compose pull && docker compose up -d`.

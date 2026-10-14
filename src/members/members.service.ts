@@ -85,8 +85,6 @@ export class MembersService {
   // ------------------------------------------------------------ create / join
 
   async create(input: CommandInput<'room:create'>): Promise<Session> {
-    this.auth.checkSetupPassword(input.setupPassword);
-    const adminPinHash = await this.auth.hashPin(input.adminPin);
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = generateRoomCode();
       try {
@@ -95,7 +93,6 @@ export class MembersService {
             data: {
               code,
               name: input.name,
-              adminPinHash,
               settings: DEFAULT_SETTINGS,
               playback: { create: {} },
             },
@@ -297,33 +294,6 @@ export class MembersService {
     return t;
   }
 
-  async claimAdmin(actor: Actor, pin: string): Promise<void> {
-    const room = await this.prisma.room.findUniqueOrThrow({
-      where: { id: actor.roomId },
-    });
-    const member = await this.prisma.member.findUnique({
-      where: { id: actor.memberId },
-    });
-    if (member?.isDevice) throw new AppError('FORBIDDEN');
-    if (member?.role === 'ADMIN') return;
-    await this.auth.checkPin(room.adminPinHash, pin, `${actor.ip}|${room.id}`);
-    await this.state.mutate(actor.roomId, async (tx, ctx) => {
-      const me = await this.state.activeMember(tx, actor);
-      await tx.member.update({
-        where: { id: me.id },
-        data: { role: 'ADMIN', canControl: true, canDj: true },
-      });
-      await this.activity.log(
-        tx,
-        ctx,
-        actor.roomId,
-        me,
-        'admin_claim',
-        'đã nhận quyền quản trị',
-      );
-    });
-  }
-
   /** R-13 / R-14 */
   async setPermissions(
     actor: Actor,
@@ -472,13 +442,9 @@ export class MembersService {
 
   // ------------------------------------------------------------ host device
 
-  /** /r/CODE/host: PIN check, then a device member (isDevice) that may claim the lease (R-27). */
-  async registerHost(
-    input: CommandInput<'host:register'>,
-    ip: string,
-  ): Promise<Session> {
+  /** /r/CODE/host: a device member (isDevice) that may claim the lease (R-27). No PIN. */
+  async registerHost(input: CommandInput<'host:register'>): Promise<Session> {
     const room = await this.roomByCode(input.code);
-    await this.auth.checkPin(room.adminPinHash, input.pin, `${ip}|${room.id}`);
     const member = await this.state.mutate(room.id, async (tx, ctx) => {
       // Offline devices from earlier sessions are retired so the member list stays clean.
       const old = await tx.member.findMany({

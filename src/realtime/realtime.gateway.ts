@@ -287,7 +287,7 @@ export class RealtimeGateway
   registerHost(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('host:register', s, body, async (input) => {
       this.limitIp(s);
-      return this.enter(s, await this.members.registerHost(input, s.data.ip));
+      return this.enter(s, await this.members.registerHost(input));
     });
   }
 
@@ -297,14 +297,6 @@ export class RealtimeGateway
       // Unbind this socket first so the ack still reaches it; other tabs get session:revoked.
       await this.unbind(s);
       await this.members.leave(actor);
-    });
-  }
-
-  @SubscribeMessage('admin:claim')
-  claimAdmin(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
-    return this.run('admin:claim', s, body, (input, actor) => {
-      this.limit(`claim:${actor.memberId}`, CLAIM_LIMIT);
-      return this.members.claimAdmin(actor, input.pin);
     });
   }
 

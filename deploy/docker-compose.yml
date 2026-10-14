@@ -23,6 +23,11 @@ services:
   web:
     image: "ghcr.io/${IMAGE_OWNER:-hungnm-developer}/music-room-client:${TAG:-latest}"
     restart: unless-stopped
+    environment:
+      # Server-side calls from the web app (link-preview card with QR) go straight to the API.
+      INTERNAL_SERVER_URL: "http://api:3001"
+      # Canonical origin for share links / QR in link previews (never taken from request headers).
+      PUBLIC_APP_URL: "${PUBLIC_URL}"
     depends_on:
       - api
 

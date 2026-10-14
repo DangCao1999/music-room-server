@@ -5,7 +5,6 @@
 export const LIMITS = {
   roomName: 50,
   displayName: 30,
-  setupPassword: 200,
   input: 2048,
   query: 100,
   wish: 200,
@@ -48,6 +47,3 @@ export type DjSound = (typeof DJ_SOUNDS)[number];
 
 /** YouTube IFrame player error codes that mean "this video cannot be played". */
 export const PLAYER_ERROR_CODES = [2, 5, 100, 101, 150] as const;
-
-/** Admin PIN: 4–8 digits. */
-export const PIN_PATTERN = /^[0-9]{4,8}$/;
