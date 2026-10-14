@@ -1,0 +1,51 @@
+import { Injectable } from '@nestjs/common';
+import { AppError } from '../common/app-error';
+import type { Track } from '../generated/prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { type TrackInfo, YouTubeProvider } from './youtube.provider';
+
+export const TRACK_TTL_MS = 7 * 24 * 3600_000;
+export const trackId = (videoId: string) => `youtube:${videoId}`;
+
+/** Track metadata cache (R-36): 7 days, refreshed when a stale track is added again. */
+@Injectable()
+export class TrackCacheService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly youtube: YouTubeProvider,
+  ) {}
+
+  /** Playable track for `videoId` or a TRACK_* AppError (R-17). Runs outside room transactions. */
+  async resolve(videoId: string): Promise<Track> {
+    const cached = await this.prisma.track.findUnique({
+      where: { id: trackId(videoId) },
+    });
+    if (cached && Date.now() - cached.fetchedAt.getTime() < TRACK_TTL_MS) {
+      if (!cached.embeddable) throw new AppError('TRACK_NOT_EMBEDDABLE');
+      return cached;
+    }
+    const info = await this.youtube.getTrack(videoId);
+    if (info.live) throw new AppError('TRACK_LIVE');
+    const row = await this.upsert(info);
+    if (!info.embeddable) throw new AppError('TRACK_NOT_EMBEDDABLE');
+    return row;
+  }
+
+  upsert(info: TrackInfo): Promise<Track> {
+    const data = {
+      provider: 'youtube',
+      externalId: info.externalId,
+      title: info.title,
+      channel: info.channel,
+      durationSec: info.durationSec,
+      thumbnailUrl: info.thumbnailUrl,
+      embeddable: info.embeddable,
+      fetchedAt: new Date(),
+    };
+    return this.prisma.track.upsert({
+      where: { id: trackId(info.externalId) },
+      create: { id: trackId(info.externalId), ...data },
+      update: data,
+    });
+  }
+}
