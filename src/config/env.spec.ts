@@ -57,4 +57,22 @@ describe('parseEnv (R-46)', () => {
     ).toThrow(/YOUTUBE_FAKE/);
     expect(parseEnv({ ...base, YOUTUBE_FAKE: '1' }).YOUTUBE_FAKE).toBe(true);
   });
+
+  it('normalizes CORS_ORIGINS to bare origins (trailing slash / path are common typos)', () => {
+    const env = parseEnv({
+      ...base,
+      CORS_ORIGINS:
+        'https://music-room-client.vercel.app/, http://localhost:3000/some/path',
+    });
+    expect(env.CORS_ORIGINS).toEqual([
+      'https://music-room-client.vercel.app',
+      'http://localhost:3000',
+    ]);
+  });
+
+  it('rejects a CORS_ORIGINS entry that is not an http(s) URL', () => {
+    expect(() =>
+      parseEnv({ ...base, CORS_ORIGINS: 'music-room-client.vercel.app' }),
+    ).toThrow(/CORS_ORIGINS/);
+  });
 });
