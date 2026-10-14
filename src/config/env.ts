@@ -29,6 +29,10 @@ const EnvSchema = z
       .min(1)
       .max(10_000)
       .default(20),
+    /**
+     * Browser origins allowed besides PUBLIC_URL. Each entry is reduced to its origin, so
+     * "https://app.vercel.app/" (trailing slash) still matches the browser's Origin header.
+     */
     CORS_ORIGINS: z
       .string()
       .optional()
@@ -37,6 +41,11 @@ const EnvSchema = z
           .split(',')
           .map((s) => s.trim())
           .filter(Boolean),
+      )
+      .pipe(
+        z
+          .array(httpUrl)
+          .transform((list) => list.map((u) => new URL(u).origin)),
       ),
     TRUST_PROXY: z
       .string()
@@ -60,6 +69,8 @@ const HINTS: Record<string, string> = {
   JWT_SECRET: 'tối thiểu 32 ký tự, hoặc để trống để tự sinh',
   PORT: 'phải là số cổng 1–65535',
   NODE_ENV: 'development | production | test',
+  CORS_ORIGINS:
+    'danh sách URL http/https ngăn bằng dấu phẩy, ví dụ https://app.vercel.app',
   YOUTUBE_FAKE: 'không được bật khi NODE_ENV=production',
 };
 
