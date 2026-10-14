@@ -22,3 +22,11 @@ lerna-debug.log*
 # temp directory
 .temp
 .tmp
+# v2
+src/generated/
+.data/
+coverage/
+.env.*
+!.env.example
+test/integration/.db-url
+test/integration/.db-container
