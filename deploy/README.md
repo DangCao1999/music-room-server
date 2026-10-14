@@ -90,6 +90,54 @@ Các mục này cần thiết bị thật nên không tự động hóa được
 - [ ] Tắt Wi-Fi của máy phát 30 giây rồi bật lại: điện thoại hiện banner, sau đó nhạc phát tiếp đúng chỗ.
 - [ ] Khởi động lại container `api` trong lúc đang phát: phòng, hàng chờ và chat vẫn còn nguyên.
 
+## 8. Deploy lên cloud: Vercel (web) + Render (API)
+
+Cách này dùng khi bạn không có máy luôn bật trong văn phòng. Web và API nằm ở hai domain khác nhau, nên **bắt buộc** khai báo cho hai bên biết nhau.
+
+### 8.1 Render (repo `music-room-server`)
+
+**Cách A, dùng Blueprint (khuyên dùng):** chọn *Dashboard → New → Blueprint*, trỏ tới repo và nhánh muốn deploy. File [`render.yaml`](../render.yaml) tự tạo web service cùng Postgres, tự sinh `JWT_SECRET` và đặt health check `/api/health`. Render sẽ hỏi 4 biến đánh dấu `sync: false` ở bảng dưới.
+
+**Cách B, service tạo bằng tay trên dashboard:** `render.yaml` không được dùng. Bạn tự tạo Postgres (Render, Neon hoặc Supabase) và đặt **toàn bộ** biến sau trong *Environment*:
+
+| Biến | Giá trị | Bắt buộc |
+|---|---|---|
+| `DATABASE_URL` | URL Postgres (Render: dùng *Internal Database URL*) | ✅ |
+| `PUBLIC_URL` | `https://<app>.vercel.app` | ✅ |
+| `CORS_ORIGINS` | `https://<app>.vercel.app` (nhiều domain thì ngăn bằng dấu phẩy) | ✅ khi web và API khác domain |
+| `JWT_SECRET` | `openssl rand -base64 48` | ✅ trên Render free (không có ổ đĩa lưu lâu dài) |
+| `SETUP_PASSWORD` | mật khẩu tạo phòng | ✅ vì server công khai trên internet |
+| `TRUST_PROXY` | `true` | ✅ |
+| `NODE_VERSION` | `22` | ✅ |
+| `DATA_DIR` | `/tmp/music-room` | nên đặt |
+| `YOUTUBE_API_KEY` | key YouTube Data API | tùy chọn |
+
+Giữ nguyên lệnh build và start:
+- *Build:* `npm install --include=dev && npm run build`
+- *Start:* `npm run start:prod` (lệnh này tự chạy migration)
+- *Health Check Path:* `/api/health`
+
+Tuyệt đối **không** đặt `YOUTUBE_FAKE`; nếu đặt, server sẽ từ chối khởi động ở môi trường production.
+
+Kiểm tra: mở `https://<api>.onrender.com/api/health`, phải thấy `"db":"up"`.
+
+### 8.2 Vercel (repo `music-room-client`)
+
+*Project → Settings → Environment Variables*, mục Production:
+
+| Biến | Giá trị |
+|---|---|
+| `NEXT_PUBLIC_SERVER_URL` | `https://<api>.onrender.com` (không có `/` ở cuối) |
+
+Biến này được nhúng vào lúc **build**, nên sau khi đặt phải bấm **Redeploy**. Không đặt `NEXT_PUBLIC_E2E`.
+
+### 8.3 Lưu ý
+
+- **Deploy server và client cùng lúc.** Nếu lệch phiên bản giao thức, người dùng sẽ thấy banner "Có phiên bản mới. Hãy tải lại trang."
+- **Link Preview của Vercel** có domain riêng, nên bị server chặn. Muốn dùng thì thêm domain đó vào `CORS_ORIGINS`.
+- **Render free** ngủ sau 15 phút không có request và mất khoảng 1 phút để khởi động lại. Trong lúc ngủ, server không tự chuyển bài. Nếu dùng cả ngày, nên chọn gói trả phí hoặc self-host (§1).
+- **Postgres miễn phí của Render** bị xóa sau 30 ngày. Muốn dùng lâu dài thì chuyển sang gói trả phí hoặc dùng Neon/Supabase.
+
 ## Bản quyền
 
 Music Room chỉ nhúng trình phát YouTube chính thức. Người cài đặt chịu trách nhiệm về bản quyền âm nhạc khi phát nhạc nơi công cộng hoặc trong văn phòng.
