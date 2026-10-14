@@ -17,7 +17,6 @@ const EnvSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
   DATABASE_URL: z.string().refine((v) => /^postgres(ql)?:\/\//.test(v)),
   PUBLIC_URL: httpUrl,
-  SETUP_PASSWORD: optionalString,
   YOUTUBE_API_KEY: optionalString,
   JWT_SECRET: optionalString.refine((v) => v === undefined || v.length >= 32),
   DATA_DIR: z.string().default('/data'),

@@ -35,7 +35,7 @@ npm run start:dev             # http://localhost:3001/api/health
 | `src/queue/` | `fair-queue.ts` (thứ tự công bằng, hàm thuần) và các thao tác hàng chờ |
 | `src/playback/` | Chuyển bài, hẹn giờ, phiếu bỏ qua, lease máy phát |
 | `src/music/` | YouTube Data API / oEmbed, cache, tìm kiếm, playlist dự phòng |
-| `src/members/`, `src/auth/` | Phòng, thành viên, quyền, token, PIN |
+| `src/members/`, `src/auth/` | Phòng, thành viên, quyền, token |
 
 ## Biến môi trường
 

@@ -1,6 +1,5 @@
-import { Controller, Get, HttpStatus, Inject, Res } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { ENV, type Env } from '../config/env';
 import { CONTRACTS_VERSION } from '../contracts';
 import { YouTubeProvider } from '../music/youtube.provider';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,7 +10,6 @@ export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly youtube: YouTubeProvider,
-    @Inject(ENV) private readonly env: Env,
   ) {}
 
   @Get()
@@ -28,7 +26,6 @@ export class HealthController {
         status: db === 'up' ? 'ok' : 'degraded',
         db,
         contractsVersion: CONTRACTS_VERSION,
-        setupRequired: Boolean(this.env.SETUP_PASSWORD),
         searchEnabled: this.youtube.searchEnabled,
       });
   }

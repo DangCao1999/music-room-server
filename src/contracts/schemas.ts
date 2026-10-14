@@ -2,7 +2,6 @@ import { z } from 'zod';
 import {
   DJ_SOUNDS,
   LIMITS,
-  PIN_PATTERN,
   PLAYER_ERROR_CODES,
   REACTIONS,
   VOICE_PRESETS,
@@ -36,7 +35,6 @@ export const RoomCodeSchema = z
   .max(32)
   .transform(normalizeRoomCode)
   .pipe(z.string().regex(ROOM_CODE_PATTERN));
-export const PinSchema = z.string().regex(PIN_PATTERN);
 const Id = z.string().min(1).max(64);
 
 export const RoomSettingsSchema = z.strictObject({
@@ -68,8 +66,6 @@ export const C2S = {
   'room:create': z.strictObject({
     name: RoomNameSchema,
     displayName: DisplayNameSchema,
-    adminPin: PinSchema,
-    setupPassword: z.string().min(1).max(LIMITS.setupPassword).optional(),
   }),
   'room:peek': z.strictObject({ code: RoomCodeSchema }),
   'room:join': z.strictObject({
@@ -77,8 +73,8 @@ export const C2S = {
     displayName: DisplayNameSchema,
   }),
   'room:leave': z.strictObject({}),
-  'admin:claim': z.strictObject({ pin: PinSchema }),
-  'host:register': z.strictObject({ code: RoomCodeSchema, pin: PinSchema }),
+  /** Anyone with the room code may open the speaker page (no PIN). */
+  'host:register': z.strictObject({ code: RoomCodeSchema }),
   'player:claim': z.strictObject({}),
   /** Keeps the lease alive while the room is idle (no item to report progress on). */
   'player:heartbeat': z.strictObject({}),

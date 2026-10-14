@@ -34,7 +34,6 @@ model Room {
   id           String         @id @default(cuid())
   code         String         @unique
   name         String
-  adminPinHash String
   settings     Json
   createdAt    DateTime       @default(now())
   members      Member[]

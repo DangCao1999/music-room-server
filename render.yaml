@@ -34,7 +34,5 @@ services:
         sync: false
       - key: CORS_ORIGINS # https://<your-app>.vercel.app (comma-separated)
         sync: false
-      - key: SETUP_PASSWORD # required to create rooms on a public server
-        sync: false
       - key: YOUTUBE_API_KEY # optional: search + fallback playlist
         sync: false
