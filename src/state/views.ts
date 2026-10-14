@@ -1,0 +1,85 @@
+import type {
+  ActivityLogView,
+  ChatMessageView,
+  QueueItemView,
+  TrackSummary,
+  VoicePreset,
+} from '../contracts';
+import type {
+  ActivityLog,
+  ChatMessage,
+  Member,
+  QueueItem,
+  Track,
+} from '../generated/prisma/client';
+
+export type ItemWithRelations = QueueItem & {
+  track: Track;
+  addedBy: Pick<Member, 'id' | 'displayName'> | null;
+  hearts: { memberId: string }[];
+};
+
+export const ITEM_INCLUDE = {
+  track: true,
+  addedBy: { select: { id: true, displayName: true } },
+  hearts: { select: { memberId: true } },
+} as const;
+
+export function toTrackSummary(t: Track): TrackSummary {
+  return {
+    id: t.id,
+    provider: 'youtube',
+    externalId: t.externalId,
+    title: t.title,
+    channel: t.channel,
+    durationSec: t.durationSec,
+    thumbnailUrl: t.thumbnailUrl,
+  };
+}
+
+export function toItemView(i: ItemWithRelations, round: number): QueueItemView {
+  return {
+    id: i.id,
+    track: toTrackSummary(i.track),
+    addedBy: i.addedBy
+      ? { id: i.addedBy.id, displayName: i.addedBy.displayName }
+      : null,
+    round,
+    hearts: i.hearts.length,
+    heartedBy: i.hearts.map((h) => h.memberId),
+    pinned: i.pinnedAt !== null,
+    wishMessage: i.wishMessage,
+    voicePreset: (i.voicePreset as VoicePreset | null) ?? null,
+    addedAt: i.addedAt.toISOString(),
+  };
+}
+
+export function toChatView(m: ChatMessage): ChatMessageView {
+  return {
+    id: m.id,
+    memberId: m.memberId,
+    displayName: m.displayName,
+    content: m.content,
+    createdAt: m.createdAt.toISOString(),
+  };
+}
+
+export function toLogView(l: ActivityLog): ActivityLogView {
+  return {
+    id: l.id,
+    type: l.type,
+    memberId: l.memberId,
+    displayName: l.displayName,
+    message: l.message,
+    createdAt: l.createdAt.toISOString(),
+  };
+}
+
+/** Position (s) at `now` for a state measured at positionAt. */
+export function estimatePosition(
+  ps: { status: string; positionSec: number; positionAt: Date },
+  now: number,
+): number {
+  if (ps.status !== 'PLAYING') return ps.positionSec;
+  return ps.positionSec + Math.max(0, now - ps.positionAt.getTime()) / 1000;
+}

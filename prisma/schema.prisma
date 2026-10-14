@@ -1,0 +1,176 @@
+// Music Room v2 data model (spec §6). Order of the queue is never stored:
+// it is computed by src/queue/fair-queue.ts on every read.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MemberRole {
+  ADMIN
+  USER
+}
+
+enum QueueStatus {
+  QUEUED
+  PLAYING
+  PLAYED
+  SKIPPED
+  REMOVED
+}
+
+enum PlaybackStatus {
+  IDLE
+  PLAYING
+  PAUSED
+}
+
+model Room {
+  id           String         @id @default(cuid())
+  code         String         @unique
+  name         String
+  adminPinHash String
+  settings     Json
+  createdAt    DateTime       @default(now())
+  members      Member[]
+  queueItems   QueueItem[]
+  playback     PlaybackState?
+  chatMessages ChatMessage[]
+  activityLogs ActivityLog[]
+}
+
+model Member {
+  id             String      @id @default(cuid())
+  roomId         String
+  room           Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  displayName    String
+  /// lower-cased name; NULL once the member left or was kicked so the name is free again (I-10)
+  displayNameKey String?
+  color          String
+  role           MemberRole  @default(USER)
+  isDevice       Boolean     @default(false)
+  canPlay        Boolean     @default(false)
+  canControl     Boolean     @default(false)
+  canDj          Boolean     @default(false)
+  tokenVersion   Int         @default(0)
+  leftAt         DateTime?
+  kickedAt       DateTime?
+  lastSeenAt     DateTime    @default(now())
+  lastPlayedAt   DateTime?
+  createdAt      DateTime    @default(now())
+  queueItems     QueueItem[]
+  hearts         Heart[]
+  skipVotes      SkipVote[]
+
+  @@unique([roomId, displayNameKey])
+  @@index([roomId])
+}
+
+model Track {
+  id           String      @id
+  provider     String
+  externalId   String
+  title        String
+  channel      String?
+  durationSec  Int?
+  thumbnailUrl String?
+  embeddable   Boolean     @default(true)
+  fetchedAt    DateTime    @default(now())
+  queueItems   QueueItem[]
+}
+
+model QueueItem {
+  id          String      @id @default(cuid())
+  roomId      String
+  room        Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  trackId     String
+  track       Track       @relation(fields: [trackId], references: [id])
+  addedById   String?
+  addedBy     Member?     @relation(fields: [addedById], references: [id], onDelete: SetNull)
+  status      QueueStatus
+  pinnedAt    DateTime?
+  wishMessage String?
+  voicePreset String?
+  addedAt     DateTime    @default(now())
+  startedAt   DateTime?
+  endedAt     DateTime?
+  hearts      Heart[]
+  skipVotes   SkipVote[]
+
+  @@index([roomId, status])
+}
+
+model Heart {
+  queueItemId String
+  queueItem   QueueItem @relation(fields: [queueItemId], references: [id], onDelete: Cascade)
+  memberId    String
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([queueItemId, memberId])
+  @@index([memberId])
+}
+
+model SkipVote {
+  queueItemId String
+  queueItem   QueueItem @relation(fields: [queueItemId], references: [id], onDelete: Cascade)
+  memberId    String
+  member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([queueItemId, memberId])
+}
+
+model PlaybackState {
+  roomId         String         @id
+  room           Room           @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  currentItemId  String?
+  status         PlaybackStatus @default(IDLE)
+  /// position (seconds) measured at positionAt
+  positionSec    Float          @default(0)
+  positionAt     DateTime       @default(now())
+  version        Int            @default(0)
+  playerMemberId String?
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  memberId  String
+  /// copied at send time so history survives renames / kicks
+  displayName String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([roomId, createdAt])
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  memberId    String?
+  displayName String?
+  type        String
+  message     String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([roomId, createdAt])
+}
+
+model SearchCache {
+  key       String   @id
+  trackIds  String[]
+  createdAt DateTime @default(now())
+}
+
+model PlaylistCache {
+  playlistId String   @id
+  videoIds   String[]
+  fetchedAt  DateTime @default(now())
+}
