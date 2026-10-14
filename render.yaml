@@ -1,6 +1,6 @@
 # Render Blueprint (Dashboard → New → Blueprint). If the service was created by hand
 # in the dashboard instead, this file is ignored: set the same env vars there.
-# Spec: deploy/README.md §8.
+# Database: Neon (free, no expiry) — see deploy/README.md §8.
 services:
   - type: web
     name: muzic-room-server
@@ -23,13 +23,13 @@ services:
       # No persistent disk on the free plan; JWT_SECRET below makes sessions survive restarts.
       - key: DATA_DIR
         value: /tmp/music-room
-      - key: DATABASE_URL
-        fromDatabase:
-          name: muzic-room-db
-          property: connectionString
       - key: JWT_SECRET
         generateValue: true
       # Set in the dashboard (sync: false = not stored in git):
+      - key: DATABASE_URL # Neon pooled URL (…-pooler…/neondb?sslmode=require&channel_binding=require)
+        sync: false
+      - key: DIRECT_URL # Neon direct URL (same, without "-pooler"), used only for migrations
+        sync: false
       - key: PUBLIC_URL # https://<your-app>.vercel.app
         sync: false
       - key: CORS_ORIGINS # https://<your-app>.vercel.app (comma-separated)
@@ -38,9 +38,3 @@ services:
         sync: false
       - key: YOUTUBE_API_KEY # optional: search + fallback playlist
         sync: false
-
-databases:
-  - name: muzic-room-db
-    plan: free
-    databaseName: musicroom
-    user: musicroom

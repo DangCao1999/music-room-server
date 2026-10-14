@@ -33,7 +33,9 @@ services:
     environment:
       # PORT in .env is the public Caddy port; the API always listens on 3001 inside.
       PORT: "3001"
-      DATABASE_URL: "postgresql://musicroom:${POSTGRES_PASSWORD:-musicroom}@db:5432/musicroom"
+      # Defaults to the bundled Postgres; set DATABASE_URL (+ DIRECT_URL) in .env to use Neon etc.
+      DATABASE_URL: "${DATABASE_URL:-postgresql://musicroom:${POSTGRES_PASSWORD:-musicroom}@db:5432/musicroom}"
+      DIRECT_URL: "${DIRECT_URL:-}"
       TRUST_PROXY: "true"
     volumes:
       - api-data:/data
