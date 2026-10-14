@@ -1,0 +1,13 @@
+# One address for everyone (spec §4): /api and /socket.io → api, the rest → web.
+# For HTTPS on a real domain, replace ":8080" with "music.example.com" and open 80/443.
+{$SITE_ADDRESS::8080} {
+	encode gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	@api path /api/* /socket.io/*
+	reverse_proxy @api api:3001
+	reverse_proxy web:3000
+}

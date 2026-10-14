@@ -1,0 +1,7 @@
+# Build the images from the two checkouts instead of pulling them:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  web:
+    build: ../../music-room-client
+  api:
+    build: ..

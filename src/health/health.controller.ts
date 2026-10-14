@@ -1,0 +1,35 @@
+import { Controller, Get, HttpStatus, Inject, Res } from '@nestjs/common';
+import type { Response } from 'express';
+import { ENV, type Env } from '../config/env';
+import { CONTRACTS_VERSION } from '../contracts';
+import { YouTubeProvider } from '../music/youtube.provider';
+import { PrismaService } from '../prisma/prisma.service';
+
+/** R-45: 200 when the database answers, 503 otherwise. */
+@Controller('health')
+export class HealthController {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly youtube: YouTubeProvider,
+    @Inject(ENV) private readonly env: Env,
+  ) {}
+
+  @Get()
+  async health(@Res() res: Response): Promise<void> {
+    let db: 'up' | 'down' = 'up';
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+    } catch {
+      db = 'down';
+    }
+    res
+      .status(db === 'up' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE)
+      .json({
+        status: db === 'up' ? 'ok' : 'degraded',
+        db,
+        contractsVersion: CONTRACTS_VERSION,
+        setupRequired: Boolean(this.env.SETUP_PASSWORD),
+        searchEnabled: this.youtube.searchEnabled,
+      });
+  }
+}

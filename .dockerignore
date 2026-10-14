@@ -1,0 +1,11 @@
+node_modules
+dist
+src/generated
+.data
+.env
+.env.*
+coverage
+test
+docs
+deploy
+.git

@@ -1,11 +1,52 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { RoomsModule } from './rooms/rooms.module';
+import { type DynamicModule, Module } from '@nestjs/common';
+import { AuthService } from './auth/auth.service';
+import { DEFAULT_TIMING, TIMING, type Timing } from './common/timing';
+import { ENV, type Env } from './config/env';
+import { HealthController } from './health/health.controller';
+import { MembersService } from './members/members.service';
+import { PlaylistService } from './music/playlist.service';
+import { SearchService } from './music/search.service';
+import { TrackCacheService } from './music/track-cache.service';
+import { YouTubeProvider } from './music/youtube.provider';
+import { LeaseService } from './playback/lease.service';
+import { PlaybackService } from './playback/playback.service';
+import { PrismaService } from './prisma/prisma.service';
+import { QueueService } from './queue/queue.service';
+import { Broadcaster } from './realtime/broadcaster.service';
+import { PresenceService } from './realtime/presence.service';
+import { RealtimeGateway } from './realtime/realtime.gateway';
+import { ActivityService } from './social/activity.service';
+import { SocialService } from './social/social.service';
+import { RoomStateService } from './state/room-state.service';
+import { SnapshotService } from './state/snapshot.service';
 
-@Module({
-  imports: [RoomsModule],
-  controllers: [AppController],
-  providers: [AppService],
-})
-export class AppModule {}
+@Module({})
+export class AppModule {
+  static forRoot(env: Env, timing: Timing = DEFAULT_TIMING): DynamicModule {
+    return {
+      module: AppModule,
+      controllers: [HealthController],
+      providers: [
+        { provide: ENV, useValue: env },
+        { provide: TIMING, useValue: timing },
+        PrismaService,
+        AuthService,
+        PresenceService,
+        Broadcaster,
+        LeaseService,
+        SnapshotService,
+        RoomStateService,
+        ActivityService,
+        YouTubeProvider,
+        TrackCacheService,
+        SearchService,
+        PlaylistService,
+        PlaybackService,
+        QueueService,
+        MembersService,
+        SocialService,
+        RealtimeGateway,
+      ],
+    };
+  }
+}
