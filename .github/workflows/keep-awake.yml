@@ -1,0 +1,30 @@
+name: keep-awake
+
+# Render's free web services sleep after 15 minutes without requests and take about a
+# minute to wake up. Pinging the health check every 10 minutes keeps the API awake
+# (one service running all month ≈ 744 h, within the free 750 h). Scheduled workflows
+# only run from the default branch. See deploy/README.md §8.7.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Ping
+        env:
+          URL: ${{ vars.KEEP_AWAKE_URL }}
+        run: |
+          if [ -z "$URL" ]; then
+            echo "::notice::Set the repository variable KEEP_AWAKE_URL (https://<api>.onrender.com) to enable this."
+            exit 0
+          fi
+          # A sleeping instance needs ~1 min to boot: allow it, and retry once more.
+          curl --fail --silent --show-error --max-time 90 --retry 2 --retry-delay 15 \
+            --output /dev/null --write-out 'HTTP %{http_code} in %{time_total}s\n' \
+            "$URL/api/health"
