@@ -342,7 +342,7 @@ export class LibraryService {
     const answer = await this.ai.json<{ summary?: string }>(
       'recap',
       `Bạn viết MỘT câu nhận xét vui, thân thiện (tối đa 30 từ, tiếng Việt) về việc nghe nhạc của một văn phòng.
-Chỉ dùng đúng các con số trong "facts", không suy ra số khác, không bịa thêm. Không emoji. Trả lời JSON {"summary":<string>}.`,
+Chỉ dùng đúng các con số trong "facts", không suy ra số khác, không bịa thêm. Người chọn bài được ghi là P1, P2…: nếu nhắc tới ai, viết đúng ký hiệu đó. Không emoji. Trả lời JSON {"summary":<string>}.`,
       JSON.stringify({
         facts: {
           songsPlayed: v.plays,
@@ -356,18 +356,26 @@ Chỉ dùng đúng các con số trong "facts", không suy ra số khác, không
           timesPlayed: s.plays,
           hearts: s.hearts,
         })),
-        topPickers: v.topPickers.map((p) => ({
-          name: p.member.displayName,
+        // Names stay on our side: the AI sees P1…P5 and they are put back below.
+        topPickers: v.topPickers.map((p, i) => ({
+          name: `P${i + 1}`,
           songsPlayed: p.songs,
           heartsReceived: p.hearts,
         })),
       }),
       { temperature: 0.5 },
     );
-    const text =
+    const raw =
       typeof answer?.summary === 'string'
         ? answer.summary.trim().slice(0, 300) || null
         : null;
+    const text =
+      raw &&
+      raw.replace(
+        /\bP([1-5])\b/g,
+        (m: string, d: string) =>
+          v.topPickers[Number(d) - 1]?.member.displayName ?? m,
+      );
     this.recapComments.set(key, { at: Date.now(), text });
     if (this.recapComments.size > 200)
       this.recapComments.delete(

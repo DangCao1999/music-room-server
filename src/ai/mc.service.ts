@@ -11,7 +11,7 @@ const KEEP = 1000;
 
 const SYSTEM = `Bạn là MC radio vui tính của một văn phòng ở Việt Nam. Viết cho mỗi bài một câu dẫn ngắn
 (tối đa 22 từ, tiếng Việt tự nhiên, thân thiện) để đọc ngay trước khi bài phát.
-- Nhắc tên bài, nghệ sĩ nếu có, và người chọn bài.
+- Nhắc tên bài, nghệ sĩ nếu có, và người chọn bài: viết đúng ký hiệu {P} ở chỗ tên người chọn (không tự đặt tên).
 - Không bịa thông tin về bài hát hay nghệ sĩ. Không emoji, không hashtag, không dấu ngoặc kép.
 - Mỗi câu một kiểu, đừng lặp cùng một mở đầu.
 Trả lời đúng JSON: {"items":[{"i":<number>,"line":<string>}]}.`;
@@ -85,7 +85,8 @@ export class McService implements OnModuleInit {
             i,
             song: q.track.song ?? q.track.title,
             artist: q.track.artist,
-            picker: q.addedBy?.displayName ?? null,
+            // People's names never reach the AI provider: it writes {P}, we put the name back.
+            picker: q.addedBy ? '{P}' : null,
           })),
         ),
         { temperature: 0.9 },
@@ -98,7 +99,11 @@ export class McService implements OnModuleInit {
             ? a.line.replace(/["“”]/g, '').trim().slice(0, 200)
             : '';
         if (!q || !line) continue;
-        this.lines.set(q.id, line);
+        const name = q.addedBy?.displayName ?? '';
+        this.lines.set(
+          q.id,
+          line.replaceAll('{P}', name).replace(/\s+/g, ' ').trim(),
+        );
         n += 1;
       }
       while (this.lines.size > KEEP)
