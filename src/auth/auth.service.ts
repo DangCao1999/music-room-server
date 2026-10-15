@@ -11,7 +11,14 @@ import { AppError } from '../common/app-error';
 import { KeyedMutex } from '../common/keyed-mutex';
 import { ENV, type Env } from '../config/env';
 import { PinGuard } from './pin-guard';
-import { type Claims, signToken, verifyToken } from './token';
+import {
+  type Claims,
+  signToken,
+  signUserToken,
+  type UserClaims,
+  verifyToken,
+  verifyUserToken,
+} from './token';
 
 const scrypt = (pin: string, salt: Buffer, opts: ScryptOptions) =>
   new Promise<Buffer>((resolve, reject) =>
@@ -62,6 +69,14 @@ export class AuthService {
 
   verify(token: unknown): Claims | null {
     return verifyToken(token, this.secret);
+  }
+
+  signUser(userId: string, tokenVersion: number): string {
+    return signUserToken({ sub: userId, tv: tokenVersion }, this.secret);
+  }
+
+  verifyUser(token: unknown): UserClaims | null {
+    return verifyUserToken(token, this.secret);
   }
 
   /** `scrypt$<salt>$<hash>` (base64url). */

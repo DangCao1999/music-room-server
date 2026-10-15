@@ -62,3 +62,60 @@ export function verifyToken(
     return null;
   }
 }
+
+/** L1: account token — `{ sub: userId, typ: 'u', tv }`, independent of any room. */
+export interface UserClaims {
+  sub: string;
+  typ: 'u';
+  tv: number;
+  iat: number;
+  exp: number;
+}
+export const USER_TOKEN_TTL_SEC = 90 * 24 * 3600;
+
+export function signUserToken(
+  claims: Pick<UserClaims, 'sub' | 'tv'>,
+  secret: string,
+  nowSec = Math.floor(Date.now() / 1000),
+): string {
+  const payload = Buffer.from(
+    JSON.stringify({
+      sub: claims.sub,
+      typ: 'u',
+      tv: claims.tv,
+      iat: nowSec,
+      exp: nowSec + USER_TOKEN_TTL_SEC,
+    }),
+  ).toString('base64url');
+  return `${HEADER}.${payload}.${sign(`${HEADER}.${payload}`, secret)}`;
+}
+
+export function verifyUserToken(
+  token: unknown,
+  secret: string,
+  nowSec = Math.floor(Date.now() / 1000),
+): UserClaims | null {
+  if (typeof token !== 'string' || token.length > 2048) return null;
+  const parts = token.split('.');
+  if (parts.length !== 3 || parts[0] !== HEADER) return null;
+  const expected = Buffer.from(sign(`${parts[0]}.${parts[1]}`, secret));
+  const actual = Buffer.from(parts[2]);
+  if (expected.length !== actual.length || !timingSafeEqual(expected, actual))
+    return null;
+  try {
+    const c = JSON.parse(
+      Buffer.from(parts[1], 'base64url').toString(),
+    ) as UserClaims;
+    if (
+      c.typ !== 'u' ||
+      typeof c.sub !== 'string' ||
+      typeof c.tv !== 'number' ||
+      typeof c.exp !== 'number' ||
+      c.exp <= nowSec
+    )
+      return null;
+    return c;
+  } catch {
+    return null;
+  }
+}

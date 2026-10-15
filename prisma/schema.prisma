@@ -37,6 +37,9 @@ model Room {
   settings     Json
   /// scrypt hash of the admin PIN (4–8 digits); null for rooms created before PINs returned
   adminPinHash String?
+  /// L6: the signed-in user who created the room; always admin there
+  ownerId      String?
+  owner        User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   createdAt    DateTime       @default(now())
   members      Member[]
   queueItems   QueueItem[]
@@ -55,6 +58,9 @@ model Member {
   color          String
   role           MemberRole  @default(USER)
   isDevice       Boolean     @default(false)
+  /// L1: the Google account behind this member (null = guest)
+  userId         String?
+  user           User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   canPlay        Boolean     @default(false)
   canControl     Boolean     @default(false)
   canDj          Boolean     @default(false)
@@ -70,31 +76,33 @@ model Member {
   favorites      Favorite[]
 
   @@unique([roomId, displayNameKey])
+  @@index([userId])
   @@index([roomId])
 }
 
 model Track {
-  id           String      @id
-  provider     String
-  externalId   String
-  title        String
-  channel      String?
-  durationSec  Int?
-  thumbnailUrl String?
-  embeddable   Boolean     @default(true)
-  fetchedAt    DateTime    @default(now())
+  id            String         @id
+  provider      String
+  externalId    String
+  title         String
+  channel       String?
+  durationSec   Int?
+  thumbnailUrl  String?
+  embeddable    Boolean        @default(true)
+  fetchedAt     DateTime       @default(now())
   /// normalizeQuery(title + channel): lets search find known songs without YouTube quota
-  searchKey    String?
+  searchKey     String?
   /// AI1: artist and song parsed from the title (rules, Last.fm or AI); keys are normalizeQuery()
-  artist       String?
-  song         String?
-  artistKey    String?
-  songKey      String?
+  artist        String?
+  song          String?
+  artistKey     String?
+  songKey       String?
   /// rules | guess | lastfm | ai — null until the metadata worker has looked at the track
-  metaSource   String?
-  metaAt       DateTime?
-  queueItems   QueueItem[]
-  favorites    Favorite[]
+  metaSource    String?
+  metaAt        DateTime?
+  queueItems    QueueItem[]
+  favorites     Favorite[]
+  userFavorites UserFavorite[]
 
   @@index([artistKey])
 }
@@ -132,6 +140,33 @@ model Heart {
   @@index([memberId])
 }
 
+/// L1: a Google account. Signing in is optional; guests have no User.
+model User {
+  id           String         @id @default(cuid())
+  googleSub    String         @unique
+  email        String
+  name         String
+  picture      String?
+  tokenVersion Int            @default(0)
+  createdAt    DateTime       @default(now())
+  lastSeenAt   DateTime       @default(now())
+  members      Member[]
+  ownedRooms   Room[]
+  favorites    UserFavorite[]
+}
+
+/// L1: saved songs of a signed-in user, across rooms and devices.
+model UserFavorite {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackId   String
+  track     Track    @relation(fields: [trackId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@id([userId, trackId])
+  @@index([userId, createdAt])
+}
+
 /// "Lưu" (A2): a member's saved songs. Not "Thả tim", which is a vote inside the queue.
 model Favorite {
   memberId  String
@@ -166,14 +201,14 @@ model PlaybackState {
 }
 
 model ChatMessage {
-  id        String   @id @default(cuid())
-  roomId    String
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  memberId  String
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  memberId    String
   /// copied at send time so history survives renames / kicks
   displayName String
-  content   String
-  createdAt DateTime @default(now())
+  content     String
+  createdAt   DateTime @default(now())
 
   @@index([roomId, createdAt])
 }

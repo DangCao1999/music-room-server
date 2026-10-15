@@ -44,6 +44,15 @@ Mẹo:
 - Không thu nhỏ tab đang phát.
 - Nếu mở trang máy phát ở một máy khác, máy cũ sẽ tự dừng phát.
 
+## Đăng nhập Google (không bắt buộc)
+
+Khách vẫn vào phòng bằng tên như cũ. Đăng nhập Google cho phép vào lại đúng mình ở mọi thiết bị, giữ bài yêu thích theo tài khoản, và chủ phòng luôn có quyền quản trị (không cần PIN).
+
+1. Vào [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **Create credentials** → **OAuth client ID** → loại **Web application**. Nếu được hỏi, cấu hình **OAuth consent screen** trước (loại *External*, chỉ cần tên app và email).
+2. Ở **Authorized JavaScript origins**, thêm địa chỉ web của bạn, ví dụ `https://<app>.vercel.app`. Với dev thêm `http://localhost:3000`. Google không chấp nhận địa chỉ IP LAN dạng `http://192.168…`, nên trong LAN chỉ máy chạy dev (qua `localhost`) đăng nhập được.
+3. Không cần *Authorized redirect URIs* và không cần client secret.
+4. Chép **Client ID** (dạng `….apps.googleusercontent.com`) vào biến `GOOGLE_CLIENT_ID` của server, rồi khởi động lại server. Web tự nhận Client ID qua `/api/health`.
+
 ## 3. Lấy YouTube API key (không bắt buộc)
 
 1. Vào https://console.cloud.google.com, tạo một project mới.

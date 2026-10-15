@@ -103,13 +103,19 @@ export class LibraryService {
 
   // ------------------------------------------------------------ A2: Lưu
 
-  private async requirePerson(actor: Actor): Promise<void> {
+  /**
+   * Whose favourites: the account's when the member is signed in (L1, every room and
+   * device), else the member's own (A2). The speaker page is a device, not a person.
+   */
+  private async owner(
+    actor: Actor,
+  ): Promise<{ memberId: string; userId: string | null }> {
     const m = await this.prisma.member.findUnique({
       where: { id: actor.memberId },
     });
     if (!m || m.leftAt || m.kickedAt) throw new AppError('UNAUTHENTICATED');
-    // The speaker page is a shared device, not a person.
     if (m.isDevice) throw new AppError('FORBIDDEN');
+    return { memberId: m.id, userId: m.userId };
   }
 
   async setFavorite(
@@ -117,31 +123,48 @@ export class LibraryService {
     id: string,
     saved: boolean,
   ): Promise<CommandResults['favorite:set']> {
-    await this.requirePerson(actor);
+    const { memberId, userId } = await this.owner(actor);
     if (saved) {
       const track = await this.prisma.track.findUnique({ where: { id } });
       if (!track || !shown(track)) throw new AppError('TRACK_NOT_FOUND');
-      await this.prisma.favorite.upsert({
-        where: { memberId_trackId: { memberId: actor.memberId, trackId: id } },
-        create: { memberId: actor.memberId, trackId: id },
-        update: {},
+      if (userId)
+        await this.prisma.userFavorite.upsert({
+          where: { userId_trackId: { userId, trackId: id } },
+          create: { userId, trackId: id },
+          update: {},
+        });
+      else
+        await this.prisma.favorite.upsert({
+          where: { memberId_trackId: { memberId, trackId: id } },
+          create: { memberId, trackId: id },
+          update: {},
+        });
+    } else if (userId) {
+      await this.prisma.userFavorite.deleteMany({
+        where: { userId, trackId: id },
       });
     } else {
       await this.prisma.favorite.deleteMany({
-        where: { memberId: actor.memberId, trackId: id },
+        where: { memberId, trackId: id },
       });
     }
-    await this.pushIds(actor.memberId);
+    await this.pushIds(memberId);
     return { saved };
   }
 
   async listFavorites(actor: Actor): Promise<CommandResults['favorite:list']> {
-    await this.requirePerson(actor);
-    const rows = await this.prisma.favorite.findMany({
-      where: { memberId: actor.memberId },
-      orderBy: { createdAt: 'desc' },
-      include: { track: true },
-    });
+    const { memberId, userId } = await this.owner(actor);
+    const rows = userId
+      ? await this.prisma.userFavorite.findMany({
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
+          include: { track: true },
+        })
+      : await this.prisma.favorite.findMany({
+          where: { memberId },
+          orderBy: { createdAt: 'desc' },
+          include: { track: true },
+        });
     return {
       tracks: rows
         .filter((r) => shown(r.track))
@@ -149,12 +172,21 @@ export class LibraryService {
     };
   }
 
-  /** Sends the member's saved track ids to all of their tabs (not part of the room snapshot). */
+  /** Sends the saved track ids to all of the member's tabs (not part of the room snapshot). */
   async pushIds(memberId: string): Promise<void> {
-    const rows = await this.prisma.favorite.findMany({
-      where: { memberId },
-      select: { trackId: true },
+    const m = await this.prisma.member.findUnique({
+      where: { id: memberId },
+      select: { userId: true },
     });
+    const rows = m?.userId
+      ? await this.prisma.userFavorite.findMany({
+          where: { userId: m.userId },
+          select: { trackId: true },
+        })
+      : await this.prisma.favorite.findMany({
+          where: { memberId },
+          select: { trackId: true },
+        });
     this.broadcaster.toMember(memberId, 'favorite:ids', {
       trackIds: rows.map((r) => r.trackId),
     });

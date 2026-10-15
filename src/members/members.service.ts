@@ -84,7 +84,10 @@ export class MembersService {
 
   // ------------------------------------------------------------ create / join
 
-  async create(input: CommandInput<'room:create'>): Promise<Session> {
+  async create(
+    input: CommandInput<'room:create'>,
+    userId?: string,
+  ): Promise<Session> {
     const adminPinHash = await this.auth.hashPin(input.adminPin);
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = generateRoomCode();
@@ -96,6 +99,8 @@ export class MembersService {
               name: input.name,
               settings: DEFAULT_SETTINGS,
               adminPinHash,
+              // L6: a signed-in creator owns the room.
+              ownerId: userId ?? null,
               playback: { create: {} },
             },
           });
@@ -106,6 +111,8 @@ export class MembersService {
               displayNameKey: nameKey(input.displayName),
               color: this.color(),
               role: 'ADMIN',
+              // L1: the signed-in creator's member belongs to their account.
+              userId: userId ?? null,
               // Kept from v1: the creator's device plays until a /host page takes over.
               canPlay: true,
               canControl: true,
@@ -151,12 +158,16 @@ export class MembersService {
   async join(
     input: CommandInput<'room:join'>,
     ip: string,
+    userId?: string,
   ): Promise<Session & { rejoined: boolean; rightsReset: boolean }> {
     const room = await this.roomByCode(input.code);
+    if (userId) return this.joinWithAccount(room, input.displayName, userId);
+    const displayName = input.displayName;
+    if (!displayName) throw new AppError('VALIDATION');
     const holder = await this.prisma.member.findFirst({
       where: {
         roomId: room.id,
-        displayNameKey: nameKey(input.displayName),
+        displayNameKey: nameKey(displayName),
         leftAt: null,
         kickedAt: null,
       },
@@ -176,8 +187,8 @@ export class MembersService {
         const m = await tx.member.create({
           data: {
             roomId: room.id,
-            displayName: input.displayName,
-            displayNameKey: nameKey(input.displayName),
+            displayName,
+            displayNameKey: nameKey(displayName),
             color: this.color(),
             canDj: settings.allowGuestDj,
           },
@@ -220,7 +231,12 @@ export class MembersService {
     pin: string | undefined,
     ip: string,
   ): Promise<{ session: Session; rightsReset: boolean }> {
-    if (holder.isDevice || this.presence.onlineMembers(room.id).has(holder.id))
+    // A member tied to a Google account comes back only through that account (L1).
+    if (
+      holder.isDevice ||
+      holder.userId ||
+      this.presence.onlineMembers(room.id).has(holder.id)
+    )
       throw new AppError('NAME_TAKEN');
     if (holder.role === 'ADMIN') {
       if (!room.adminPinHash) throw new AppError('PIN_NOT_SET');
@@ -270,6 +286,147 @@ export class MembersService {
       session: this.session(member.m, room.code),
       rightsReset: member.reset,
     };
+  }
+
+  // ------------------------------------------------------------ accounts (L1, L6)
+
+  /**
+   * Signed in: the account's member in this room, on any device and with all its
+   * rights (the account is the proof); otherwise a new member with the given or Google
+   * name (" 2", " 3"… when taken). The owner is always admin (L6).
+   */
+  private async joinWithAccount(
+    room: {
+      id: string;
+      code: string;
+      ownerId: string | null;
+      settings: Prisma.JsonValue;
+    },
+    wantedName: string | undefined,
+    userId: string,
+  ): Promise<Session & { rejoined: boolean; rightsReset: boolean }> {
+    const owner = room.ownerId === userId;
+    const mine = await this.prisma.member.findFirst({
+      where: {
+        roomId: room.id,
+        userId,
+        leftAt: null,
+        kickedAt: null,
+        isDevice: false,
+      },
+    });
+    if (mine) {
+      const member = await this.state.mutate(room.id, async (tx, ctx) => {
+        const m =
+          owner && mine.role !== 'ADMIN'
+            ? await tx.member.update({
+                where: { id: mine.id },
+                data: { role: 'ADMIN', canControl: true, canDj: true },
+              })
+            : mine;
+        await this.activity.log(
+          tx,
+          ctx,
+          room.id,
+          m,
+          'user_rejoin',
+          'đã quay lại phòng',
+        );
+        return m;
+      });
+      return {
+        ...this.session(member, room.code),
+        rejoined: true,
+        rightsReset: false,
+      };
+    }
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+    const base = (wantedName ?? user.name).slice(0, 30);
+    const settings = readSettings(room.settings);
+    for (let n = 1; n <= 20; n++) {
+      const name = n === 1 ? base : `${base.slice(0, 27)} ${n}`;
+      try {
+        const member = await this.state.mutate(room.id, async (tx, ctx) => {
+          const m = await tx.member.create({
+            data: {
+              roomId: room.id,
+              displayName: name,
+              displayNameKey: nameKey(name),
+              color: this.color(),
+              userId,
+              ...(owner
+                ? { role: 'ADMIN' as const, canControl: true, canDj: true }
+                : { canDj: settings.allowGuestDj }),
+            },
+          });
+          await this.activity.log(
+            tx,
+            ctx,
+            room.id,
+            m,
+            'user_join',
+            'đã vào phòng',
+          );
+          return m;
+        });
+        return {
+          ...this.session(member, room.code),
+          rejoined: false,
+          rightsReset: false,
+        };
+      } catch (e) {
+        if (!isUniqueViolation(e)) throw e;
+      }
+    }
+    throw new AppError('NAME_TAKEN');
+  }
+
+  /**
+   * Ties a guest member to the account signed in on its socket, unless the account
+   * already has another member in that room. Saved songs move to the account; the
+   * room's creator becomes its owner when the room has none yet.
+   */
+  async linkMember(memberId: string, userId: string): Promise<void> {
+    const m = await this.prisma.member.findUnique({ where: { id: memberId } });
+    if (!m || m.userId || m.isDevice || m.leftAt || m.kickedAt) return;
+    await this.state.mutate(m.roomId, async (tx) => {
+      const other = await tx.member.findFirst({
+        where: {
+          roomId: m.roomId,
+          userId,
+          leftAt: null,
+          kickedAt: null,
+          id: { not: m.id },
+        },
+      });
+      if (other) return;
+      await tx.member.update({ where: { id: m.id }, data: { userId } });
+      const favs = await tx.favorite.findMany({ where: { memberId: m.id } });
+      if (favs.length) {
+        await tx.userFavorite.createMany({
+          data: favs.map((f) => ({
+            userId,
+            trackId: f.trackId,
+            createdAt: f.createdAt,
+          })),
+          skipDuplicates: true,
+        });
+        await tx.favorite.deleteMany({ where: { memberId: m.id } });
+      }
+      const room = await tx.room.findUniqueOrThrow({ where: { id: m.roomId } });
+      if (!room.ownerId) {
+        const created = await tx.activityLog.findFirst({
+          where: { roomId: m.roomId, type: 'room_create', memberId: m.id },
+        });
+        if (created)
+          await tx.room.update({
+            where: { id: room.id },
+            data: { ownerId: userId },
+          });
+      }
+    });
   }
 
   /** Token → member, only if still active and the token version matches (R-06, R-10, R-11). */

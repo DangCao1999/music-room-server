@@ -17,6 +17,24 @@ export interface TrackSummary {
   song: string | null;
 }
 
+/** L1: a signed-in Google account. */
+export interface UserView {
+  id: string;
+  name: string;
+  email: string;
+  picture: string | null;
+}
+
+/** L6: a room on "Phòng của tôi". */
+export interface MyRoomView {
+  code: string;
+  name: string;
+  isOwner: boolean;
+  onlineCount: number;
+  nowPlaying: string | null;
+  lastVisitedAt: string;
+}
+
 /** A7: `synced` lines carry their start time in seconds; `plain` is the text alone. */
 export interface LyricsView {
   synced: { t: number; text: string }[] | null;
