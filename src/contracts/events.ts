@@ -3,6 +3,7 @@ import type {
   ChatMessageView,
   DjEvent,
   LibraryItemView,
+  SuggestionView,
   PlayerCommand,
   PlayerRevokeReason,
   ReactionEvent,
@@ -37,6 +38,7 @@ export interface CommandResults {
     source: 'library' | 'cache' | 'youtube';
   };
   'library:room': { items: LibraryItemView[] };
+  'suggest:next': { items: SuggestionView[] };
   'favorite:set': { saved: boolean };
   /** Newest first. */
   'favorite:list': { tracks: TrackSummary[] };

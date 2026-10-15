@@ -22,6 +22,8 @@ import {
 import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
 import { SearchService } from '../music/search.service';
+import { SuggestService } from '../music/suggest.service';
+import { readSettings } from '../state/settings';
 import { PlaybackService } from '../playback/playback.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueService } from '../queue/queue.service';
@@ -89,6 +91,7 @@ export class RealtimeGateway
     private readonly presence: PresenceService,
     private readonly broadcaster: Broadcaster,
     private readonly library: LibraryService,
+    private readonly suggest: SuggestService,
   ) {}
 
   // ------------------------------------------------------------ lifecycle
@@ -348,6 +351,24 @@ export class RealtimeGateway
   }
 
   // ------------------------------------------------------------ library (A1) & favourites (A2)
+
+  @SubscribeMessage('suggest:next')
+  suggestNext(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('suggest:next', s, body, async (input, actor) => {
+      this.limit(`suggest:${actor.memberId}`, LOOKUP_LIMIT);
+      const room = await this.prisma.room.findUniqueOrThrow({
+        where: { id: actor.roomId },
+        select: { settings: true },
+      });
+      return {
+        items: await this.suggest.forRoom(
+          actor.roomId,
+          input.trackId ?? null,
+          readSettings(room.settings),
+        ),
+      };
+    });
+  }
 
   @SubscribeMessage('library:room')
   roomLibrary(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {

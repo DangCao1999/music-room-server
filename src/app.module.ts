@@ -4,6 +4,10 @@ import { DEFAULT_TIMING, TIMING, type Timing } from './common/timing';
 import { ENV, type Env } from './config/env';
 import { HealthController } from './health/health.controller';
 import { LibraryService } from './library/library.service';
+import { AiService } from './ai/ai.service';
+import { LastFmService } from './music/lastfm.service';
+import { SuggestService } from './music/suggest.service';
+import { TrackMetaService } from './music/track-meta.service';
 import { MembersService } from './members/members.service';
 import { ApiDataRetentionService } from './music/api-data-retention.service';
 import { PlaylistService } from './music/playlist.service';
@@ -42,6 +46,10 @@ export class AppModule {
         ActivityService,
         YouTubeProvider,
         TrackCacheService,
+        AiService,
+        LastFmService,
+        TrackMetaService,
+        SuggestService,
         SearchService,
         ApiDataRetentionService,
         PlaylistService,
