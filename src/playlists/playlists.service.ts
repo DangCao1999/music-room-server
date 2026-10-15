@@ -250,4 +250,43 @@ export class PlaylistsService {
       src.tracks.map((t) => t.id),
     );
   }
+
+  /**
+   * L3: an imported playlist — created the first time, its songs replaced on every
+   * later import from the same source (the user's own edits to it are overwritten).
+   */
+  async saveFromSource(
+    userId: string,
+    source: string,
+    name: string,
+    trackIds: string[],
+  ): Promise<string> {
+    const existing = await this.prisma.playlist.findUnique({
+      where: { ownerId_source: { ownerId: userId, source } },
+    });
+    if (!existing) {
+      const id = await this.create(userId, name, trackIds);
+      await this.prisma.playlist.update({ where: { id }, data: { source } });
+      return id;
+    }
+    await this.prisma.$transaction(async (tx) => {
+      const ids = (await this.playable(tx, trackIds)).slice(
+        0,
+        MAX_PLAYLIST_TRACKS,
+      );
+      await tx.playlistItem.deleteMany({ where: { playlistId: existing.id } });
+      await tx.playlistItem.createMany({
+        data: ids.map((trackId, position) => ({
+          playlistId: existing.id,
+          trackId,
+          position,
+        })),
+      });
+      await tx.playlist.update({
+        where: { id: existing.id },
+        data: { name, updatedAt: new Date() },
+      });
+    });
+    return existing.id;
+  }
 }

@@ -24,16 +24,37 @@ type Result = { status: number; body: unknown };
 class QuotaError extends Error {}
 class KeyError extends Error {}
 
-interface VideoItem {
+export interface VideoItem {
   id: string;
   snippet?: {
     title?: string;
     channelTitle?: string;
     liveBroadcastContent?: string;
+    /** "10" = Music (L3 "Chỉ lấy bài nhạc"). */
+    categoryId?: string;
     thumbnails?: Record<string, { url?: string } | undefined>;
   };
   contentDetails?: { duration?: string };
   status?: { embeddable?: boolean };
+}
+
+/** A Data API `videos` item → what we store about a track. */
+export function videoToTrackInfo(v: VideoItem): TrackInfo {
+  const thumbs = v.snippet?.thumbnails ?? {};
+  const duration = parseIsoDuration(v.contentDetails?.duration ?? '');
+  const live = ['live', 'upcoming'].includes(
+    v.snippet?.liveBroadcastContent ?? '',
+  );
+  return {
+    externalId: v.id,
+    title: v.snippet?.title ?? v.id,
+    channel: v.snippet?.channelTitle ?? null,
+    durationSec: duration && duration > 0 ? duration : null,
+    thumbnailUrl:
+      thumbs.medium?.url ?? thumbs.high?.url ?? thumbs.default?.url ?? null,
+    embeddable: v.status?.embeddable !== false,
+    live,
+  };
 }
 
 /**
@@ -134,21 +155,7 @@ export class YouTubeProvider {
   // ---------------------------------------------------------------- mapping
 
   private toInfo(v: VideoItem): TrackInfo {
-    const thumbs = v.snippet?.thumbnails ?? {};
-    const duration = parseIsoDuration(v.contentDetails?.duration ?? '');
-    const live = ['live', 'upcoming'].includes(
-      v.snippet?.liveBroadcastContent ?? '',
-    );
-    return {
-      externalId: v.id,
-      title: v.snippet?.title ?? v.id,
-      channel: v.snippet?.channelTitle ?? null,
-      durationSec: duration && duration > 0 ? duration : null,
-      thumbnailUrl:
-        thumbs.medium?.url ?? thumbs.high?.url ?? thumbs.default?.url ?? null,
-      embeddable: v.status?.embeddable !== false,
-      live,
-    };
+    return videoToTrackInfo(v);
   }
 
   /** Data API lookup, up to 50 ids per call (1 quota unit). */

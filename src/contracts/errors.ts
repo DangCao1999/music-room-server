@@ -31,6 +31,8 @@ export const ERROR_CODES = [
   'PLAYLIST_NOT_FOUND',
   'PLAYLIST_LIMIT',
   'PLAYLIST_FULL',
+  /** L3: Google refused the YouTube access token (expired, scope missing, API off…). */
+  'YOUTUBE_ACCESS_DENIED',
   'TRACK_TOO_LONG',
   'TRACK_NOT_EMBEDDABLE',
   'TRACK_NOT_FOUND',

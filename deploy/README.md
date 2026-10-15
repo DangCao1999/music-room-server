@@ -53,6 +53,17 @@ Khách vẫn vào phòng bằng tên như cũ. Đăng nhập Google cho phép v�
 3. Không cần *Authorized redirect URIs* và không cần client secret.
 4. Chép **Client ID** (dạng `….apps.googleusercontent.com`) vào biến `GOOGLE_CLIENT_ID` của server, rồi khởi động lại server. Web tự nhận Client ID qua `/api/health`.
 
+### Nhập từ YouTube (cần đăng nhập Google)
+
+Nút **Nhập từ YouTube** (tab Thêm bài → Của tôi) đọc playlist và video đã thích của chính người dùng, chỉ đọc. Cấu hình một lần trong project chứa OAuth Client ID:
+
+1. **APIs & Services → Library**: bật **YouTube Data API v3** cho project này (quota nhập bài tính vào project này, khoảng 1 đơn vị cho 50 video).
+2. **Google Auth Platform → Data access** (hoặc *OAuth consent screen → Scopes*): **Add or remove scopes** → thêm `https://www.googleapis.com/auth/youtube.readonly`.
+3. **Audience** (hoặc *Test users*): khi app ở chế độ **Testing**, thêm email của từng người được dùng tính năng này (tối đa 100). Họ sẽ thấy cảnh báo "Google chưa xác minh ứng dụng này" → **Tiếp tục**.
+4. Muốn mọi tài khoản dùng được mà không có cảnh báo: chuyển app sang **In production** và gửi Google xét duyệt scope này (thường vài tuần).
+
+Đăng nhập thường không cần các bước này; quyền YouTube chỉ được hỏi khi bấm "Nhập từ YouTube", và được thu hồi khi đóng hộp nhập.
+
 ## 3. Lấy YouTube API key (không bắt buộc)
 
 1. Vào https://console.cloud.google.com, tạo một project mới.

@@ -22,6 +22,7 @@ import {
 import { DjService } from '../ai/dj.service';
 import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
+import { YouTubeAccountService } from '../music/youtube-account.service';
 import { PlaylistsService } from '../playlists/playlists.service';
 import { UsersService } from '../users/users.service';
 import { SearchService } from '../music/search.service';
@@ -74,6 +75,8 @@ export const DJ_LIMIT = { count: 3, windowMs: 3600_000 };
 export const RECAP_LIMIT = { count: 20, windowMs: 60_000 };
 /** L2: adding songs / creating playlists, per account. */
 export const PLAYLIST_WRITE_LIMIT = { count: 60, windowMs: 60_000 };
+/** L3: each import reads up to ~10 pages from YouTube. */
+export const YT_IMPORT_LIMIT = { count: 20, windowMs: 600_000 };
 
 export function clientIp(socket: Socket, trustProxy: boolean): string {
   if (trustProxy) {
@@ -111,6 +114,7 @@ export class RealtimeGateway
     private readonly djAi: DjService,
     private readonly users: UsersService,
     private readonly personal: PlaylistsService,
+    private readonly youtubeAccount: YouTubeAccountService,
   ) {}
 
   // ------------------------------------------------------------ lifecycle
@@ -529,6 +533,34 @@ export class RealtimeGateway
       const userId = this.requireUser(s);
       this.limit(`playlist-write:${userId}`, PLAYLIST_WRITE_LIMIT);
       return { id: await this.personal.copy(userId, input.shareCode) };
+    });
+  }
+
+  // ------------------------------------------------------------ YouTube import (L3)
+
+  @SubscribeMessage('youtube:library')
+  youtubeLibrary(
+    @ConnectedSocket() s: AppSocket,
+    @MessageBody() body: unknown,
+  ) {
+    return this.run('youtube:library', s, body, (input) => {
+      const userId = this.requireUser(s);
+      this.limit(`yt-import:${userId}`, YT_IMPORT_LIMIT);
+      return this.youtubeAccount.library(userId, input.accessToken);
+    });
+  }
+
+  @SubscribeMessage('youtube:import')
+  youtubeImport(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('youtube:import', s, body, (input) => {
+      const userId = this.requireUser(s);
+      this.limit(`yt-import:${userId}`, YT_IMPORT_LIMIT);
+      return this.youtubeAccount.import(
+        userId,
+        input.accessToken,
+        input.source,
+        input.musicOnly,
+      );
     });
   }
 

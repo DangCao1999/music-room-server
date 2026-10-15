@@ -165,10 +165,13 @@ model Playlist {
   name        String
   description String?
   shareCode   String?        @unique
+  /// L3: where an imported playlist came from ('yt:liked', 'yt:<playlistId>'); re-import updates it
+  source      String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   items       PlaylistItem[]
 
+  @@unique([ownerId, source])
   @@index([ownerId, updatedAt])
 }
 

@@ -4,6 +4,7 @@ import { DEFAULT_TIMING, TIMING, type Timing } from './common/timing';
 import { ENV, type Env } from './config/env';
 import { HealthController } from './health/health.controller';
 import { LibraryService } from './library/library.service';
+import { YouTubeAccountService } from './music/youtube-account.service';
 import { PlaylistsService } from './playlists/playlists.service';
 import { UsersService } from './users/users.service';
 import { AiService } from './ai/ai.service';
@@ -70,6 +71,7 @@ export class AppModule {
         LibraryService,
         UsersService,
         PlaylistsService,
+        YouTubeAccountService,
         RealtimeGateway,
       ],
     };

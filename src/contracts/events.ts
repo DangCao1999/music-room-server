@@ -8,6 +8,7 @@ import type {
   MyRoomView,
   PlaylistSummaryView,
   PlaylistView,
+  YouTubePlaylistView,
   UserView,
   RecapView,
   SuggestionView,
@@ -56,6 +57,17 @@ export interface CommandResults {
   'playlist:get': PlaylistView;
   'playlist:share': { shareCode: string | null };
   'playlist:copy': { id: string };
+  /** `likedImportedId`: our playlist made from the liked videos, if any. */
+  'youtube:library': {
+    playlists: YouTubePlaylistView[];
+    likedImportedId: string | null;
+  };
+  'youtube:import': {
+    playlistId: string;
+    name: string;
+    imported: number;
+    skipped: number;
+  };
   'room:recap': RecapView;
   'playlist:open': { playlistId: string; tracks: TrackSummary[] };
   /** Skipped songs say why (ALREADY_QUEUED, PLAYED_RECENTLY, TRACK_TOO_LONG, QUEUE_LIMIT…). */

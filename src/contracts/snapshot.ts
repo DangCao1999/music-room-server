@@ -46,6 +46,15 @@ export interface PlaylistSummaryView {
   hasTrack?: boolean;
 }
 
+/** L3: one of the user's YouTube playlists. `importedId`: our playlist made from it. */
+export interface YouTubePlaylistView {
+  id: string;
+  title: string;
+  itemCount: number;
+  thumbnailUrl: string | null;
+  importedId: string | null;
+}
+
 /** L2: a whole playlist. `shareCode` is only sent to its owner. */
 export interface PlaylistView {
   id: string;
