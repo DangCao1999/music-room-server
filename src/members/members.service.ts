@@ -151,7 +151,7 @@ export class MembersService {
   async join(
     input: CommandInput<'room:join'>,
     ip: string,
-  ): Promise<Session & { rejoined: boolean }> {
+  ): Promise<Session & { rejoined: boolean; rightsReset: boolean }> {
     const room = await this.roomByCode(input.code);
     const holder = await this.prisma.member.findFirst({
       where: {
@@ -162,8 +162,13 @@ export class MembersService {
       },
     });
     if (holder) {
-      const session = await this.rejoin(room, holder, input.adminPin, ip);
-      return { ...session, rejoined: true };
+      const { session, rightsReset } = await this.rejoin(
+        room,
+        holder,
+        input.adminPin,
+        ip,
+      );
+      return { ...session, rejoined: true, rightsReset };
     }
     const settings = readSettings(room.settings);
     try {
@@ -187,19 +192,34 @@ export class MembersService {
         );
         return m;
       });
-      return { ...this.session(member, room.code), rejoined: false };
+      return {
+        ...this.session(member, room.code),
+        rejoined: false,
+        rightsReset: false,
+      };
     } catch (e) {
       if (isUniqueViolation(e)) throw new AppError('NAME_TAKEN');
       throw e;
     }
   }
 
+  /**
+   * A name is no credential: a non-admin coming back by name keeps their name, colour,
+   * songs and hearts, but control / DJ / player rights go back to what a new member
+   * gets — an admin grants them again, or the PIN (admin:claim) restores everything.
+   * An admin proves themselves with the PIN and keeps everything.
+   */
   private async rejoin(
-    room: { id: string; code: string; adminPinHash: string | null },
+    room: {
+      id: string;
+      code: string;
+      adminPinHash: string | null;
+      settings: Prisma.JsonValue;
+    },
     holder: Member,
     pin: string | undefined,
     ip: string,
-  ): Promise<Session> {
+  ): Promise<{ session: Session; rightsReset: boolean }> {
     if (holder.isDevice || this.presence.onlineMembers(room.id).has(holder.id))
       throw new AppError('NAME_TAKEN');
     if (holder.role === 'ADMIN') {
@@ -211,18 +231,45 @@ export class MembersService {
       const m = await tx.member.findUnique({ where: { id: holder.id } });
       // Left or was kicked in the meantime: the name is free now, so just try again.
       if (!m || m.leftAt || m.kickedAt) throw new AppError('STALE_ITEM');
+      const guestDj = readSettings(room.settings).allowGuestDj;
+      const reset =
+        m.role !== 'ADMIN' &&
+        (m.canControl || m.canPlay || m.canDj !== guestDj);
+      if (reset) {
+        await tx.member.update({
+          where: { id: m.id },
+          data: { canControl: false, canPlay: false, canDj: guestDj },
+        });
+        const ps = await tx.playbackState.findUniqueOrThrow({
+          where: { roomId: room.id },
+        });
+        if (ps.playerMemberId === m.id) {
+          await tx.playbackState.update({
+            where: { roomId: room.id },
+            data: { playerMemberId: null },
+          });
+          ctx.afterCommit(() =>
+            this.playback.releasePlayer(room.id, m.id, 'permission'),
+          );
+        }
+      }
       await this.activity.log(
         tx,
         ctx,
         room.id,
         m,
         'user_rejoin',
-        'đã quay lại phòng',
+        reset
+          ? 'đã quay lại phòng (quyền điều khiển, DJ, máy phát cần được cấp lại)'
+          : 'đã quay lại phòng',
       );
-      return m;
+      return { m, reset };
     });
     // tokenVersion is left alone: the old browser, if it ever comes back, still works.
-    return this.session(member, room.code);
+    return {
+      session: this.session(member.m, room.code),
+      rightsReset: member.reset,
+    };
   }
 
   /** Token → member, only if still active and the token version matches (R-06, R-10, R-11). */

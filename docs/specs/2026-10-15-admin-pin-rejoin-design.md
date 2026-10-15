@@ -1,6 +1,6 @@
 # Admin PIN và vào lại đúng thành viên cũ
 
-Ngày: 2026-10-15 · Contracts: `2026-10-15.2`
+Ngày: 2026-10-15 · Contracts: `2026-10-15.3`
 
 ## Vấn đề
 
@@ -26,12 +26,14 @@ Ngày: 2026-10-15 · Contracts: `2026-10-15.2`
   - tên chưa ai dùng → thành viên mới (như cũ);
   - tên thuộc thành viên **đang online** hoặc thiết bị máy phát → `NAME_TAKEN`;
   - tên thuộc thành viên **offline** (không phải thiết bị):
-    - không phải admin → vào lại đúng thành viên đó (giữ màu, bài, tim, quyền), log
-      `user_rejoin` "đã quay lại phòng";
+    - không phải admin → vào lại đúng thành viên đó (giữ màu, bài, tim). Tên không phải
+      bằng chứng, nên quyền Điều khiển / DJ / Máy phát trở về mức của thành viên mới
+      (`rightsReset: true`; nếu đang là máy phát của phòng thì bỏ luôn). Admin cấp lại,
+      hoặc người đó nhận quyền bằng PIN. Log `user_rejoin`;
     - là admin, phòng chưa có PIN → `PIN_NOT_SET`;
     - là admin, thiếu `adminPin` → `PIN_REQUIRED`; sai → `PIN_INVALID`/`PIN_LOCKED`; đúng → vào lại.
   - Không tăng `tokenVersion`: trình duyệt cũ (nếu còn token) vẫn dùng được.
-  - Kết quả thêm `rejoined: boolean`.
+  - Kết quả thêm `rejoined: boolean` và `rightsReset: boolean`.
 - `admin:claim { pin }`: thành viên (không phải thiết bị) nhập đúng PIN → `ADMIN` + `canControl`
   + `canDj`; log `admin_claim` "đã nhận quyền quản trị bằng mã PIN". Phòng chưa có PIN → `PIN_NOT_SET`.
 - `room:set-pin { pin }`: chỉ admin; đặt hoặc đổi PIN; log `pin_change` "đã đổi mã PIN quản trị".

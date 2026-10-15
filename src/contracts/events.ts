@@ -13,12 +13,16 @@ import type {
 /** Ack payloads returned by commands that carry data. Others return {}. */
 export interface CommandResults {
   'room:create': { token: string; code: string; memberId: string };
-  /** `rejoined`: the name belonged to an offline member and this is them again. */
+  /**
+   * `rejoined`: the name belonged to an offline member and this is them again.
+   * `rightsReset`: coming back by name dropped their control / DJ / player rights.
+   */
   'room:join': {
     token: string;
     code: string;
     memberId: string;
     rejoined: boolean;
+    rightsReset: boolean;
   };
   'room:peek': { name: string; memberCount: number; onlineCount: number };
   'host:register': { token: string; code: string; memberId: string };
