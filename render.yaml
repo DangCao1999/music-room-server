@@ -33,9 +33,9 @@ services:
         sync: false
       - key: DIRECT_URL # Neon direct URL (same, without "-pooler"), used only for migrations
         sync: false
-      - key: PUBLIC_URL # https://<your-app>.vercel.app
+      - key: PUBLIC_URL # the web address, e.g. https://musicroom.io.vn (or https://<your-app>.vercel.app)
         sync: false
-      - key: CORS_ORIGINS # https://<your-app>.vercel.app (comma-separated)
+      - key: CORS_ORIGINS # web addresses allowed to call the API, comma-separated, e.g. https://musicroom.io.vn,https://<your-app>.vercel.app
         sync: false
       - key: YOUTUBE_API_KEY # optional: search + fallback playlist
         sync: false
