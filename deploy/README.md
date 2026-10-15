@@ -153,7 +153,8 @@ Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đ
 
 - **Deploy API trước, web sau.** Lệch phiên bản thì người dùng thấy banner "Có phiên bản mới. Hãy tải lại trang."
 - **Link Preview của Vercel** bị API chặn, trừ khi bạn thêm domain đó vào `CORS_ORIGINS`.
-- **Render ngủ sau 15 phút** không có request. Khi có người mở trang, kết nối mất khoảng 1 phút; trong lúc ngủ, server không tự chuyển bài. Muốn chạy suốt ngày làm việc, xem §8.5.
+- **Render ngủ sau 15 phút** không có request. Khi có người mở trang, kết nối mất khoảng 1 phút; trong lúc ngủ, server không tự chuyển bài. Bật workflow giữ server thức ở §8.7, hoặc xem các lựa chọn khác ở §8.5.
+- **Render và Neon phải cùng ở Singapore.** Nếu một bên ở Mỹ hoặc châu Âu, mỗi truy vấn database tốn thêm vài trăm ms và mọi thao tác đều chậm. Cách chuyển ở §8.6.
 
 ### 8.5 Các lựa chọn khác
 
@@ -166,6 +167,35 @@ Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đ
 | Supabase (database) | Free 500 MB | Project tự tạm dừng sau 1 tuần không hoạt động |
 
 Không dùng Vercel Functions, Netlify hay Cloudflare Workers cho API: server cần giữ kết nối WebSocket và hẹn giờ chạy liên tục.
+
+### 8.6 Chuyển API và database sang Singapore
+
+Render và Neon đều **không đổi được khu vực** của service hoặc database đã tạo, nên phải tạo cái mới rồi chuyển sang.
+
+1. **Neon:** tạo project mới, region **AWS Asia Pacific (Singapore)**, rồi lấy 2 chuỗi kết nối như §8.1.
+   - Dữ liệu phòng cũ không quan trọng thì bỏ qua bước chuyển dữ liệu: server tự tạo bảng khi khởi động.
+   - Muốn giữ dữ liệu, chạy trên máy của bạn (dán chuỗi **không có** `-pooler`, không gửi chuỗi này cho ai):
+     ```bash
+     export OLD_URL='postgresql://…'   # Neon cũ, chuỗi direct
+     export NEW_URL='postgresql://…'   # Neon mới, chuỗi direct
+     docker run --rm -e OLD_URL -e NEW_URL postgres:17-alpine sh -c \
+       'pg_dump "$OLD_URL" --no-owner --no-acl -Fc | pg_restore --no-owner --no-acl -d "$NEW_URL"'
+     ```
+2. **Render:** *New → Blueprint*, chọn repo `music-room-server`, nhánh `develop`. `render.yaml` tạo service `music-room-api` ở **Singapore**. Nhập các biến ở §8.2, dùng chuỗi Neon mới, và chép `YOUTUBE_API_KEY` từ service cũ. `JWT_SECRET` mới được tự sinh, nên mọi người phải nhập lại tên khi vào phòng.
+3. Mở `https://<api-mới>.onrender.com/api/health`, phải thấy `"db":"up"`.
+4. **Vercel:** đổi `NEXT_PUBLIC_SERVER_URL` sang địa chỉ API mới rồi **Redeploy**.
+5. Đổi biến `KEEP_AWAKE_URL` ở §8.7 sang địa chỉ mới.
+6. Dùng ổn vài ngày thì xóa service Render cũ và project Neon cũ.
+
+### 8.7 Giữ API luôn thức (miễn phí)
+
+Workflow [`.github/workflows/keep-awake.yml`](../.github/workflows/keep-awake.yml) gọi `/api/health` mỗi 10 phút nên Render không ngủ. Một service chạy cả tháng mất khoảng 744 giờ, nằm trong 750 giờ miễn phí mỗi tháng. Nếu có thêm service free thứ hai chạy liên tục thì sẽ vượt hạn mức.
+
+1. *GitHub → repo → Settings → Secrets and variables → Actions → Variables*: tạo `KEEP_AWAKE_URL` = `https://<api>.onrender.com` (không có `/` ở cuối).
+2. Workflow theo lịch chỉ chạy từ **nhánh mặc định** của repo, nên file này phải có trên nhánh đó.
+3. GitHub tự tắt workflow theo lịch nếu repo công khai không có hoạt động nào trong 60 ngày. Khi đó vào tab *Actions* bật lại.
+
+Kiểm tra: tab *Actions → keep-awake → Run workflow* chạy tay một lần, bước *Ping* phải xanh.
 
 ## Bản quyền
 
