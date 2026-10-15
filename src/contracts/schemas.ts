@@ -92,7 +92,11 @@ export const C2S = {
     voicePreset: z.enum(VOICE_PRESETS).optional(),
   }),
   'queue:vote-skip': z.strictObject({ queueItemId: Id }),
-  'search:query': z.strictObject({ q: line(LIMITS.query) }),
+  /** `remote: true` skips the server library and asks YouTube (costs search quota). */
+  'search:query': z.strictObject({
+    q: line(LIMITS.query),
+    remote: z.boolean().optional(),
+  }),
   'playback:control': z.strictObject({
     action: z.enum(['play', 'pause', 'skip', 'seek']),
     queueItemId: Id,

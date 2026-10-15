@@ -369,7 +369,7 @@ export class RealtimeGateway
   searchQuery(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('search:query', s, body, async (input, actor) => {
       await this.requireMember(actor);
-      return { results: await this.search.search(actor.memberId, input.q) };
+      return this.search.search(actor.memberId, input.q, input.remote);
     });
   }
 
