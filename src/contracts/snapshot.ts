@@ -53,7 +53,13 @@ export interface NowPlayingView {
 export interface RoomSnapshot {
   version: number;
   serverTime: number;
-  room: { code: string; name: string; settings: RoomSettings };
+  /** `hasPin`: an admin PIN is set, so members can reclaim admin with it. */
+  room: {
+    code: string;
+    name: string;
+    settings: RoomSettings;
+    hasPin: boolean;
+  };
   members: MemberView[];
   /** Upcoming items, already in play order (R-18). */
   queue: QueueItemView[];

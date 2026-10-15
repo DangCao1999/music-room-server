@@ -45,5 +45,8 @@ export const DJ_SOUNDS = [
 ] as const;
 export type DjSound = (typeof DJ_SOUNDS)[number];
 
+/** Admin PIN: 4–8 digits. */
+export const PIN_PATTERN = /^[0-9]{4,8}$/;
+
 /** YouTube IFrame player error codes that mean "this video cannot be played". */
 export const PLAYER_ERROR_CODES = [2, 5, 100, 101, 150] as const;

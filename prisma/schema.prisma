@@ -35,6 +35,8 @@ model Room {
   code         String         @unique
   name         String
   settings     Json
+  /// scrypt hash of the admin PIN (4–8 digits); null for rooms created before PINs returned
+  adminPinHash String?
   createdAt    DateTime       @default(now())
   members      Member[]
   queueItems   QueueItem[]

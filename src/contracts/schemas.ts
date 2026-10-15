@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   DJ_SOUNDS,
   LIMITS,
+  PIN_PATTERN,
   PLAYER_ERROR_CODES,
   REACTIONS,
   VOICE_PRESETS,
@@ -36,6 +37,7 @@ export const RoomCodeSchema = z
   .transform(normalizeRoomCode)
   .pipe(z.string().regex(ROOM_CODE_PATTERN));
 const Id = z.string().min(1).max(64);
+export const PinSchema = z.string().regex(PIN_PATTERN);
 
 export const RoomSettingsSchema = z.strictObject({
   skipThreshold: z.number().min(0.1).max(1),
@@ -66,13 +68,23 @@ export const C2S = {
   'room:create': z.strictObject({
     name: RoomNameSchema,
     displayName: DisplayNameSchema,
+    adminPin: PinSchema,
   }),
   'room:peek': z.strictObject({ code: RoomCodeSchema }),
+  /**
+   * A name held by an offline member brings that member back; an offline admin also
+   * needs `adminPin` (PIN_REQUIRED otherwise).
+   */
   'room:join': z.strictObject({
     code: RoomCodeSchema,
     displayName: DisplayNameSchema,
+    adminPin: PinSchema.optional(),
   }),
   'room:leave': z.strictObject({}),
+  /** Any member who knows the room's PIN becomes admin. */
+  'admin:claim': z.strictObject({ pin: PinSchema }),
+  /** Admin only: set or change the room's PIN. */
+  'room:set-pin': z.strictObject({ pin: PinSchema }),
   /** Anyone with the room code may open the speaker page (no PIN). */
   'host:register': z.strictObject({ code: RoomCodeSchema }),
   'player:claim': z.strictObject({}),

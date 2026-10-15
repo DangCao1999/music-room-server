@@ -85,6 +85,7 @@ export class MembersService {
   // ------------------------------------------------------------ create / join
 
   async create(input: CommandInput<'room:create'>): Promise<Session> {
+    const adminPinHash = await this.auth.hashPin(input.adminPin);
     for (let attempt = 0; attempt < 5; attempt++) {
       const code = generateRoomCode();
       try {
@@ -94,6 +95,7 @@ export class MembersService {
               code,
               name: input.name,
               settings: DEFAULT_SETTINGS,
+              adminPinHash,
               playback: { create: {} },
             },
           });
@@ -140,8 +142,29 @@ export class MembersService {
     return { name: room.name, memberCount, onlineCount: online };
   }
 
-  async join(input: CommandInput<'room:join'>): Promise<Session> {
+  /**
+   * A new name creates a member. A name held by an *offline* member brings that member
+   * back (same colour, songs, hearts, rights) — the way back for someone whose browser
+   * lost its token. An offline admin needs the room PIN; online members and player
+   * devices keep their names (NAME_TAKEN).
+   */
+  async join(
+    input: CommandInput<'room:join'>,
+    ip: string,
+  ): Promise<Session & { rejoined: boolean }> {
     const room = await this.roomByCode(input.code);
+    const holder = await this.prisma.member.findFirst({
+      where: {
+        roomId: room.id,
+        displayNameKey: nameKey(input.displayName),
+        leftAt: null,
+        kickedAt: null,
+      },
+    });
+    if (holder) {
+      const session = await this.rejoin(room, holder, input.adminPin, ip);
+      return { ...session, rejoined: true };
+    }
     const settings = readSettings(room.settings);
     try {
       const member = await this.state.mutate(room.id, async (tx, ctx) => {
@@ -164,11 +187,42 @@ export class MembersService {
         );
         return m;
       });
-      return this.session(member, room.code);
+      return { ...this.session(member, room.code), rejoined: false };
     } catch (e) {
       if (isUniqueViolation(e)) throw new AppError('NAME_TAKEN');
       throw e;
     }
+  }
+
+  private async rejoin(
+    room: { id: string; code: string; adminPinHash: string | null },
+    holder: Member,
+    pin: string | undefined,
+    ip: string,
+  ): Promise<Session> {
+    if (holder.isDevice || this.presence.onlineMembers(room.id).has(holder.id))
+      throw new AppError('NAME_TAKEN');
+    if (holder.role === 'ADMIN') {
+      if (!room.adminPinHash) throw new AppError('PIN_NOT_SET');
+      if (!pin) throw new AppError('PIN_REQUIRED');
+      await this.auth.checkPin(room.adminPinHash, pin, `${ip}|${room.id}`);
+    }
+    const member = await this.state.mutate(room.id, async (tx, ctx) => {
+      const m = await tx.member.findUnique({ where: { id: holder.id } });
+      // Left or was kicked in the meantime: the name is free now, so just try again.
+      if (!m || m.leftAt || m.kickedAt) throw new AppError('STALE_ITEM');
+      await this.activity.log(
+        tx,
+        ctx,
+        room.id,
+        m,
+        'user_rejoin',
+        'đã quay lại phòng',
+      );
+      return m;
+    });
+    // tokenVersion is left alone: the old browser, if it ever comes back, still works.
+    return this.session(member, room.code);
   }
 
   /** Token → member, only if still active and the token version matches (R-06, R-10, R-11). */
@@ -292,6 +346,54 @@ export class MembersService {
     if (!t || t.roomId !== roomId || t.leftAt || t.kickedAt)
       throw new AppError('STALE_ITEM');
     return t;
+  }
+
+  /** Any member (not a player device) who knows the room PIN becomes admin. */
+  async claimAdmin(actor: Actor, pin: string, ip: string): Promise<void> {
+    const room = await this.prisma.room.findUniqueOrThrow({
+      where: { id: actor.roomId },
+    });
+    const member = await this.prisma.member.findUnique({
+      where: { id: actor.memberId },
+    });
+    if (member?.isDevice) throw new AppError('FORBIDDEN');
+    if (member?.role === 'ADMIN') return;
+    await this.auth.checkPin(room.adminPinHash, pin, `${ip}|${room.id}`);
+    await this.state.mutate(actor.roomId, async (tx, ctx) => {
+      const me = await this.state.activeMember(tx, actor);
+      await tx.member.update({
+        where: { id: me.id },
+        data: { role: 'ADMIN', canControl: true, canDj: true },
+      });
+      await this.activity.log(
+        tx,
+        ctx,
+        actor.roomId,
+        me,
+        'admin_claim',
+        'đã nhận quyền quản trị bằng mã PIN',
+      );
+    });
+  }
+
+  /** Admin only: set the PIN (rooms from before PINs) or change it. */
+  async setPin(actor: Actor, pin: string): Promise<void> {
+    const adminPinHash = await this.auth.hashPin(pin);
+    await this.state.mutate(actor.roomId, async (tx, ctx) => {
+      const me = await this.requireAdmin(tx, actor);
+      await tx.room.update({
+        where: { id: actor.roomId },
+        data: { adminPinHash },
+      });
+      await this.activity.log(
+        tx,
+        ctx,
+        actor.roomId,
+        me,
+        'pin_change',
+        'đã đổi mã PIN quản trị',
+      );
+    });
   }
 
   /** R-13 / R-14 */

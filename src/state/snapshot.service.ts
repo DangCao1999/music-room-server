@@ -114,7 +114,12 @@ export class SnapshotService {
     return {
       version: ps.version,
       serverTime: now,
-      room: { code: room.code, name: room.name, settings },
+      room: {
+        code: room.code,
+        name: room.name,
+        settings,
+        hasPin: room.adminPinHash !== null,
+      },
       members,
       queue: ordered.map((o) =>
         toItemView(o._row as ItemWithRelations, o.round),
