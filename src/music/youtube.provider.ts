@@ -56,7 +56,8 @@ export class YouTubeProvider {
     return Boolean(this.env.YOUTUBE_API_KEY) && !this.keyInvalid;
   }
 
-  private get apiUsable(): boolean {
+  /** Key present, valid, and not backing off after a quota error. */
+  get apiUsable(): boolean {
     return this.searchEnabled && Date.now() >= this.quotaUntil;
   }
 
