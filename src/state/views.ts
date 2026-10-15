@@ -34,6 +34,8 @@ export function toTrackSummary(t: Track): TrackSummary {
     channel: t.channel,
     durationSec: t.durationSec,
     thumbnailUrl: t.thumbnailUrl,
+    artist: t.artist,
+    song: t.song,
   };
 }
 
@@ -51,6 +53,13 @@ export function toItemView(i: ItemWithRelations, round: number): QueueItemView {
     wishMessage: i.wishMessage,
     voicePreset: (i.voicePreset as VoicePreset | null) ?? null,
     addedAt: i.addedAt.toISOString(),
+    // Older automatic items predate the column: no member means the fallback playlist.
+    auto:
+      i.auto === 'radio' || i.auto === 'fallback'
+        ? i.auto
+        : i.addedById === null
+          ? 'fallback'
+          : null,
   };
 }
 

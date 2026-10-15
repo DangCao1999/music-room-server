@@ -128,6 +128,10 @@ export class ApiDataRetentionService implements OnModuleInit, OnModuleDestroy {
         thumbnailUrl: null,
         durationSec: null,
         searchKey: null,
+        artist: null,
+        song: null,
+        artistKey: null,
+        songKey: null,
         embeddable: false,
       },
     });

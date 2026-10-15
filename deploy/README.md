@@ -17,6 +17,8 @@ Sửa file `.env`:
 |---|---|
 | `PUBLIC_URL` | Địa chỉ mọi người sẽ dùng, ví dụ `http://192.168.1.20:8080`. Đây là IP trong mạng LAN của máy chạy Docker. Xem IP bằng `ipconfig getifaddr en0` (macOS) hoặc `hostname -I` (Linux) |
 | `YOUTUBE_API_KEY` | Không bắt buộc. Có key thì dùng được **tìm kiếm** và **playlist dự phòng**; không có thì chỉ dán link YouTube |
+| `LASTFM_API_KEY` | Không bắt buộc. **Gợi ý tiếp theo** và **Radio tự động** có thêm "bài tương tự" từ Last.fm (miễn phí, tạo ở last.fm/api/account/create) |
+| `GEMINI_API_KEY`, `GROQ_API_KEY` | Không bắt buộc. AI miễn phí để tách tên nghệ sĩ / bài từ tiêu đề YouTube (thử Gemini trước, lỗi thì Groq). Chỉ gửi tiêu đề và tên kênh |
 
 ```bash
 docker compose up -d
@@ -133,6 +135,8 @@ Không cần tự tạo bảng: server tự chạy migration mỗi lần khởi 
 | `NODE_VERSION` | `22` | ✅ |
 | `DATA_DIR` | `/tmp/music-room` | nên đặt |
 | `YOUTUBE_API_KEY` | key YouTube Data API | tùy chọn |
+| `LASTFM_API_KEY` | key Last.fm | tùy chọn |
+| `GEMINI_API_KEY` / `GROQ_API_KEY` | key AI miễn phí (Google AI Studio / Groq) | tùy chọn |
 
 Cài đặt khác:
 - *Build:* `npm install --include=dev && npm run build`

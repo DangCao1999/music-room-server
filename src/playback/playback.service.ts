@@ -27,6 +27,7 @@ import {
 import { readSettings } from '../state/settings';
 import { SnapshotService } from '../state/snapshot.service';
 import { estimatePosition } from '../state/views';
+import { SuggestService } from '../music/suggest.service';
 import { pickFallback } from './fallback';
 import { LeaseService } from './lease.service';
 import { countVotes, requiredVotes } from './skip-votes';
@@ -52,6 +53,7 @@ export class PlaybackService
     private readonly activity: ActivityService,
     private readonly snapshots: SnapshotService,
     @Inject(TIMING) private readonly timing: Timing,
+    private readonly suggest: SuggestService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -116,8 +118,13 @@ export class PlaybackService
       })),
       await lastPlayedMap(tx, roomId),
     );
+    // Members' songs first; an empty queue goes to the radio (A4), then the fallback playlist.
     const nextId =
-      ordered[0]?.id ?? (await this.createFallbackItem(tx, roomId, settings));
+      ordered[0]?.id ??
+      (settings.autoRadio
+        ? await this.createRadioItem(tx, roomId, settings, ctx.now)
+        : null) ??
+      (await this.createFallbackItem(tx, roomId, settings));
 
     if (nextId) {
       const item = await tx.queueItem.update({
@@ -131,6 +138,8 @@ export class PlaybackService
           data: { lastPlayedAt: ctx.now },
         });
       }
+      // Have the radio's Last.fm picks ready for when this song ends (outside the transaction).
+      ctx.afterCommit(() => this.suggest.warmFor(item.trackId));
       await tx.playbackState.update({
         where: { roomId },
         data: {
@@ -153,6 +162,27 @@ export class PlaybackService
     }
     ctx.afterCommit(() => this.afterChange(roomId));
     return nextId;
+  }
+
+  /** A4: a known song like the last one (no YouTube quota), not repeated within 3 hours. */
+  private async createRadioItem(
+    tx: Tx,
+    roomId: string,
+    settings: ReturnType<typeof readSettings>,
+    now: Date,
+  ): Promise<string | null> {
+    const pick = await this.suggest.radioPick(tx, roomId, settings, now);
+    if (!pick) return null;
+    const item = await tx.queueItem.create({
+      data: {
+        roomId,
+        trackId: pick,
+        addedById: null,
+        auto: 'radio',
+        status: 'QUEUED',
+      },
+    });
+    return item.id;
   }
 
   /** R-31: random fallback track not among the last 20 fallback picks. */
@@ -197,7 +227,13 @@ export class PlaybackService
     );
     if (!pick) return null;
     const item = await tx.queueItem.create({
-      data: { roomId, trackId: pick, addedById: null, status: 'QUEUED' },
+      data: {
+        roomId,
+        trackId: pick,
+        addedById: null,
+        auto: 'fallback',
+        status: 'QUEUED',
+      },
     });
     return item.id;
   }

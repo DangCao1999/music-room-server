@@ -12,7 +12,21 @@ export interface TrackSummary {
   channel: string | null;
   durationSec: number | null;
   thumbnailUrl: string | null;
+  /** AI1: parsed from the title; null until known. */
+  artist: string | null;
+  song: string | null;
 }
+
+/** Why a song is suggested (A3). */
+export type SuggestionReason = 'similar' | 'room' | 'artist' | 'popular';
+
+/**
+ * `track`: a song the server knows, added in one tap. `search`: a song Last.fm suggests
+ * that has no YouTube video here yet ("Tìm & thêm" runs a normal search).
+ */
+export type SuggestionView =
+  | { kind: 'track'; track: TrackSummary; reason: SuggestionReason }
+  | { kind: 'search'; artist: string; song: string; reason: 'similar' };
 
 export interface MemberView {
   id: string;
@@ -42,6 +56,8 @@ export interface QueueItemView {
   track: TrackSummary;
   /** null = fallback playlist ("Playlist dự phòng"). */
   addedBy: { id: string; displayName: string } | null;
+  /** Set when the room added it itself (addedBy is null): radio (A4) or fallback playlist. */
+  auto: 'radio' | 'fallback' | null;
   /** 1-based fair-queue round (0 for pinned / now playing). */
   round: number;
   hearts: number;

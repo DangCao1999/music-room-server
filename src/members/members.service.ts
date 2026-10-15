@@ -566,6 +566,9 @@ export class MembersService {
         'đã thay đổi cài đặt phòng',
       );
       await this.playback.reevaluateSkip(tx, ctx, actor.roomId);
+      // Radio just switched on in a silent room: start it now (A4).
+      if (next.autoRadio && !current.autoRadio)
+        await this.playback.startIfIdle(tx, ctx, actor.roomId);
       if (
         next.fallbackPlaylistUrl &&
         next.fallbackPlaylistUrl !== current.fallbackPlaylistUrl

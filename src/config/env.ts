@@ -18,6 +18,15 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().refine((v) => /^postgres(ql)?:\/\//.test(v)),
   PUBLIC_URL: httpUrl,
   YOUTUBE_API_KEY: optionalString,
+  /** A3 / A4 / AI1: Last.fm similar tracks and canonical names (free key). */
+  LASTFM_API_KEY: optionalString,
+  /** Free AI, tried in this order: Gemini → Groq → OpenRouter (each only with a key). */
+  GEMINI_API_KEY: optionalString,
+  GEMINI_MODEL: z.string().default('gemini-flash-lite-latest'),
+  GROQ_API_KEY: optionalString,
+  GROQ_MODEL: z.string().default('llama-3.1-8b-instant'),
+  OPENROUTER_API_KEY: optionalString,
+  OPENROUTER_MODEL: optionalString,
   JWT_SECRET: optionalString.refine((v) => v === undefined || v.length >= 32),
   DATA_DIR: z.string().default('/data'),
   /** R-43: room:create / room:join / host:register per IP per minute. */

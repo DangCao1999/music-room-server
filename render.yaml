@@ -39,3 +39,9 @@ services:
         sync: false
       - key: YOUTUBE_API_KEY # optional: search + fallback playlist
         sync: false
+      - key: LASTFM_API_KEY # optional: similar songs (suggestions, radio)
+        sync: false
+      - key: GEMINI_API_KEY # optional: free AI, tried first
+        sync: false
+      - key: GROQ_API_KEY # optional: free AI, fallback
+        sync: false
