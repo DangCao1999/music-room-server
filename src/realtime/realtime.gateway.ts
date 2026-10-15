@@ -22,6 +22,7 @@ import {
 import { DjService } from '../ai/dj.service';
 import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
+import { PlaylistsService } from '../playlists/playlists.service';
 import { UsersService } from '../users/users.service';
 import { SearchService } from '../music/search.service';
 import { LyricsService } from '../music/lyrics.service';
@@ -71,6 +72,8 @@ export const LYRICS_LIMIT = { count: 20, windowMs: 60_000 };
 /** AI2: free AI quota is shared by the whole server. */
 export const DJ_LIMIT = { count: 3, windowMs: 3600_000 };
 export const RECAP_LIMIT = { count: 20, windowMs: 60_000 };
+/** L2: adding songs / creating playlists, per account. */
+export const PLAYLIST_WRITE_LIMIT = { count: 60, windowMs: 60_000 };
 
 export function clientIp(socket: Socket, trustProxy: boolean): string {
   if (trustProxy) {
@@ -107,6 +110,7 @@ export class RealtimeGateway
     private readonly lyrics: LyricsService,
     private readonly djAi: DjService,
     private readonly users: UsersService,
+    private readonly personal: PlaylistsService,
   ) {}
 
   // ------------------------------------------------------------ lifecycle
@@ -425,6 +429,106 @@ export class RealtimeGateway
       const imported = await this.users.importFavorites(userId, input.videoIds);
       if (s.data.bound) await this.library.pushIds(s.data.bound.memberId);
       return { imported };
+    });
+  }
+
+  // ------------------------------------------------------------ playlists (L2)
+
+  @SubscribeMessage('playlist:mine')
+  playlistMine(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('playlist:mine', s, body, async (input) => ({
+      playlists: await this.personal.mine(this.requireUser(s), input.trackId),
+    }));
+  }
+
+  @SubscribeMessage('playlist:create')
+  playlistCreate(
+    @ConnectedSocket() s: AppSocket,
+    @MessageBody() body: unknown,
+  ) {
+    return this.run('playlist:create', s, body, async (input) => {
+      const userId = this.requireUser(s);
+      this.limit(`playlist-write:${userId}`, PLAYLIST_WRITE_LIMIT);
+      return {
+        id: await this.personal.create(userId, input.name, input.trackIds),
+      };
+    });
+  }
+
+  @SubscribeMessage('playlist:update')
+  playlistUpdate(
+    @ConnectedSocket() s: AppSocket,
+    @MessageBody() body: unknown,
+  ) {
+    return this.run('playlist:update', s, body, (input) =>
+      this.personal.update(this.requireUser(s), input.id, input),
+    );
+  }
+
+  @SubscribeMessage('playlist:delete')
+  playlistDelete(
+    @ConnectedSocket() s: AppSocket,
+    @MessageBody() body: unknown,
+  ) {
+    return this.run('playlist:delete', s, body, (input) =>
+      this.personal.remove(this.requireUser(s), input.id),
+    );
+  }
+
+  @SubscribeMessage('playlist:set-track')
+  playlistSetTrack(
+    @ConnectedSocket() s: AppSocket,
+    @MessageBody() body: unknown,
+  ) {
+    return this.run('playlist:set-track', s, body, (input) => {
+      const userId = this.requireUser(s);
+      this.limit(`playlist-write:${userId}`, PLAYLIST_WRITE_LIMIT);
+      return this.personal.setTrack(
+        userId,
+        input.id,
+        input.trackId,
+        input.saved,
+      );
+    });
+  }
+
+  @SubscribeMessage('playlist:move')
+  playlistMove(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('playlist:move', s, body, (input) =>
+      this.personal.move(
+        this.requireUser(s),
+        input.id,
+        input.trackId,
+        input.to,
+      ),
+    );
+  }
+
+  @SubscribeMessage('playlist:get')
+  playlistGet(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('playlist:get', s, body, (input) => {
+      this.limit(`playlist-get:${s.data.ip}`, PEEK_LIMIT);
+      return this.personal.get(s.data.userId, input);
+    });
+  }
+
+  @SubscribeMessage('playlist:share')
+  playlistShare(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('playlist:share', s, body, async (input) => ({
+      shareCode: await this.personal.share(
+        this.requireUser(s),
+        input.id,
+        input.enabled,
+      ),
+    }));
+  }
+
+  @SubscribeMessage('playlist:copy')
+  playlistCopy(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('playlist:copy', s, body, async (input) => {
+      const userId = this.requireUser(s);
+      this.limit(`playlist-write:${userId}`, PLAYLIST_WRITE_LIMIT);
+      return { id: await this.personal.copy(userId, input.shareCode) };
     });
   }
 

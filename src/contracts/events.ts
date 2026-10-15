@@ -6,6 +6,8 @@ import type {
   LibraryItemView,
   LyricsView,
   MyRoomView,
+  PlaylistSummaryView,
+  PlaylistView,
   UserView,
   RecapView,
   SuggestionView,
@@ -49,6 +51,11 @@ export interface CommandResults {
   'auth:me': { user: UserView | null };
   'me:rooms': { rooms: MyRoomView[] };
   'me:favorites-import': { imported: number };
+  'playlist:mine': { playlists: PlaylistSummaryView[] };
+  'playlist:create': { id: string };
+  'playlist:get': PlaylistView;
+  'playlist:share': { shareCode: string | null };
+  'playlist:copy': { id: string };
   'room:recap': RecapView;
   'playlist:open': { playlistId: string; tracks: TrackSummary[] };
   /** Skipped songs say why (ALREADY_QUEUED, PLAYED_RECENTLY, TRACK_TOO_LONG, QUEUE_LIMIT…). */

@@ -5,6 +5,8 @@ import {
   LIBRARY_SORTS,
   LIMITS,
   LOOKUP_MAX_IDS,
+  MAX_PLAYLIST_TRACKS,
+  SHARE_CODE,
   PIN_PATTERN,
   PLAYER_ERROR_CODES,
   REACTIONS,
@@ -40,6 +42,7 @@ export const RoomCodeSchema = z
   .transform(normalizeRoomCode)
   .pipe(z.string().regex(ROOM_CODE_PATTERN));
 const Id = z.string().min(1).max(64);
+const TrackIdSchema = z.string().regex(/^youtube:[A-Za-z0-9_-]{11}$/);
 export const PinSchema = z.string().regex(PIN_PATTERN);
 
 export const RoomSettingsSchema = z.strictObject({
@@ -169,6 +172,36 @@ export const C2S = {
   'me:favorites-import': z.strictObject({
     videoIds: z.array(z.string().regex(VIDEO_ID)).max(300),
   }),
+  /** L2: personal playlists (signed in), and shared ones by code. */
+  'playlist:mine': z.strictObject({ trackId: TrackIdSchema.optional() }),
+  'playlist:create': z.strictObject({
+    name: line(LIMITS.playlistName),
+    trackIds: z.array(TrackIdSchema).max(MAX_PLAYLIST_TRACKS).optional(),
+  }),
+  'playlist:update': z
+    .strictObject({
+      id: Id,
+      name: line(LIMITS.playlistName).optional(),
+      description: line(LIMITS.playlistDescription, 0).optional(),
+    })
+    .refine((p) => p.name !== undefined || p.description !== undefined),
+  'playlist:delete': z.strictObject({ id: Id }),
+  'playlist:set-track': z.strictObject({
+    id: Id,
+    trackId: TrackIdSchema,
+    saved: z.boolean(),
+  }),
+  'playlist:move': z.strictObject({
+    id: Id,
+    trackId: TrackIdSchema,
+    to: z.number().int().min(0).max(MAX_PLAYLIST_TRACKS),
+  }),
+  'playlist:get': z.union([
+    z.strictObject({ id: Id }),
+    z.strictObject({ shareCode: z.string().regex(SHARE_CODE) }),
+  ]),
+  'playlist:share': z.strictObject({ id: Id, enabled: z.boolean() }),
+  'playlist:copy': z.strictObject({ shareCode: z.string().regex(SHARE_CODE) }),
   /** AI2: songs for a request in plain words ("nhạc chill chiều thứ 6"). */
   'dj:ask': z.strictObject({ prompt: line(LIMITS.djPrompt) }),
   /** A8: what the room played since `since` (at most 31 days back). */
@@ -229,4 +262,13 @@ export const ANONYMOUS_COMMANDS: readonly CommandName[] = [
   'auth:me',
   'me:rooms',
   'me:favorites-import',
+  'playlist:mine',
+  'playlist:create',
+  'playlist:update',
+  'playlist:delete',
+  'playlist:set-track',
+  'playlist:move',
+  'playlist:get',
+  'playlist:share',
+  'playlist:copy',
 ];
