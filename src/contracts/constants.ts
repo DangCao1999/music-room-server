@@ -8,6 +8,8 @@ export const LIMITS = {
   input: 2048,
   query: 100,
   djPrompt: 200,
+  playlistName: 60,
+  playlistDescription: 200,
   wish: 200,
   chat: 500,
   rawText: 4000,
@@ -53,6 +55,11 @@ export const LIBRARY_LIMIT = 50;
 export const LOOKUP_MAX_IDS = 50;
 /** A5: songs added from a playlist in one go (each member's queue limit still applies). */
 export const ADD_MANY_MAX = 20;
+
+/** L2: per user / per playlist. */
+export const MAX_PLAYLISTS = 50;
+export const MAX_PLAYLIST_TRACKS = 200;
+export const SHARE_CODE = /^[A-Za-z0-9]{10}$/;
 
 /** Admin PIN: 4–8 digits. */
 export const PIN_PATTERN = /^[0-9]{4,8}$/;

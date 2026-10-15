@@ -103,6 +103,7 @@ model Track {
   queueItems    QueueItem[]
   favorites     Favorite[]
   userFavorites UserFavorite[]
+  playlistItems PlaylistItem[]
 
   @@index([artistKey])
 }
@@ -153,6 +154,36 @@ model User {
   members      Member[]
   ownedRooms   Room[]
   favorites    UserFavorite[]
+  playlists    Playlist[]
+}
+
+/// L2: a signed-in user's playlist. shareCode set = anyone with the /p/<code> link can see it.
+model Playlist {
+  id          String         @id @default(cuid())
+  ownerId     String
+  owner       User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  shareCode   String?        @unique
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  items       PlaylistItem[]
+
+  @@index([ownerId, updatedAt])
+}
+
+/// L2: a song in a playlist, once per playlist, in `position` order.
+model PlaylistItem {
+  id         String   @id @default(cuid())
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  trackId    String
+  track      Track    @relation(fields: [trackId], references: [id])
+  position   Int
+  addedAt    DateTime @default(now())
+
+  @@unique([playlistId, trackId])
+  @@index([playlistId, position])
 }
 
 /// L1: saved songs of a signed-in user, across rooms and devices.

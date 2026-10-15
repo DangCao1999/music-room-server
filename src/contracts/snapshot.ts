@@ -35,6 +35,28 @@ export interface MyRoomView {
   lastVisitedAt: string;
 }
 
+/** L2: a playlist in a list. `hasTrack` answers "is this song in it?" for "Lưu vào…". */
+export interface PlaylistSummaryView {
+  id: string;
+  name: string;
+  trackCount: number;
+  coverUrl: string | null;
+  shared: boolean;
+  updatedAt: string;
+  hasTrack?: boolean;
+}
+
+/** L2: a whole playlist. `shareCode` is only sent to its owner. */
+export interface PlaylistView {
+  id: string;
+  name: string;
+  description: string | null;
+  owner: { name: string };
+  isOwner: boolean;
+  shareCode: string | null;
+  tracks: TrackSummary[];
+}
+
 /** A7: `synced` lines carry their start time in seconds; `plain` is the text alone. */
 export interface LyricsView {
   synced: { t: number; text: string }[] | null;
