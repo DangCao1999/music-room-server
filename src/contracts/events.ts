@@ -62,6 +62,9 @@ export interface CommandResults {
     playlists: YouTubePlaylistView[];
     likedImportedId: string | null;
   };
+  /** `topArtists`: display names, best first. */
+  'taste:for-me': { items: SuggestionView[]; topArtists: string[] };
+  'taste:save-mix': { playlistId: string; count: number };
   'youtube:import': {
     playlistId: string;
     name: string;

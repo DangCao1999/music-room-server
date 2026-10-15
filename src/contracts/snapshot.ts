@@ -73,14 +73,29 @@ export interface LyricsView {
 }
 
 /** Why a song is suggested (A3). */
-export type SuggestionReason = 'similar' | 'room' | 'artist' | 'popular' | 'dj';
+export type SuggestionReason =
+  | 'similar'
+  | 'room'
+  | 'artist'
+  | 'popular'
+  | 'dj'
+  /** L5: for one person — "Vì bạn hay nghe X", "Giống gu X", "Người cùng gu cũng thích". */
+  | 'taste'
+  | 'taste-similar'
+  | 'peers';
 
 /**
  * `track`: a song the server knows, added in one tap. `search`: a song Last.fm suggests
  * that has no YouTube video here yet ("Tìm & thêm" runs a normal search).
  */
 export type SuggestionView =
-  | { kind: 'track'; track: TrackSummary; reason: SuggestionReason }
+  | {
+      kind: 'track';
+      track: TrackSummary;
+      reason: SuggestionReason;
+      /** L5: the artist behind a taste reason. */
+      because?: string;
+    }
   | { kind: 'search'; artist: string; song: string; reason: 'similar' | 'dj' };
 
 /** A8: what a room played over a period. */
