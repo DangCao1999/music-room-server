@@ -4,6 +4,7 @@ import { DEFAULT_TIMING, TIMING, type Timing } from './common/timing';
 import { ENV, type Env } from './config/env';
 import { HealthController } from './health/health.controller';
 import { MembersService } from './members/members.service';
+import { ApiDataRetentionService } from './music/api-data-retention.service';
 import { PlaylistService } from './music/playlist.service';
 import { SearchService } from './music/search.service';
 import { TrackCacheService } from './music/track-cache.service';
@@ -41,6 +42,7 @@ export class AppModule {
         YouTubeProvider,
         TrackCacheService,
         SearchService,
+        ApiDataRetentionService,
         PlaylistService,
         PlaybackService,
         QueueService,

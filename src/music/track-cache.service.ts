@@ -1,11 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '../common/app-error';
 import type { Track } from '../generated/prisma/client';
+import { normalizeQuery } from '../contracts';
 import { PrismaService } from '../prisma/prisma.service';
 import { type TrackInfo, YouTubeProvider } from './youtube.provider';
 
 export const TRACK_TTL_MS = 7 * 24 * 3600_000;
 export const trackId = (videoId: string) => `youtube:${videoId}`;
+
+/** What library search matches against: title and channel, accents and case removed. */
+export const trackSearchKey = (title: string, channel: string | null) =>
+  normalizeQuery(`${title} ${channel ?? ''}`);
 
 /** Track metadata cache (R-36): 7 days, refreshed when a stale track is added again. */
 @Injectable()
@@ -41,6 +46,7 @@ export class TrackCacheService {
       thumbnailUrl: info.thumbnailUrl,
       embeddable: info.embeddable,
       fetchedAt: new Date(),
+      searchKey: trackSearchKey(info.title, info.channel),
     };
     return this.prisma.track.upsert({
       where: { id: trackId(info.externalId) },

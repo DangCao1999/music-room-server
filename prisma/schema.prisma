@@ -80,6 +80,8 @@ model Track {
   thumbnailUrl String?
   embeddable   Boolean     @default(true)
   fetchedAt    DateTime    @default(now())
+  /// normalizeQuery(title + channel): lets search find known songs without YouTube quota
+  searchKey    String?
   queueItems   QueueItem[]
 }
 
