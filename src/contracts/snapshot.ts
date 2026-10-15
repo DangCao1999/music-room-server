@@ -17,6 +17,12 @@ export interface TrackSummary {
   song: string | null;
 }
 
+/** A7: `synced` lines carry their start time in seconds; `plain` is the text alone. */
+export interface LyricsView {
+  synced: { t: number; text: string }[] | null;
+  plain: string | null;
+}
+
 /** Why a song is suggested (A3). */
 export type SuggestionReason = 'similar' | 'room' | 'artist' | 'popular';
 

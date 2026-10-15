@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { AppError } from '../common/app-error';
 import { RateLimiter } from '../common/rate-limiter';
-import { type CommandInput, parseYouTubeVideo } from '../contracts';
+import {
+  type CommandInput,
+  type CommandResults,
+  type ErrorCode,
+  parseYouTubeVideo,
+  type RoomSettings,
+} from '../contracts';
 import type { Member, QueueItem, Track } from '../generated/prisma/client';
 import { TrackCacheService } from '../music/track-cache.service';
 import { PlaybackService } from '../playback/playback.service';
@@ -57,6 +63,55 @@ export class QueueService {
     if (item.status !== 'QUEUED') throw new AppError('STALE_ITEM');
   }
 
+  /**
+   * Room rules for one song a member adds: length (R-17) and duplicates (A6). A song
+   * already waiting or on air is always refused; one that started within
+   * repeatGapMinutes is refused too, except for admins.
+   */
+  private async checkAddable(
+    tx: Tx,
+    roomId: string,
+    me: Member,
+    track: Track,
+    settings: RoomSettings,
+    now: Date,
+  ): Promise<void> {
+    const max = settings.maxTrackDurationSec;
+    if (max > 0 && track.durationSec !== null && track.durationSec > max) {
+      throw new AppError('TRACK_TOO_LONG', {
+        duration: track.durationSec,
+        max,
+      });
+    }
+    const waiting = await tx.queueItem.count({
+      where: {
+        roomId,
+        trackId: track.id,
+        status: { in: ['QUEUED', 'PLAYING'] },
+      },
+    });
+    if (waiting > 0) throw new AppError('ALREADY_QUEUED');
+    const gap = settings.repeatGapMinutes;
+    if (gap > 0 && me.role !== 'ADMIN') {
+      const last = await tx.queueItem.findFirst({
+        where: {
+          roomId,
+          trackId: track.id,
+          startedAt: { gte: new Date(now.getTime() - gap * 60_000) },
+        },
+        orderBy: { startedAt: 'desc' },
+        select: { startedAt: true },
+      });
+      if (last?.startedAt) {
+        const minutes = Math.max(
+          1,
+          Math.round((now.getTime() - last.startedAt.getTime()) / 60_000),
+        );
+        throw new AppError('PLAYED_RECENTLY', { minutes, gap });
+      }
+    }
+  }
+
   async add(
     actor: Actor,
     input: CommandInput<'queue:add'>,
@@ -100,13 +155,7 @@ export class QueueService {
       if (mine >= settings.maxQueuedPerMember) {
         throw new AppError('QUEUE_LIMIT', { max: settings.maxQueuedPerMember });
       }
-      const max = settings.maxTrackDurationSec;
-      if (max > 0 && track.durationSec !== null && track.durationSec > max) {
-        throw new AppError('TRACK_TOO_LONG', {
-          duration: track.durationSec,
-          max,
-        });
-      }
+      await this.checkAddable(tx, actor.roomId, me, track, settings, ctx.now);
 
       const wish = input.wishMessage ? input.wishMessage : null;
       const item = await tx.queueItem.create({
@@ -129,6 +178,93 @@ export class QueueService {
       );
       await this.playback.startIfIdle(tx, ctx, actor.roomId);
       return { queueItemId: item.id, title: track.title };
+    });
+  }
+
+  /**
+   * A5: several known songs (from a playlist) in the order given, until the member's
+   * queue limit. Songs the room's rules refuse are skipped with the reason; the fair
+   * queue still interleaves them with everyone else's.
+   */
+  async addMany(
+    actor: Actor,
+    trackIds: string[],
+  ): Promise<CommandResults['queue:add-many']> {
+    const rl = this.limiter.hit(
+      `add:${actor.memberId}`,
+      ADD_LIMIT.count,
+      ADD_LIMIT.windowMs,
+      Date.now(),
+    );
+    if (!rl.ok)
+      throw new AppError('RATE_LIMITED', { seconds: rl.retryAfterSec });
+    const ids = [...new Set(trackIds)];
+    const known = await this.prisma.track.findMany({
+      where: { id: { in: ids }, embeddable: true, title: { not: '' } },
+    });
+    const byId = new Map(known.map((t) => [t.id, t]));
+
+    return this.state.mutate(actor.roomId, async (tx, ctx) => {
+      const me = await this.state.activeMember(tx, actor);
+      if (me.isDevice) throw new AppError('FORBIDDEN');
+      const room = await tx.room.findUniqueOrThrow({
+        where: { id: actor.roomId },
+      });
+      const settings = readSettings(room.settings);
+      let mine = await tx.queueItem.count({
+        where: { roomId: actor.roomId, addedById: me.id, status: 'QUEUED' },
+      });
+      const skipped: { trackId: string; reason: ErrorCode }[] = [];
+      const titles: string[] = [];
+      for (const id of ids) {
+        const track = byId.get(id);
+        if (!track) {
+          skipped.push({ trackId: id, reason: 'TRACK_NOT_FOUND' });
+          continue;
+        }
+        if (mine >= settings.maxQueuedPerMember) {
+          skipped.push({ trackId: id, reason: 'QUEUE_LIMIT' });
+          continue;
+        }
+        try {
+          await this.checkAddable(
+            tx,
+            actor.roomId,
+            me,
+            track,
+            settings,
+            ctx.now,
+          );
+        } catch (e) {
+          if (!(e instanceof AppError)) throw e;
+          skipped.push({ trackId: id, reason: e.code });
+          continue;
+        }
+        await tx.queueItem.create({
+          data: {
+            roomId: actor.roomId,
+            trackId: track.id,
+            addedById: me.id,
+            status: 'QUEUED',
+          },
+        });
+        mine += 1;
+        titles.push(track.title);
+      }
+      if (titles.length) {
+        await this.activity.log(
+          tx,
+          ctx,
+          actor.roomId,
+          me,
+          'track_add',
+          titles.length === 1
+            ? `đã thêm "${titles[0]}"`
+            : `đã thêm ${titles.length} bài từ playlist`,
+        );
+        await this.playback.startIfIdle(tx, ctx, actor.roomId);
+      }
+      return { added: titles.length, skipped };
     });
   }
 

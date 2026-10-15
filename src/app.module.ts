@@ -6,6 +6,7 @@ import { HealthController } from './health/health.controller';
 import { LibraryService } from './library/library.service';
 import { AiService } from './ai/ai.service';
 import { LastFmService } from './music/lastfm.service';
+import { LyricsService } from './music/lyrics.service';
 import { SuggestService } from './music/suggest.service';
 import { TrackMetaService } from './music/track-meta.service';
 import { MembersService } from './members/members.service';
@@ -50,6 +51,7 @@ export class AppModule {
         LastFmService,
         TrackMetaService,
         SuggestService,
+        LyricsService,
         SearchService,
         ApiDataRetentionService,
         PlaylistService,

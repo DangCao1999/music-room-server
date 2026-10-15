@@ -1,8 +1,10 @@
+import type { ErrorCode } from './errors';
 import type {
   ActivityLogView,
   ChatMessageView,
   DjEvent,
   LibraryItemView,
+  LyricsView,
   SuggestionView,
   PlayerCommand,
   PlayerRevokeReason,
@@ -39,6 +41,14 @@ export interface CommandResults {
   };
   'library:room': { items: LibraryItemView[] };
   'suggest:next': { items: SuggestionView[] };
+  'playlist:open': { playlistId: string; tracks: TrackSummary[] };
+  /** Skipped songs say why (ALREADY_QUEUED, PLAYED_RECENTLY, TRACK_TOO_LONG, QUEUE_LIMIT…). */
+  'queue:add-many': {
+    added: number;
+    skipped: { trackId: string; reason: ErrorCode }[];
+  };
+  /** null when no lyrics were found. */
+  'lyrics:get': { lyrics: LyricsView | null };
   'favorite:set': { saved: boolean };
   /** Newest first. */
   'favorite:list': { tracks: TrackSummary[] };

@@ -11,6 +11,14 @@ export const ERROR_CODES = [
   /** The room has no admin PIN yet (rooms created before PINs returned). */
   'PIN_NOT_SET',
   'QUEUE_LIMIT',
+  /** A6: the song is already waiting or on air. */
+  'ALREADY_QUEUED',
+  /** A6: the song started less than `gap` minutes ago (`minutes` = how long ago). */
+  'PLAYED_RECENTLY',
+  /** A5: reading a playlist needs YOUTUBE_API_KEY on the server. */
+  'PLAYLIST_UNAVAILABLE',
+  /** A5: no playable video (empty, private or all blocked from embedding). */
+  'PLAYLIST_EMPTY',
   'TRACK_TOO_LONG',
   'TRACK_NOT_EMBEDDABLE',
   'TRACK_NOT_FOUND',

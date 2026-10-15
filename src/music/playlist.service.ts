@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { parseYouTubePlaylist } from '../contracts';
+import { AppError } from '../common/app-error';
+import { type CommandResults, parseYouTubePlaylist } from '../contracts';
+import { toTrackSummary } from '../state/views';
 import { PrismaService } from '../prisma/prisma.service';
 import { TrackCacheService } from './track-cache.service';
 import { type TrackInfo, YouTubeProvider } from './youtube.provider';
@@ -53,5 +55,34 @@ export class PlaylistService {
       update: { videoIds: playable, fetchedAt: new Date() },
     });
     return playable;
+  }
+
+  /**
+   * A5: the playable songs of a playlist link, in playlist order. Uses the same 24 h
+   * cache as the fallback playlist; reading a new playlist needs YOUTUBE_API_KEY.
+   */
+  async open(url: string): Promise<CommandResults['playlist:open']> {
+    const parsed = parseYouTubePlaylist(url);
+    if (!parsed) throw new AppError('LINK_UNSUPPORTED');
+    const cached = await this.prisma.playlistCache.findUnique({
+      where: { playlistId: parsed.playlistId },
+    });
+    if (!cached && !this.youtube.searchEnabled)
+      throw new AppError('PLAYLIST_UNAVAILABLE');
+    const ids = await this.refresh(url);
+    const rows = await this.prisma.track.findMany({
+      where: {
+        id: { in: ids.map((v) => `youtube:${v}`) },
+        embeddable: true,
+        title: { not: '' },
+      },
+    });
+    const byId = new Map(rows.map((t) => [t.externalId, t]));
+    const tracks = ids.flatMap((v) => {
+      const t = byId.get(v);
+      return t ? [toTrackSummary(t)] : [];
+    });
+    if (!tracks.length) throw new AppError('PLAYLIST_EMPTY');
+    return { playlistId: parsed.playlistId, tracks };
   }
 }
