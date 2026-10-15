@@ -4,6 +4,12 @@ export const ERROR_CODES = [
   'VALIDATION',
   'ROOM_NOT_FOUND',
   'NAME_TAKEN',
+  /** The name belongs to an offline admin: send adminPin to come back as them. */
+  'PIN_REQUIRED',
+  'PIN_INVALID',
+  'PIN_LOCKED',
+  /** The room has no admin PIN yet (rooms created before PINs returned). */
+  'PIN_NOT_SET',
   'QUEUE_LIMIT',
   'TRACK_TOO_LONG',
   'TRACK_NOT_EMBEDDABLE',

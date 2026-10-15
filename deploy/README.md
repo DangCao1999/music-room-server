@@ -23,7 +23,13 @@ docker compose up -d
 docker compose ps        # các service đều "Up", api và db hiện "healthy"
 ```
 
-Mở `PUBLIC_URL` trên trình duyệt, chọn **Tạo phòng**, nhập tên của bạn và tên phòng. Người tạo phòng là quản trị viên.
+Mở `PUBLIC_URL` trên trình duyệt, chọn **Tạo phòng**, nhập tên của bạn, tên phòng và **mã PIN quản trị** (4–8 số). Người tạo phòng là quản trị viên.
+
+Mã PIN dùng khi cần lấy lại quyền quản trị:
+- Ở tab **Mọi người**, bấm **Nhận quyền quản trị** rồi nhập PIN.
+- Quản trị viên mất phiên (đổi trình duyệt, xoá dữ liệu…) vào lại bằng **đúng tên cũ** và PIN.
+- Thành viên thường mất phiên chỉ cần vào lại bằng đúng tên cũ (khi tên đó đang offline).
+- Nhập sai PIN 5 lần trong 15 phút sẽ bị khoá 15 phút. Quản trị viên đổi PIN trong **Cài đặt phòng**.
 
 ## 2. Nối loa
 

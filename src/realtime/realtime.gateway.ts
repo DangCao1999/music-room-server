@@ -279,7 +279,8 @@ export class RealtimeGateway
   join(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('room:join', s, body, async (input) => {
       this.limitIp(s);
-      return this.enter(s, await this.members.join(input));
+      const session = await this.members.join(input, s.data.ip);
+      return { ...(await this.enter(s, session)), rejoined: session.rejoined };
     });
   }
 
@@ -297,6 +298,22 @@ export class RealtimeGateway
       // Unbind this socket first so the ack still reaches it; other tabs get session:revoked.
       await this.unbind(s);
       await this.members.leave(actor);
+    });
+  }
+
+  @SubscribeMessage('admin:claim')
+  claimAdmin(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('admin:claim', s, body, (input, actor) => {
+      this.limit(`claim:${actor.memberId}`, CLAIM_LIMIT);
+      return this.members.claimAdmin(actor, input.pin, s.data.ip);
+    });
+  }
+
+  @SubscribeMessage('room:set-pin')
+  setPin(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('room:set-pin', s, body, (input, actor) => {
+      this.limit(`claim:${actor.memberId}`, CLAIM_LIMIT);
+      return this.members.setPin(actor, input.pin);
     });
   }
 
