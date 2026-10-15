@@ -6,6 +6,7 @@ import { HealthController } from './health/health.controller';
 import { LibraryService } from './library/library.service';
 import { YouTubeAccountService } from './music/youtube-account.service';
 import { PlaylistsService } from './playlists/playlists.service';
+import { TasteService } from './taste/taste.service';
 import { UsersService } from './users/users.service';
 import { AiService } from './ai/ai.service';
 import { DjService } from './ai/dj.service';
@@ -72,6 +73,7 @@ export class AppModule {
         UsersService,
         PlaylistsService,
         YouTubeAccountService,
+        TasteService,
         RealtimeGateway,
       ],
     };

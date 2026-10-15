@@ -203,6 +203,10 @@ export const C2S = {
   ]),
   'playlist:share': z.strictObject({ id: Id, enabled: z.boolean() }),
   'playlist:copy': z.strictObject({ shareCode: z.string().regex(SHARE_CODE) }),
+  /** L5: suggestions from the signed-in user's own taste. */
+  'taste:for-me': z.strictObject({}),
+  /** L5: keep the current "Dành cho bạn" picks as a personal playlist (updated on every save). */
+  'taste:save-mix': z.strictObject({}),
   /** L3: the user's YouTube playlists, read with their own short-lived access token. */
   'youtube:library': z.strictObject({ accessToken: AccessToken }),
   /** L3: liked videos or one YouTube playlist → a personal playlist (re-import updates it). */
@@ -285,4 +289,6 @@ export const ANONYMOUS_COMMANDS: readonly CommandName[] = [
   'playlist:copy',
   'youtube:library',
   'youtube:import',
+  'taste:for-me',
+  'taste:save-mix',
 ];

@@ -24,6 +24,7 @@ import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
 import { YouTubeAccountService } from '../music/youtube-account.service';
 import { PlaylistsService } from '../playlists/playlists.service';
+import { TasteService } from '../taste/taste.service';
 import { UsersService } from '../users/users.service';
 import { SearchService } from '../music/search.service';
 import { LyricsService } from '../music/lyrics.service';
@@ -115,6 +116,7 @@ export class RealtimeGateway
     private readonly users: UsersService,
     private readonly personal: PlaylistsService,
     private readonly youtubeAccount: YouTubeAccountService,
+    private readonly taste: TasteService,
   ) {}
 
   // ------------------------------------------------------------ lifecycle
@@ -533,6 +535,39 @@ export class RealtimeGateway
       const userId = this.requireUser(s);
       this.limit(`playlist-write:${userId}`, PLAYLIST_WRITE_LIMIT);
       return { id: await this.personal.copy(userId, input.shareCode) };
+    });
+  }
+
+  // ------------------------------------------------------------ taste (L5)
+
+  @SubscribeMessage('taste:for-me')
+  tasteForMe(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('taste:for-me', s, body, async () => {
+      const userId = this.requireUser(s);
+      this.limit(`taste:${userId}`, LOOKUP_LIMIT);
+      // In a room: leave out what is already queued there and what its rules refuse.
+      const roomId = s.data.bound?.roomId;
+      const room = roomId
+        ? await this.prisma.room.findUnique({
+            where: { id: roomId },
+            select: { settings: true },
+          })
+        : null;
+      return this.taste.forMe(
+        userId,
+        roomId && room
+          ? { roomId, settings: readSettings(room.settings) }
+          : null,
+      );
+    });
+  }
+
+  @SubscribeMessage('taste:save-mix')
+  tasteSaveMix(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('taste:save-mix', s, body, () => {
+      const userId = this.requireUser(s);
+      this.limit(`playlist-write:${userId}`, PLAYLIST_WRITE_LIMIT);
+      return this.taste.saveMix(userId);
     });
   }
 
