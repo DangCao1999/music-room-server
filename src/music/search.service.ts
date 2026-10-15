@@ -109,6 +109,11 @@ export class SearchService implements OnModuleInit {
     return { results: await pending, source: 'youtube' };
   }
 
+  /** An earlier YouTube search for the same words, in YouTube's order. Free. */
+  cached(q: string): Promise<TrackSummary[] | null> {
+    return this.fromCache(`youtube:${normalizeQuery(q)}`);
+  }
+
   private async fromCache(key: string): Promise<TrackSummary[] | null> {
     const cached = await this.prisma.searchCache.findUnique({ where: { key } });
     if (!cached) return null;
@@ -127,8 +132,8 @@ export class SearchService implements OnModuleInit {
     );
   }
 
-  /** Every word must appear in title or channel (accents and case ignored). */
-  private async fromLibrary(words: string): Promise<TrackSummary[]> {
+  /** Every word must appear in title or channel (accents and case ignored). Free. */
+  async fromLibrary(words: string): Promise<TrackSummary[]> {
     const tokens = words.split(' ').filter(Boolean).slice(0, 8);
     if (!tokens.length) return [];
     const rows = await this.prisma.track.findMany({

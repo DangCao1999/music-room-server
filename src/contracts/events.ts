@@ -17,6 +17,8 @@ import type {
   ReactionEvent,
   RevokeReason,
   RoomSnapshot,
+  SongListItemView,
+  SongListStop,
   TrackSummary,
 } from './snapshot';
 
@@ -73,6 +75,11 @@ export interface CommandResults {
   };
   'room:recap': RecapView;
   'playlist:open': { playlistId: string; tracks: TrackSummary[] };
+  /**
+   * One item per line, in order. `stopped`: why some lines are still `later`
+   * (`seconds` until the member may search YouTube again, when known).
+   */
+  'songlist:match': { items: SongListItemView[]; stopped: SongListStop | null };
   /** Skipped songs say why (ALREADY_QUEUED, PLAYED_RECENTLY, TRACK_TOO_LONG, QUEUE_LIMIT…). */
   'queue:add-many': {
     added: number;

@@ -55,6 +55,22 @@ export interface YouTubePlaylistView {
   importedId: string | null;
 }
 
+/**
+ * L4: what a pasted line became. `found`: a playable song; `notFound`: YouTube has
+ * nothing playable; `later`: not searched yet (limit, quota or time); `unsupported`:
+ * a link that is not a YouTube video (Spotify, …).
+ */
+export interface SongListItemView {
+  line: string;
+  status: 'found' | 'notFound' | 'later' | 'unsupported';
+  track: TrackSummary | null;
+}
+
+export interface SongListStop {
+  reason: 'RATE_LIMITED' | 'QUOTA_EXCEEDED' | 'SEARCH_UNAVAILABLE' | 'TIME';
+  seconds?: number;
+}
+
 /** L2: a whole playlist. `shareCode` is only sent to its owner. */
 export interface PlaylistView {
   id: string;
