@@ -89,7 +89,8 @@ export const C2S = {
    */
   'room:join': z.strictObject({
     code: RoomCodeSchema,
-    displayName: DisplayNameSchema,
+    /** Optional when signed in (the account's member or Google name is used). */
+    displayName: DisplayNameSchema.optional(),
     adminPin: PinSchema.optional(),
   }),
   'room:leave': z.strictObject({}),
@@ -158,6 +159,16 @@ export const C2S = {
   'chat:send': z.strictObject({ content: multiline(LIMITS.chat) }),
   'room:reaction': z.strictObject({ emoji: z.enum(REACTIONS) }),
   'dj:trigger': z.strictObject({ soundType: z.enum(DJ_SOUNDS) }),
+  /** L1: sign in with a Google ID token (Google Identity Services). */
+  'auth:google': z.strictObject({ credential: z.string().min(20).max(4096) }),
+  /** L1: the account this socket is signed in with, if any. */
+  'auth:me': z.strictObject({}),
+  /** L6: rooms the signed-in user owns or has joined. */
+  'me:rooms': z.strictObject({}),
+  /** L1: songs saved on this device before signing in, added to the account. */
+  'me:favorites-import': z.strictObject({
+    videoIds: z.array(z.string().regex(VIDEO_ID)).max(300),
+  }),
   /** AI2: songs for a request in plain words ("nhạc chill chiều thứ 6"). */
   'dj:ask': z.strictObject({ prompt: line(LIMITS.djPrompt) }),
   /** A8: what the room played since `since` (at most 31 days back). */
@@ -214,4 +225,8 @@ export const ANONYMOUS_COMMANDS: readonly CommandName[] = [
   'room:peek',
   'room:join',
   'host:register',
+  'auth:google',
+  'auth:me',
+  'me:rooms',
+  'me:favorites-import',
 ];

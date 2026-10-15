@@ -4,6 +4,7 @@ import { DEFAULT_TIMING, TIMING, type Timing } from './common/timing';
 import { ENV, type Env } from './config/env';
 import { HealthController } from './health/health.controller';
 import { LibraryService } from './library/library.service';
+import { UsersService } from './users/users.service';
 import { AiService } from './ai/ai.service';
 import { DjService } from './ai/dj.service';
 import { McService } from './ai/mc.service';
@@ -66,6 +67,7 @@ export class AppModule {
         MembersService,
         SocialService,
         LibraryService,
+        UsersService,
         RealtimeGateway,
       ],
     };

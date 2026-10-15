@@ -18,6 +18,8 @@ export interface Actor {
   roomId: string;
   socketId: string;
   ip: string;
+  /** L1: the Google account signed in on this socket, if any. */
+  userId?: string;
 }
 
 /**

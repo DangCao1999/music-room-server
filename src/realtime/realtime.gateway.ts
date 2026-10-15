@@ -22,6 +22,7 @@ import {
 import { DjService } from '../ai/dj.service';
 import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
+import { UsersService } from '../users/users.service';
 import { SearchService } from '../music/search.service';
 import { LyricsService } from '../music/lyrics.service';
 import { PlaylistService } from '../music/playlist.service';
@@ -47,6 +48,8 @@ interface SocketData {
   ip: string;
   bound?: Bound;
   invalidToken?: boolean;
+  /** L1: the Google account signed in on this socket. */
+  userId?: string;
 }
 
 type AppSocket = Socket<
@@ -103,6 +106,7 @@ export class RealtimeGateway
     private readonly playlists: PlaylistService,
     private readonly lyrics: LyricsService,
     private readonly djAi: DjService,
+    private readonly users: UsersService,
   ) {}
 
   // ------------------------------------------------------------ lifecycle
@@ -112,12 +116,17 @@ export class RealtimeGateway
     server.use((socket, next) => {
       const s = socket as AppSocket;
       s.data.ip = clientIp(socket, this.env.TRUST_PROXY);
-      const token = (socket.handshake.auth as { token?: unknown } | undefined)
-        ?.token;
-      if (!token) return next();
-      this.members
-        .resume(token)
-        .then((r) => {
+      const auth = socket.handshake.auth as
+        | { token?: unknown; userToken?: unknown }
+        | undefined;
+      void (async () => {
+        // L1: an account token signs the socket in; a bad one is simply ignored.
+        if (auth?.userToken) {
+          const user = await this.users.resolve(auth.userToken);
+          if (user) s.data.userId = user.id;
+        }
+        if (auth?.token) {
+          const r = await this.members.resume(auth.token);
           if (r)
             s.data.bound = {
               memberId: r.member.id,
@@ -125,8 +134,12 @@ export class RealtimeGateway
               code: r.code,
             };
           else s.data.invalidToken = true;
-          next();
-        })
+        }
+        // A guest session opened by a signed-in browser becomes the account's member.
+        if (s.data.bound && s.data.userId)
+          await this.members.linkMember(s.data.bound.memberId, s.data.userId);
+      })()
+        .then(() => next())
         .catch((e: unknown) => {
           this.logger.error(`handshake failed: ${String(e)}`);
           next(new Error('INTERNAL'));
@@ -199,6 +212,7 @@ export class RealtimeGateway
           roomId: b.roomId,
           socketId: socket.id,
           ip: socket.data.ip,
+          userId: socket.data.userId,
         }
       : null;
   }
@@ -282,7 +296,7 @@ export class RealtimeGateway
   create(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('room:create', s, body, async (input) => {
       this.limitIp(s);
-      return this.enter(s, await this.members.create(input));
+      return this.enter(s, await this.members.create(input, s.data.userId));
     });
   }
 
@@ -298,7 +312,7 @@ export class RealtimeGateway
   join(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('room:join', s, body, async (input) => {
       this.limitIp(s);
-      const session = await this.members.join(input, s.data.ip);
+      const session = await this.members.join(input, s.data.ip, s.data.userId);
       return {
         ...(await this.enter(s, session)),
         rejoined: session.rejoined,
@@ -362,6 +376,57 @@ export class RealtimeGateway
   }
 
   // ------------------------------------------------------------ library (A1) & favourites (A2)
+
+  // ------------------------------------------------------------ accounts (L1, L6)
+
+  private requireUser(s: AppSocket): string {
+    if (!s.data.userId) throw new AppError('UNAUTHENTICATED');
+    return s.data.userId;
+  }
+
+  @SubscribeMessage('auth:google')
+  signIn(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('auth:google', s, body, async (input) => {
+      this.limitIp(s);
+      const { token, user } = await this.users.signIn(input.credential);
+      s.data.userId = user.id;
+      const b = s.data.bound;
+      if (b) {
+        await this.members.linkMember(b.memberId, user.id);
+        await this.library.pushIds(b.memberId);
+      }
+      return { token, user: this.users.view(user) };
+    });
+  }
+
+  @SubscribeMessage('auth:me')
+  me(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('auth:me', s, body, async () => {
+      const user = s.data.userId ? await this.users.byId(s.data.userId) : null;
+      return { user: user ? this.users.view(user) : null };
+    });
+  }
+
+  @SubscribeMessage('me:rooms')
+  myRooms(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('me:rooms', s, body, async () => ({
+      rooms: await this.users.myRooms(this.requireUser(s)),
+    }));
+  }
+
+  @SubscribeMessage('me:favorites-import')
+  importFavorites(
+    @ConnectedSocket() s: AppSocket,
+    @MessageBody() body: unknown,
+  ) {
+    return this.run('me:favorites-import', s, body, async (input) => {
+      const userId = this.requireUser(s);
+      this.limit(`import:${userId}`, LOOKUP_LIMIT);
+      const imported = await this.users.importFavorites(userId, input.videoIds);
+      if (s.data.bound) await this.library.pushIds(s.data.bound.memberId);
+      return { imported };
+    });
+  }
 
   @SubscribeMessage('dj:ask')
   askDj(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {

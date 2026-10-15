@@ -23,6 +23,10 @@ export const ERROR_CODES = [
   'MESSAGE_BLOCKED',
   /** No free AI provider is configured or answering. */
   'AI_UNAVAILABLE',
+  /** L1: the Google sign-in could not be verified. */
+  'SIGN_IN_FAILED',
+  /** L1: the server has no GOOGLE_CLIENT_ID. */
+  'SIGN_IN_UNAVAILABLE',
   'TRACK_TOO_LONG',
   'TRACK_NOT_EMBEDDABLE',
   'TRACK_NOT_FOUND',

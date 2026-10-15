@@ -1,5 +1,6 @@
-import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Inject, Res } from '@nestjs/common';
 import type { Response } from 'express';
+import { ENV, type Env } from '../config/env';
 import { CONTRACTS_VERSION } from '../contracts';
 import { YouTubeProvider } from '../music/youtube.provider';
 import { PrismaService } from '../prisma/prisma.service';
@@ -10,6 +11,7 @@ export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly youtube: YouTubeProvider,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   @Get()
@@ -27,6 +29,8 @@ export class HealthController {
         db,
         contractsVersion: CONTRACTS_VERSION,
         searchEnabled: this.youtube.searchEnabled,
+        // L1: public OAuth client id, so the web app needs no separate setting.
+        googleClientId: this.env.GOOGLE_CLIENT_ID ?? null,
       });
   }
 }

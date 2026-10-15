@@ -5,6 +5,8 @@ import type {
   DjEvent,
   LibraryItemView,
   LyricsView,
+  MyRoomView,
+  UserView,
   RecapView,
   SuggestionView,
   PlayerCommand,
@@ -43,6 +45,10 @@ export interface CommandResults {
   'library:room': { items: LibraryItemView[] };
   'suggest:next': { items: SuggestionView[] };
   'dj:ask': { items: SuggestionView[] };
+  'auth:google': { token: string; user: UserView };
+  'auth:me': { user: UserView | null };
+  'me:rooms': { rooms: MyRoomView[] };
+  'me:favorites-import': { imported: number };
   'room:recap': RecapView;
   'playlist:open': { playlistId: string; tracks: TrackSummary[] };
   /** Skipped songs say why (ALREADY_QUEUED, PLAYED_RECENTLY, TRACK_TOO_LONG, QUEUE_LIMIT…). */

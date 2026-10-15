@@ -18,6 +18,8 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().refine((v) => /^postgres(ql)?:\/\//.test(v)),
   PUBLIC_URL: httpUrl,
   YOUTUBE_API_KEY: optionalString,
+  /** L1: Google sign-in (OAuth client id, public). Without it sign-in is hidden. */
+  GOOGLE_CLIENT_ID: optionalString,
   /** A3 / A4 / AI1: Last.fm similar tracks and canonical names (free key). */
   LASTFM_API_KEY: optionalString,
   /** Free AI, tried in this order: Gemini → Groq → OpenRouter (each only with a key). */
