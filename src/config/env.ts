@@ -24,9 +24,11 @@ const EnvSchema = z.object({
   GEMINI_API_KEY: optionalString,
   GEMINI_MODEL: z.string().default('gemini-flash-lite-latest'),
   GROQ_API_KEY: optionalString,
-  GROQ_MODEL: z.string().default('llama-3.1-8b-instant'),
+  GROQ_MODEL: z.string().default('qwen/qwen3.8-27b'),
   OPENROUTER_API_KEY: optionalString,
   OPENROUTER_MODEL: optionalString,
+  /** Local time for the radio's "time of day" (AI5); the office's time zone. */
+  ROOM_TIMEZONE: z.string().default('Asia/Ho_Chi_Minh'),
   JWT_SECRET: optionalString.refine((v) => v === undefined || v.length >= 32),
   DATA_DIR: z.string().default('/data'),
   /** R-43: room:create / room:join / host:register per IP per minute. */

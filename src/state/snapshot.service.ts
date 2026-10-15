@@ -131,6 +131,11 @@ export class SnapshotService {
         online: this.lease.isOnline(roomId),
       },
       searchEnabled: Boolean(this.env.YOUTUBE_API_KEY),
+      aiEnabled: Boolean(
+        this.env.GEMINI_API_KEY ||
+        this.env.GROQ_API_KEY ||
+        (this.env.OPENROUTER_API_KEY && this.env.OPENROUTER_MODEL),
+      ),
     };
   }
 }

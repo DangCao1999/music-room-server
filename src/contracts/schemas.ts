@@ -59,6 +59,8 @@ export const RoomSettingsSchema = z.strictObject({
   autoRadio: z.boolean(),
   /** A6: a song cannot be added again within this many minutes of starting (0 = off). */
   repeatGapMinutes: z.number().int().min(0).max(1440),
+  /** AI3: the speaker reads a short radio-style intro before members' songs. */
+  mcIntro: z.boolean(),
 });
 export type RoomSettings = z.infer<typeof RoomSettingsSchema>;
 
@@ -70,6 +72,7 @@ export const DEFAULT_SETTINGS: RoomSettings = {
   allowGuestDj: false,
   autoRadio: false,
   repeatGapMinutes: 60,
+  mcIntro: false,
 };
 
 /** Client → server command payloads. Every schema is strict: unknown keys are rejected (R-09, R-42). */
@@ -155,6 +158,13 @@ export const C2S = {
   'chat:send': z.strictObject({ content: multiline(LIMITS.chat) }),
   'room:reaction': z.strictObject({ emoji: z.enum(REACTIONS) }),
   'dj:trigger': z.strictObject({ soundType: z.enum(DJ_SOUNDS) }),
+  /** AI2: songs for a request in plain words ("nhạc chill chiều thứ 6"). */
+  'dj:ask': z.strictObject({ prompt: line(LIMITS.djPrompt) }),
+  /** A8: what the room played since `since` (at most 31 days back). */
+  'room:recap': z.strictObject({
+    since: z.iso.datetime(),
+    tzOffsetMinutes: z.number().int().min(-840).max(840),
+  }),
   /** A5: the playable songs of a YouTube playlist link. */
   'playlist:open': z.strictObject({
     url: z

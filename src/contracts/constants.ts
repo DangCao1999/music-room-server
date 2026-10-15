@@ -7,6 +7,7 @@ export const LIMITS = {
   displayName: 30,
   input: 2048,
   query: 100,
+  djPrompt: 200,
   wish: 200,
   chat: 500,
   rawText: 4000,

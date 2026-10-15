@@ -1,3 +1,4 @@
+import { maskBlocked } from '../ai/moderation';
 import { Injectable } from '@nestjs/common';
 import { AppError } from '../common/app-error';
 import { RateLimiter } from '../common/rate-limiter';
@@ -50,7 +51,8 @@ export class SocialService {
         roomId: actor.roomId,
         memberId: me.id,
         displayName: me.displayName,
-        content,
+        // AI4: the word list only — every message through AI would burn the free quota.
+        content: maskBlocked(content),
       },
     });
     this.broadcaster.toRoom(actor.roomId, 'chat:receive', toChatView(row));

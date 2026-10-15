@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { AiService } from '../ai/ai.service';
+import { ENV, type Env } from '../config/env';
 import {
   normalizeQuery,
   type RoomSettings,
@@ -18,6 +20,14 @@ const HISTORY_SCAN = 2000;
 /** Radio (A4) never repeats a song the room started within this window. */
 export const RADIO_NO_REPEAT_MS = 3 * 3600_000;
 const WARM_MS = 6 * 3600_000;
+/** AI5: how long an AI-ordered radio plan stays usable, and how many it orders. */
+const PLAN_MS = 15 * 60_000;
+const PLAN_CANDIDATES = 15;
+
+const RADIO_SYSTEM = `Bạn chọn nhạc cho radio của một văn phòng. Dựa vào giờ trong ngày và phản ứng gần đây của
+cả phòng (bài nghe hết, bài bị bỏ qua, số tim), xếp 5 ứng viên hợp nhất để phát tiếp, hợp nhất trước.
+Tránh chọn liền nhiều bài cùng nghệ sĩ. Chỉ dùng số "i" của ứng viên.
+Trả lời đúng JSON: {"order":[<i>, ...]}.`;
 
 type Db = PrismaService | Tx;
 type Candidate = { id: string; reason: SuggestionReason };
@@ -37,9 +47,14 @@ export class SuggestService {
   /** Last.fm part per seed track, so the radio can pick inside a transaction without I/O. */
   private readonly warm = new Map<string, { at: number; part: LastFmPart }>();
 
+  /** AI5: per room, the radio's next picks in the AI's order. */
+  private readonly plans = new Map<string, { at: number; ids: string[] }>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly lastfm: LastFmService,
+    private readonly ai: AiService,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   // ------------------------------------------------------------ Last.fm part (no transaction)
@@ -283,10 +298,24 @@ export class SuggestService {
       },
       select: { trackId: true },
     });
+    const plan = this.plans.get(roomId);
+    const planned = plan && Date.now() - plan.at < PLAN_MS ? plan.ids : [];
     const candidates: Candidate[] = [
+      ...planned.map((k) => ({ id: k, reason: 'similar' as const })),
       ...warm.map((k) => ({ id: k, reason: 'similar' as const })),
       ...(await this.dbPart(tx, roomId, seed)),
     ];
+    // The AI already ordered the best few: take its first that is still allowed.
+    if (planned.length) {
+      const ok = await this.eligible(
+        tx,
+        roomId,
+        planned.map((k) => ({ id: k, reason: 'similar' as const })),
+        settings,
+        new Set(recent.map((r) => r.trackId)),
+      );
+      if (ok.length) return ok[0].c.id;
+    }
     const picks = await this.eligible(
       tx,
       roomId,
@@ -297,5 +326,85 @@ export class SuggestService {
     if (!picks.length) return null;
     // A little variety among the best few, so two rooms with the same history differ.
     return picks[Math.floor(Math.random() * Math.min(3, picks.length))].c.id;
+  }
+
+  /**
+   * AI5: when a song starts in a room with the radio on, order the next few picks
+   * outside any transaction — by time of day and how the room reacted lately (songs
+   * heard to the end, skipped, hearted). Without AI the plan is simply not made.
+   */
+  async planRadio(roomId: string, settings: RoomSettings): Promise<void> {
+    if (!this.ai.enabled) return;
+    try {
+      const last = await this.prisma.queueItem.findFirst({
+        where: { roomId, startedAt: { not: null } },
+        orderBy: { startedAt: 'desc' },
+        include: { track: true },
+      });
+      const seed = last?.track ?? null;
+      const lf = seed
+        ? await this.lastFmPart(seed)
+        : { known: [], unknown: [] };
+      const recent = await this.prisma.queueItem.findMany({
+        where: {
+          roomId,
+          startedAt: { gte: new Date(Date.now() - RADIO_NO_REPEAT_MS) },
+        },
+        orderBy: { startedAt: 'desc' },
+        include: { track: true, _count: { select: { hearts: true } } },
+      });
+      const candidates = await this.eligible(
+        this.prisma,
+        roomId,
+        [
+          ...lf.known.map((k) => ({ id: k, reason: 'similar' as const })),
+          ...(await this.dbPart(this.prisma, roomId, seed)),
+        ],
+        settings,
+        new Set(recent.map((r) => r.trackId)),
+      );
+      const pool = candidates.slice(0, PLAN_CANDIDATES);
+      if (pool.length < 2) return;
+      const name = (t: Track) => ({
+        song: t.song ?? t.title,
+        artist: t.artist,
+      });
+      const when = new Intl.DateTimeFormat('vi-VN', {
+        timeZone: this.env.ROOM_TIMEZONE,
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(new Date());
+      const answer = await this.ai.json<{ order?: number[] }>(
+        'radio',
+        RADIO_SYSTEM,
+        JSON.stringify({
+          now: when,
+          recent: recent.slice(0, 8).map((r) => ({
+            ...name(r.track),
+            outcome:
+              r.status === 'SKIPPED'
+                ? 'bị bỏ qua'
+                : r.status === 'PLAYING'
+                  ? 'đang phát'
+                  : 'nghe hết',
+            hearts: r._count.hearts,
+          })),
+          candidates: pool.map((p, i) => ({ i, ...name(p.t) })),
+        }),
+        { temperature: 0.5 },
+      );
+      const ids = (answer?.order ?? [])
+        .filter((i) => Number.isInteger(i) && pool[i])
+        .map((i) => pool[i].c.id);
+      if (ids.length) {
+        this.plans.set(roomId, { at: Date.now(), ids: [...new Set(ids)] });
+        this.logger.log(
+          `Radio plan for room ${roomId}: ${ids.length} of ${pool.length} candidates`,
+        );
+      }
+    } catch (e) {
+      this.logger.warn(`radio plan for ${roomId} failed: ${String(e)}`);
+    }
   }
 }

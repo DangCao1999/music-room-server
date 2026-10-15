@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AiService } from '../ai/ai.service';
 import { AppError } from '../common/app-error';
 import {
   type CommandResults,
   LIBRARY_LIMIT,
   type LibraryItemView,
   type LibrarySort,
+  type RecapView,
   type TrackSummary,
 } from '../contracts';
 import type { Track } from '../generated/prisma/client';
@@ -37,7 +39,13 @@ export class LibraryService {
     private readonly tracks: TrackCacheService,
     private readonly youtube: YouTubeProvider,
     private readonly broadcaster: Broadcaster,
+    private readonly ai: AiService,
   ) {}
+
+  private readonly recapComments = new Map<
+    string,
+    { at: number; text: string | null }
+  >();
 
   // ------------------------------------------------------------ A1: Đã phát
 
@@ -193,5 +201,146 @@ export class LibraryService {
       if (t && shown(t) && t.embeddable) tracks.push(toTrackSummary(t));
     }
     return { tracks };
+  }
+
+  // ------------------------------------------------------------ A8: Tổng kết
+
+  /**
+   * What the room played since `since` (at most 31 days back): counts, top songs, top
+   * pickers, plays per local hour, and a one-line AI comment (cached 10 minutes).
+   */
+  async recap(
+    actor: Actor,
+    sinceIso: string,
+    tzOffsetMinutes: number,
+  ): Promise<RecapView> {
+    const now = Date.now();
+    const since = new Date(
+      Math.max(new Date(sinceIso).getTime(), now - 31 * 24 * 3600_000),
+    );
+    const plays = await this.prisma.queueItem.findMany({
+      where: {
+        roomId: actor.roomId,
+        startedAt: { gte: since },
+        status: { in: ['PLAYED', 'SKIPPED', 'PLAYING'] },
+      },
+      include: {
+        track: true,
+        addedBy: { select: { id: true, displayName: true } },
+        _count: { select: { hearts: true } },
+      },
+    });
+    let ms = 0;
+    const byHour = Array.from({ length: 24 }, () => 0);
+    const songs = new Map<
+      string,
+      { track: Track; plays: number; hearts: number }
+    >();
+    const pickers = new Map<
+      string,
+      {
+        member: { id: string; displayName: string };
+        songs: number;
+        hearts: number;
+      }
+    >();
+    for (const p of plays) {
+      const start = (p.startedAt as Date).getTime();
+      const end = p.endedAt?.getTime() ?? now;
+      const cap = p.track.durationSec ? p.track.durationSec * 1000 : Infinity;
+      ms += Math.max(0, Math.min(end - start, cap));
+      // getTimezoneOffset() is UTC − local, in minutes.
+      const local = new Date(start - tzOffsetMinutes * 60_000);
+      byHour[local.getUTCHours()] += 1;
+      if (shown(p.track)) {
+        const s = songs.get(p.track.id) ?? {
+          track: p.track,
+          plays: 0,
+          hearts: 0,
+        };
+        s.plays += 1;
+        s.hearts += p._count.hearts;
+        songs.set(p.track.id, s);
+      }
+      if (p.addedBy) {
+        const k = pickers.get(p.addedBy.id) ?? {
+          member: p.addedBy,
+          songs: 0,
+          hearts: 0,
+        };
+        k.songs += 1;
+        k.hearts += p._count.hearts;
+        pickers.set(p.addedBy.id, k);
+      }
+    }
+    const topSongs = [...songs.values()]
+      .sort((a, b) => b.plays - a.plays || b.hearts - a.hearts)
+      .slice(0, 5)
+      .map((s) => ({
+        track: toTrackSummary(s.track),
+        plays: s.plays,
+        hearts: s.hearts,
+      }));
+    const topPickers = [...pickers.values()]
+      .sort((a, b) => b.hearts - a.hearts || b.songs - a.songs)
+      .slice(0, 5);
+    const view: RecapView = {
+      plays: plays.length,
+      minutes: Math.round(ms / 60_000),
+      skipped: plays.filter((p) => p.status === 'SKIPPED').length,
+      topSongs,
+      topPickers,
+      byHour,
+      summary: null,
+    };
+    view.summary = await this.recapComment(
+      `${actor.roomId}|${since.toISOString()}`,
+      view,
+    );
+    return view;
+  }
+
+  private async recapComment(
+    key: string,
+    v: RecapView,
+  ): Promise<string | null> {
+    if (!this.ai.enabled || v.plays === 0) return null;
+    const hit = this.recapComments.get(key);
+    if (hit && Date.now() - hit.at < 10 * 60_000) return hit.text;
+    const answer = await this.ai.json<{ summary?: string }>(
+      'recap',
+      `Bạn viết MỘT câu nhận xét vui, thân thiện (tối đa 30 từ, tiếng Việt) về việc nghe nhạc của một văn phòng.
+Chỉ dùng đúng các con số trong "facts", không suy ra số khác, không bịa thêm. Không emoji. Trả lời JSON {"summary":<string>}.`,
+      JSON.stringify({
+        facts: {
+          songsPlayed: v.plays,
+          minutesOfMusic: v.minutes,
+          songsSkipped: v.skipped,
+          busiestHour: `${v.byHour.indexOf(Math.max(...v.byHour))}:00`,
+        },
+        topSongs: v.topSongs.map((s) => ({
+          song: s.track.song ?? s.track.title,
+          artist: s.track.artist,
+          timesPlayed: s.plays,
+          hearts: s.hearts,
+        })),
+        topPickers: v.topPickers.map((p) => ({
+          name: p.member.displayName,
+          songsPlayed: p.songs,
+          heartsReceived: p.hearts,
+        })),
+      }),
+      { temperature: 0.5 },
+    );
+    const text =
+      typeof answer?.summary === 'string'
+        ? answer.summary.trim().slice(0, 300) || null
+        : null;
+    this.recapComments.set(key, { at: Date.now(), text });
+    if (this.recapComments.size > 200)
+      this.recapComments.delete(
+        this.recapComments.keys().next().value as string,
+      );
+    return text;
   }
 }

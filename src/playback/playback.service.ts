@@ -27,6 +27,7 @@ import {
 import { readSettings } from '../state/settings';
 import { SnapshotService } from '../state/snapshot.service';
 import { estimatePosition } from '../state/views';
+import { McService } from '../ai/mc.service';
 import { SuggestService } from '../music/suggest.service';
 import { pickFallback } from './fallback';
 import { LeaseService } from './lease.service';
@@ -54,6 +55,7 @@ export class PlaybackService
     private readonly snapshots: SnapshotService,
     @Inject(TIMING) private readonly timing: Timing,
     private readonly suggest: SuggestService,
+    private readonly mc: McService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -139,7 +141,16 @@ export class PlaybackService
         });
       }
       // Have the radio's Last.fm picks ready for when this song ends (outside the transaction).
-      ctx.afterCommit(() => this.suggest.warmFor(item.trackId));
+      // Not awaited: afterCommit runs under the room lock, and Last.fm / AI can take seconds.
+      ctx.afterCommit(() => {
+        void this.suggest
+          .warmFor(item.trackId)
+          .then(() =>
+            settings.autoRadio
+              ? this.suggest.planRadio(roomId, settings)
+              : undefined,
+          );
+      });
       await tx.playbackState.update({
         where: { roomId },
         data: {
@@ -559,7 +570,20 @@ export class PlaybackService
             voicePreset: (item.voicePreset as VoicePreset) ?? null,
           }
         : null,
+      // AI3: a wish is read instead of the MC line, never both.
+      intro:
+        item && !item.wishMessage && item.addedById && (await this.mcOn(roomId))
+          ? this.mc.lineFor(item.id)
+          : null,
     };
+  }
+
+  private async mcOn(roomId: string): Promise<boolean> {
+    const room = await this.prisma.room.findUnique({
+      where: { id: roomId },
+      select: { settings: true },
+    });
+    return Boolean(room && readSettings(room.settings).mcIntro);
   }
 
   async sendPlayerCommand(roomId: string): Promise<void> {

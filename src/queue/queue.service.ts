@@ -9,6 +9,7 @@ import {
   type RoomSettings,
 } from '../contracts';
 import type { Member, QueueItem, Track } from '../generated/prisma/client';
+import { ModerationService } from '../ai/moderation.service';
 import { TrackCacheService } from '../music/track-cache.service';
 import { PlaybackService } from '../playback/playback.service';
 import type { Tx } from '../prisma/prisma.service';
@@ -43,6 +44,7 @@ export class QueueService {
     private readonly tracks: TrackCacheService,
     private readonly playback: PlaybackService,
     private readonly activity: ActivityService,
+    private readonly moderation: ModerationService,
   ) {}
 
   /** Loads a queue item of the actor's room or throws STALE_ITEM. */
@@ -138,7 +140,8 @@ export class QueueService {
       },
     });
     if (queued >= max) throw new AppError('QUEUE_LIMIT', { max });
-    // Network lookup happens outside the room lock.
+    // Network work (track lookup, AI4 wish check) happens outside the room lock.
+    await this.moderation.checkWish(input.wishMessage);
     const track = await this.tracks.resolve(videoId);
 
     return this.state.mutate(actor.roomId, async (tx, ctx) => {
@@ -350,6 +353,7 @@ export class QueueService {
     actor: Actor,
     input: CommandInput<'queue:set-message'>,
   ): Promise<void> {
+    await this.moderation.checkWish(input.wishMessage);
     await this.state.mutate(actor.roomId, async (tx) => {
       const me = await this.state.activeMember(tx, actor);
       const item = await this.item(tx, actor.roomId, input.queueItemId);

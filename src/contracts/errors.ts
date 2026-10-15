@@ -19,6 +19,10 @@ export const ERROR_CODES = [
   'PLAYLIST_UNAVAILABLE',
   /** A5: no playable video (empty, private or all blocked from embedding). */
   'PLAYLIST_EMPTY',
+  /** AI4: a wish that would be read aloud was refused. */
+  'MESSAGE_BLOCKED',
+  /** No free AI provider is configured or answering. */
+  'AI_UNAVAILABLE',
   'TRACK_TOO_LONG',
   'TRACK_NOT_EMBEDDABLE',
   'TRACK_NOT_FOUND',
