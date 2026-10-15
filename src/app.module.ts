@@ -3,6 +3,7 @@ import { AuthService } from './auth/auth.service';
 import { DEFAULT_TIMING, TIMING, type Timing } from './common/timing';
 import { ENV, type Env } from './config/env';
 import { HealthController } from './health/health.controller';
+import { LibraryService } from './library/library.service';
 import { MembersService } from './members/members.service';
 import { ApiDataRetentionService } from './music/api-data-retention.service';
 import { PlaylistService } from './music/playlist.service';
@@ -48,6 +49,7 @@ export class AppModule {
         QueueService,
         MembersService,
         SocialService,
+        LibraryService,
         RealtimeGateway,
       ],
     };

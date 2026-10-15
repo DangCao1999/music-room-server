@@ -26,6 +26,17 @@ export interface MemberView {
   online: boolean;
 }
 
+/** A1: one song this room has played (PLAYED or SKIPPED), all its plays together. */
+export interface LibraryItemView {
+  track: TrackSummary;
+  plays: number;
+  /** Hearts over every play. */
+  hearts: number;
+  lastPlayedAt: string;
+  /** Who added it last time; null = fallback playlist. */
+  lastAddedBy: { id: string; displayName: string } | null;
+}
+
 export interface QueueItemView {
   id: string;
   track: TrackSummary;

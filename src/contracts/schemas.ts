@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import {
   DJ_SOUNDS,
+  LIBRARY_SORTS,
   LIMITS,
+  LOOKUP_MAX_IDS,
   PIN_PATTERN,
   PLAYER_ERROR_CODES,
   REACTIONS,
@@ -13,7 +15,7 @@ import {
   normalizeRoomCode,
   ROOM_CODE_PATTERN,
 } from './text';
-import { parseYouTubePlaylist } from './youtube';
+import { parseYouTubePlaylist, VIDEO_ID } from './youtube';
 
 const line = (max: number, min = 1) =>
   z
@@ -146,6 +148,18 @@ export const C2S = {
   'chat:send': z.strictObject({ content: multiline(LIMITS.chat) }),
   'room:reaction': z.strictObject({ emoji: z.enum(REACTIONS) }),
   'dj:trigger': z.strictObject({ soundType: z.enum(DJ_SOUNDS) }),
+  /** A1: songs this room has played, grouped by track. */
+  'library:room': z.strictObject({ sort: z.enum(LIBRARY_SORTS) }),
+  /** A2: save / unsave a song ("Lưu"). Idempotent. */
+  'favorite:set': z.strictObject({
+    trackId: z.string().regex(/^youtube:[A-Za-z0-9_-]{11}$/),
+    saved: z.boolean(),
+  }),
+  'favorite:list': z.strictObject({}),
+  /** Name and artwork for video ids saved on this device in other rooms. */
+  'tracks:lookup': z.strictObject({
+    videoIds: z.array(z.string().regex(VIDEO_ID)).min(1).max(LOOKUP_MAX_IDS),
+  }),
 } as const;
 
 export type CommandName = keyof typeof C2S;

@@ -67,6 +67,7 @@ model Member {
   queueItems     QueueItem[]
   hearts         Heart[]
   skipVotes      SkipVote[]
+  favorites      Favorite[]
 
   @@unique([roomId, displayNameKey])
   @@index([roomId])
@@ -85,6 +86,7 @@ model Track {
   /// normalizeQuery(title + channel): lets search find known songs without YouTube quota
   searchKey    String?
   queueItems   QueueItem[]
+  favorites    Favorite[]
 }
 
 model QueueItem {
@@ -116,6 +118,18 @@ model Heart {
 
   @@id([queueItemId, memberId])
   @@index([memberId])
+}
+
+/// "Lưu" (A2): a member's saved songs. Not "Thả tim", which is a vote inside the queue.
+model Favorite {
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  trackId   String
+  track     Track    @relation(fields: [trackId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@id([memberId, trackId])
+  @@index([memberId, createdAt])
 }
 
 model SkipVote {

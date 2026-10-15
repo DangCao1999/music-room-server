@@ -19,6 +19,7 @@ import {
   type CommandInput,
   type CommandName,
 } from '../contracts';
+import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
 import { SearchService } from '../music/search.service';
 import { PlaybackService } from '../playback/playback.service';
@@ -55,6 +56,8 @@ const IP_WINDOW_MS = 60_000;
 /** Extra throttles (review): PIN guesses per member, room-code lookups per IP. */
 export const CLAIM_LIMIT = { count: 10, windowMs: 60_000 };
 export const PEEK_LIMIT = { count: 60, windowMs: 60_000 };
+/** tracks:lookup may call YouTube for unknown ids: a few per minute is plenty. */
+export const LOOKUP_LIMIT = { count: 10, windowMs: 60_000 };
 
 export function clientIp(socket: Socket, trustProxy: boolean): string {
   if (trustProxy) {
@@ -85,6 +88,7 @@ export class RealtimeGateway
     private readonly snapshots: SnapshotService,
     private readonly presence: PresenceService,
     private readonly broadcaster: Broadcaster,
+    private readonly library: LibraryService,
   ) {}
 
   // ------------------------------------------------------------ lifecycle
@@ -142,6 +146,7 @@ export class RealtimeGateway
     ]);
     socket.emit('chat:history', chat);
     socket.emit('activity:history', logs);
+    await this.library.pushIds(b.memberId);
     if (cameOnline) {
       // Presence changed: re-check vote thresholds (R-25) and broadcast to everyone.
       await this.state.mutate(b.roomId, (tx, ctx) =>
@@ -340,6 +345,37 @@ export class RealtimeGateway
     return this.run('room:settings', s, body, (input, actor) =>
       this.members.updateSettings(actor, input),
     );
+  }
+
+  // ------------------------------------------------------------ library (A1) & favourites (A2)
+
+  @SubscribeMessage('library:room')
+  roomLibrary(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('library:room', s, body, (input, actor) =>
+      this.library.roomLibrary(actor, input.sort),
+    );
+  }
+
+  @SubscribeMessage('favorite:set')
+  setFavorite(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('favorite:set', s, body, (input, actor) =>
+      this.library.setFavorite(actor, input.trackId, input.saved),
+    );
+  }
+
+  @SubscribeMessage('favorite:list')
+  listFavorites(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('favorite:list', s, body, (_i, actor) =>
+      this.library.listFavorites(actor),
+    );
+  }
+
+  @SubscribeMessage('tracks:lookup')
+  lookup(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('tracks:lookup', s, body, (input, actor) => {
+      this.limit(`lookup:${actor.memberId}`, LOOKUP_LIMIT);
+      return this.library.lookup(input.videoIds);
+    });
   }
 
   // ------------------------------------------------------------ queue
