@@ -43,6 +43,7 @@ export const RoomCodeSchema = z
   .pipe(z.string().regex(ROOM_CODE_PATTERN));
 const Id = z.string().min(1).max(64);
 const TrackIdSchema = z.string().regex(/^youtube:[A-Za-z0-9_-]{11}$/);
+const AccessToken = z.string().min(20).max(4096);
 export const PinSchema = z.string().regex(PIN_PATTERN);
 
 export const RoomSettingsSchema = z.strictObject({
@@ -202,6 +203,17 @@ export const C2S = {
   ]),
   'playlist:share': z.strictObject({ id: Id, enabled: z.boolean() }),
   'playlist:copy': z.strictObject({ shareCode: z.string().regex(SHARE_CODE) }),
+  /** L3: the user's YouTube playlists, read with their own short-lived access token. */
+  'youtube:library': z.strictObject({ accessToken: AccessToken }),
+  /** L3: liked videos or one YouTube playlist → a personal playlist (re-import updates it). */
+  'youtube:import': z.strictObject({
+    accessToken: AccessToken,
+    source: z.union([
+      z.literal('liked'),
+      z.string().regex(/^[A-Za-z0-9_-]{10,64}$/),
+    ]),
+    musicOnly: z.boolean(),
+  }),
   /** AI2: songs for a request in plain words ("nhạc chill chiều thứ 6"). */
   'dj:ask': z.strictObject({ prompt: line(LIMITS.djPrompt) }),
   /** A8: what the room played since `since` (at most 31 days back). */
@@ -271,4 +283,6 @@ export const ANONYMOUS_COMMANDS: readonly CommandName[] = [
   'playlist:get',
   'playlist:share',
   'playlist:copy',
+  'youtube:library',
+  'youtube:import',
 ];
