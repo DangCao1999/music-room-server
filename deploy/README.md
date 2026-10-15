@@ -49,7 +49,7 @@ Mẹo:
 Khách vẫn vào phòng bằng tên như cũ. Đăng nhập Google cho phép vào lại đúng mình ở mọi thiết bị, giữ bài yêu thích theo tài khoản, và chủ phòng luôn có quyền quản trị (không cần PIN).
 
 1. Vào [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → **Create credentials** → **OAuth client ID** → loại **Web application**. Nếu được hỏi, cấu hình **OAuth consent screen** trước (loại *External*, chỉ cần tên app và email).
-2. Ở **Authorized JavaScript origins**, thêm địa chỉ web của bạn, ví dụ `https://<app>.vercel.app`. Với dev thêm `http://localhost:3000`. Google không chấp nhận địa chỉ IP LAN dạng `http://192.168…`, nên trong LAN chỉ máy chạy dev (qua `localhost`) đăng nhập được.
+2. Ở **Authorized JavaScript origins**, thêm địa chỉ web của bạn, ví dụ `https://musicroom.io.vn` (tên miền riêng, §8.8) hoặc `https://<app>.vercel.app`. Với dev thêm `http://localhost:3000`. Google không chấp nhận địa chỉ IP LAN dạng `http://192.168…`, nên trong LAN chỉ máy chạy dev (qua `localhost`) đăng nhập được.
 3. Không cần *Authorized redirect URIs* và không cần client secret.
 4. Chép **Client ID** (dạng `….apps.googleusercontent.com`) vào biến `GOOGLE_CLIENT_ID` của server, rồi khởi động lại server. Web tự nhận Client ID qua `/api/health`.
 
@@ -60,7 +60,7 @@ Nút **Nhập từ YouTube** (tab Thêm bài → Của tôi) đọc playlist và
 1. **APIs & Services → Library**: bật **YouTube Data API v3** cho project này (quota nhập bài tính vào project này, khoảng 1 đơn vị cho 50 video).
 2. **Google Auth Platform → Data access** (hoặc *OAuth consent screen → Scopes*): **Add or remove scopes** → thêm `https://www.googleapis.com/auth/youtube.readonly`.
 3. **Audience** (hoặc *Test users*): khi app ở chế độ **Testing**, thêm email của từng người được dùng tính năng này (tối đa 100). Họ sẽ thấy cảnh báo "Google chưa xác minh ứng dụng này" → **Tiếp tục**.
-4. Muốn mọi tài khoản dùng được mà không có cảnh báo: chuyển app sang **In production** và gửi Google xét duyệt scope này (thường vài tuần).
+4. Muốn mọi tài khoản dùng được mà không có cảnh báo: chuyển app sang **In production** và gửi Google xét duyệt scope này (thường vài tuần). Google chỉ duyệt khi trang chủ và trang chính sách nằm trên **tên miền riêng đã xác minh** (§8.8); không dùng được `*.vercel.app`. Hồ sơ mẫu: [`docs/google-oauth-verification.md`](../docs/google-oauth-verification.md).
 
 Đăng nhập thường không cần các bước này; quyền YouTube chỉ được hỏi khi bấm "Nhập từ YouTube", và được thu hồi khi đóng hộp nhập.
 
@@ -148,8 +148,8 @@ Không cần tự tạo bảng: server tự chạy migration mỗi lần khởi 
 |---|---|---|
 | `DATABASE_URL` | Chuỗi Neon **có** `-pooler` | ✅ |
 | `DIRECT_URL` | Chuỗi Neon **không có** `-pooler` | ✅ với Neon |
-| `PUBLIC_URL` | `https://<app>.vercel.app` | ✅ |
-| `CORS_ORIGINS` | `https://<app>.vercel.app` (nhiều domain thì ngăn bằng dấu phẩy) | ✅ |
+| `PUBLIC_URL` | Địa chỉ web chính thức: `https://musicroom.io.vn` (tên miền riêng, §8.8), hoặc `https://<app>.vercel.app` nếu chưa có | ✅ |
+| `CORS_ORIGINS` | Mọi địa chỉ web được gọi API, ngăn bằng dấu phẩy, ví dụ `https://musicroom.io.vn,https://<app>.vercel.app` | ✅ |
 | `JWT_SECRET` | `openssl rand -base64 48` | ✅ (Render free không có ổ đĩa lưu lâu dài) |
 | `TRUST_PROXY` | `true` | ✅ |
 | `NODE_VERSION` | `22` | ✅ |
@@ -175,7 +175,7 @@ Nếu đang dùng Render Postgres, sau khi Neon chạy ổn bạn có thể xóa
 | Biến | Giá trị |
 |---|---|
 | `NEXT_PUBLIC_SERVER_URL` | `https://<api>.onrender.com` (không có `/` ở cuối) |
-| `PUBLIC_APP_URL` | `https://<app>.vercel.app`: domain chính thức dùng cho link và mã QR trong ảnh xem trước. Nên đặt, vì nếu thiếu thì app phải đoán domain từ header của request, và ảnh xem trước sẽ không được CDN cache |
+| `PUBLIC_APP_URL` | Địa chỉ web chính thức, ví dụ `https://musicroom.io.vn` (hoặc `https://<app>.vercel.app` nếu chưa có tên miền riêng): dùng cho link và mã QR trong ảnh xem trước. Nên đặt, vì nếu thiếu thì app phải đoán domain từ header của request, và ảnh xem trước sẽ không được CDN cache |
 
 Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đặt. Ảnh xem trước khi chia sẻ link phòng (tên bài, ảnh bìa, mã QR) cũng lấy dữ liệu qua địa chỉ này.
 
@@ -226,6 +226,41 @@ Workflow [`.github/workflows/keep-awake.yml`](../.github/workflows/keep-awake.ym
 3. GitHub tự tắt workflow theo lịch nếu repo công khai không có hoạt động nào trong 60 ngày. Khi đó vào tab *Actions* bật lại.
 
 Kiểm tra: tab *Actions → keep-awake → Run workflow* chạy tay một lần, bước *Ping* phải xanh.
+
+### 8.8 Tên miền riêng cho web (ví dụ `musicroom.io.vn`)
+
+Bản đang chạy dùng `https://musicroom.io.vn` cho web; API vẫn ở `https://<api>.onrender.com` (không cần tên miền riêng). Tên miền riêng cần khi gửi Google xét duyệt "Nhập từ YouTube", và dễ nhớ hơn `*.vercel.app`.
+
+1. **Mua tên miền** ở một nhà đăng ký tên miền `.vn` (đuôi `.io.vn`, `.id.vn` có giá rẻ). Không cần bật DNSSEC.
+2. **Vercel → Project → Settings → Domains → Add**: thêm `musicroom.io.vn` và `www.musicroom.io.vn`.
+   - Chọn `musicroom.io.vn` làm tên chính; `www.musicroom.io.vn` chọn **Redirect** về `musicroom.io.vn` (308).
+   - Sửa domain `<app>.vercel.app` có sẵn thành **Redirect** về `musicroom.io.vn`, để chỉ còn một địa chỉ.
+3. **DNS ở nhà đăng ký**, đúng giá trị Vercel hiển thị trong trang Domains:
+
+   | Loại | Tên | Giá trị (10/2026) |
+   |---|---|---|
+   | `A` | `@` | `216.198.79.1` |
+   | `CNAME` | `www` | dạng `….vercel-dns-017.com.` (mỗi project một giá trị) |
+
+   Chờ Vercel báo *Valid Configuration* (vài phút đến vài giờ); chứng chỉ HTTPS được cấp tự động.
+4. **Biến môi trường**:
+   - Vercel: `PUBLIC_APP_URL=https://musicroom.io.vn`, rồi **Redeploy**. `NEXT_PUBLIC_SERVER_URL` giữ nguyên.
+   - Render: `PUBLIC_URL=https://musicroom.io.vn`, `CORS_ORIGINS=https://musicroom.io.vn,https://<app>.vercel.app` (giữ domain cũ để các tab đang mở ở địa chỉ cũ vẫn kết nối được cho tới khi tải lại trang). Lưu (*Save and deploy*) để Render khởi động lại với biến mới.
+5. **Google** (nếu dùng đăng nhập Google):
+   - [Search Console](https://search.google.com/search-console): thêm property **Domain** `musicroom.io.vn`, xác minh bằng bản ghi `TXT` (`google-site-verification=…`) ở nhà đăng ký. Dùng tài khoản Google là Owner/Editor của project chứa OAuth client.
+   - OAuth client → **Authorized JavaScript origins**: thêm `https://musicroom.io.vn`.
+   - **Google Auth Platform → Branding**: trang chủ `https://musicroom.io.vn`, chính sách `https://musicroom.io.vn/privacy`, điều khoản `https://musicroom.io.vn/terms`, **Authorized domains** `musicroom.io.vn`.
+6. **Kiểm tra**:
+   ```bash
+   curl -sI https://www.musicroom.io.vn | grep -i location          # → https://musicroom.io.vn/
+   curl -sI https://<app>.vercel.app | grep -i location             # → https://musicroom.io.vn/
+   curl -s https://<api>.onrender.com/api/health                    # "db":"up", contractsVersion khớp web
+   curl -s -o /dev/null -D - -H "Origin: https://musicroom.io.vn" \
+     "https://<api>.onrender.com/socket.io/?EIO=4&transport=polling" | grep -i access-control-allow-origin
+   ```
+   Lệnh cuối phải in `access-control-allow-origin: https://musicroom.io.vn`; thử với một `Origin` lạ thì không in gì.
+
+Lưu ý: dữ liệu lưu trên trình duyệt (phiên vào phòng, tên đã dùng, Yêu thích của khách) gắn với từng địa chỉ web. Sau khi chuyển tên miền, khách vào lại phòng bằng đúng tên cũ (§1); ai đăng nhập Google thì không mất gì.
 
 ## Bản quyền
 
