@@ -280,7 +280,11 @@ export class RealtimeGateway
     return this.run('room:join', s, body, async (input) => {
       this.limitIp(s);
       const session = await this.members.join(input, s.data.ip);
-      return { ...(await this.enter(s, session)), rejoined: session.rejoined };
+      return {
+        ...(await this.enter(s, session)),
+        rejoined: session.rejoined,
+        rightsReset: session.rightsReset,
+      };
     });
   }
 

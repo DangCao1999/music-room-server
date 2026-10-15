@@ -28,7 +28,7 @@ Mở `PUBLIC_URL` trên trình duyệt, chọn **Tạo phòng**, nhập tên c�
 Mã PIN dùng khi cần lấy lại quyền quản trị:
 - Ở tab **Mọi người**, bấm **Nhận quyền quản trị** rồi nhập PIN.
 - Quản trị viên mất phiên (đổi trình duyệt, xoá dữ liệu…) vào lại bằng **đúng tên cũ** và PIN.
-- Thành viên thường mất phiên chỉ cần vào lại bằng đúng tên cũ (khi tên đó đang offline).
+- Thành viên thường mất phiên chỉ cần vào lại bằng đúng tên cũ (khi tên đó đang offline). Họ giữ bài và tim, nhưng quyền Điều khiển, DJ, Máy phát phải được quản trị viên cấp lại.
 - Nhập sai PIN 5 lần trong 15 phút sẽ bị khoá 15 phút. Quản trị viên đổi PIN trong **Cài đặt phòng**.
 
 ## 2. Nối loa
