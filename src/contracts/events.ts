@@ -2,6 +2,7 @@ import type {
   ActivityLogView,
   ChatMessageView,
   DjEvent,
+  LibraryItemView,
   PlayerCommand,
   PlayerRevokeReason,
   ReactionEvent,
@@ -35,6 +36,12 @@ export interface CommandResults {
     results: TrackSummary[];
     source: 'library' | 'cache' | 'youtube';
   };
+  'library:room': { items: LibraryItemView[] };
+  'favorite:set': { saved: boolean };
+  /** Newest first. */
+  'favorite:list': { tracks: TrackSummary[] };
+  /** In the order asked; ids that cannot be found are left out. */
+  'tracks:lookup': { tracks: TrackSummary[] };
 }
 
 /** Server → client events. */
@@ -50,6 +57,8 @@ export interface ServerEvents {
   'dj:event': (event: DjEvent) => void;
   'player:command': (command: PlayerCommand) => void;
   'player:revoked': (data: { reason: PlayerRevokeReason }) => void;
+  /** Only to the member's own sockets: on joining and after every save / unsave. */
+  'favorite:ids': (data: { trackIds: string[] }) => void;
 }
 
 export const ACK_TIMEOUT_MS = 8000;

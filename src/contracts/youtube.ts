@@ -1,7 +1,8 @@
 // YouTube link parsing shared by client (to label the add button) and server
 // (authoritative). Keep in sync with R-15 / spec §9.
 
-const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
+/** An 11-character YouTube video id. */
+export const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 const PLAYLIST_ID = /^[A-Za-z0-9_-]{10,64}$/;
 const PATH_PREFIXES = ['shorts', 'embed', 'live', 'v', 'e'];
 

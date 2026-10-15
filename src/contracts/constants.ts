@@ -45,6 +45,12 @@ export const DJ_SOUNDS = [
 ] as const;
 export type DjSound = (typeof DJ_SOUNDS)[number];
 
+/** Library (A1) and favourites (A2). */
+export const LIBRARY_SORTS = ['recent', 'loved', 'most'] as const;
+export type LibrarySort = (typeof LIBRARY_SORTS)[number];
+export const LIBRARY_LIMIT = 50;
+export const LOOKUP_MAX_IDS = 50;
+
 /** Admin PIN: 4–8 digits. */
 export const PIN_PATTERN = /^[0-9]{4,8}$/;
 
