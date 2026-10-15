@@ -22,6 +22,8 @@ import {
 import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
 import { SearchService } from '../music/search.service';
+import { LyricsService } from '../music/lyrics.service';
+import { PlaylistService } from '../music/playlist.service';
 import { SuggestService } from '../music/suggest.service';
 import { readSettings } from '../state/settings';
 import { PlaybackService } from '../playback/playback.service';
@@ -60,6 +62,8 @@ export const CLAIM_LIMIT = { count: 10, windowMs: 60_000 };
 export const PEEK_LIMIT = { count: 60, windowMs: 60_000 };
 /** tracks:lookup may call YouTube for unknown ids: a few per minute is plenty. */
 export const LOOKUP_LIMIT = { count: 10, windowMs: 60_000 };
+/** Lyrics are asked once per song per device (cached on the server). */
+export const LYRICS_LIMIT = { count: 20, windowMs: 60_000 };
 
 export function clientIp(socket: Socket, trustProxy: boolean): string {
   if (trustProxy) {
@@ -92,6 +96,8 @@ export class RealtimeGateway
     private readonly broadcaster: Broadcaster,
     private readonly library: LibraryService,
     private readonly suggest: SuggestService,
+    private readonly playlists: PlaylistService,
+    private readonly lyrics: LyricsService,
   ) {}
 
   // ------------------------------------------------------------ lifecycle
@@ -351,6 +357,30 @@ export class RealtimeGateway
   }
 
   // ------------------------------------------------------------ library (A1) & favourites (A2)
+
+  @SubscribeMessage('playlist:open')
+  openPlaylist(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('playlist:open', s, body, async (input, actor) => {
+      await this.requireMember(actor);
+      this.limit(`playlist:${actor.memberId}`, LOOKUP_LIMIT);
+      return this.playlists.open(input.url);
+    });
+  }
+
+  @SubscribeMessage('queue:add-many')
+  addMany(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('queue:add-many', s, body, (input, actor) =>
+      this.queue.addMany(actor, input.trackIds),
+    );
+  }
+
+  @SubscribeMessage('lyrics:get')
+  getLyrics(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('lyrics:get', s, body, async (input, actor) => {
+      this.limit(`lyrics:${actor.memberId}`, LYRICS_LIMIT);
+      return { lyrics: await this.lyrics.forTrack(input.trackId) };
+    });
+  }
 
   @SubscribeMessage('suggest:next')
   suggestNext(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {

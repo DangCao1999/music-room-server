@@ -50,6 +50,8 @@ export const LIBRARY_SORTS = ['recent', 'loved', 'most'] as const;
 export type LibrarySort = (typeof LIBRARY_SORTS)[number];
 export const LIBRARY_LIMIT = 50;
 export const LOOKUP_MAX_IDS = 50;
+/** A5: songs added from a playlist in one go (each member's queue limit still applies). */
+export const ADD_MANY_MAX = 20;
 
 /** Admin PIN: 4–8 digits. */
 export const PIN_PATTERN = /^[0-9]{4,8}$/;

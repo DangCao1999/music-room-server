@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   DJ_SOUNDS,
+  ADD_MANY_MAX,
   LIBRARY_SORTS,
   LIMITS,
   LOOKUP_MAX_IDS,
@@ -56,6 +57,8 @@ export const RoomSettingsSchema = z.strictObject({
   allowGuestDj: z.boolean(),
   /** A4: when the queue is empty, keep playing songs like the last one (known songs only). */
   autoRadio: z.boolean(),
+  /** A6: a song cannot be added again within this many minutes of starting (0 = off). */
+  repeatGapMinutes: z.number().int().min(0).max(1440),
 });
 export type RoomSettings = z.infer<typeof RoomSettingsSchema>;
 
@@ -66,6 +69,7 @@ export const DEFAULT_SETTINGS: RoomSettings = {
   fallbackPlaylistUrl: null,
   allowGuestDj: false,
   autoRadio: false,
+  repeatGapMinutes: 60,
 };
 
 /** Client → server command payloads. Every schema is strict: unknown keys are rejected (R-09, R-42). */
@@ -151,6 +155,24 @@ export const C2S = {
   'chat:send': z.strictObject({ content: multiline(LIMITS.chat) }),
   'room:reaction': z.strictObject({ emoji: z.enum(REACTIONS) }),
   'dj:trigger': z.strictObject({ soundType: z.enum(DJ_SOUNDS) }),
+  /** A5: the playable songs of a YouTube playlist link. */
+  'playlist:open': z.strictObject({
+    url: z
+      .string()
+      .max(LIMITS.input)
+      .refine((v) => parseYouTubePlaylist(v) !== null),
+  }),
+  /** A5: add several known songs in order, until the member's queue limit. */
+  'queue:add-many': z.strictObject({
+    trackIds: z
+      .array(z.string().regex(/^youtube:[A-Za-z0-9_-]{11}$/))
+      .min(1)
+      .max(ADD_MANY_MAX),
+  }),
+  /** A7: lyrics for a song (LRCLIB), synced to the music when available. */
+  'lyrics:get': z.strictObject({
+    trackId: z.string().regex(/^youtube:[A-Za-z0-9_-]{11}$/),
+  }),
   /** A3: songs to play next, for the song on air unless `trackId` is given. */
   'suggest:next': z.strictObject({
     trackId: z
