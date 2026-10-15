@@ -18,6 +18,7 @@ import {
   normalizeRoomCode,
   ROOM_CODE_PATTERN,
 } from './text';
+import { SONGLIST_LINE_MAX, SONGLIST_MAX_LINES } from './songlist';
 import { parseYouTubePlaylist, VIDEO_ID } from './youtube';
 
 const line = (max: number, min = 1) =>
@@ -231,6 +232,10 @@ export const C2S = {
       .string()
       .max(LIMITS.input)
       .refine((v) => parseYouTubePlaylist(v) !== null),
+  }),
+  /** L4: find a song for each pasted line (free sources first, then YouTube search). */
+  'songlist:match': z.strictObject({
+    lines: z.array(line(SONGLIST_LINE_MAX)).min(1).max(SONGLIST_MAX_LINES),
   }),
   /** A5: add several known songs in order, until the member's queue limit. */
   'queue:add-many': z.strictObject({

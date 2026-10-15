@@ -27,6 +27,7 @@ import { PlaylistsService } from '../playlists/playlists.service';
 import { TasteService } from '../taste/taste.service';
 import { UsersService } from '../users/users.service';
 import { SearchService } from '../music/search.service';
+import { SongListService } from '../music/songlist.service';
 import { LyricsService } from '../music/lyrics.service';
 import { PlaylistService } from '../music/playlist.service';
 import { SuggestService } from '../music/suggest.service';
@@ -78,6 +79,8 @@ export const RECAP_LIMIT = { count: 20, windowMs: 60_000 };
 export const PLAYLIST_WRITE_LIMIT = { count: 60, windowMs: 60_000 };
 /** L3: each import reads up to ~10 pages from YouTube. */
 export const YT_IMPORT_LIMIT = { count: 20, windowMs: 600_000 };
+/** L4: pasted lists (YouTube searches inside have their own hourly limit). */
+export const SONGLIST_LIMIT = { count: 20, windowMs: 600_000 };
 
 export function clientIp(socket: Socket, trustProxy: boolean): string {
   if (trustProxy) {
@@ -117,6 +120,7 @@ export class RealtimeGateway
     private readonly personal: PlaylistsService,
     private readonly youtubeAccount: YouTubeAccountService,
     private readonly taste: TasteService,
+    private readonly songlist: SongListService,
   ) {}
 
   // ------------------------------------------------------------ lifecycle
@@ -632,6 +636,15 @@ export class RealtimeGateway
       await this.requireMember(actor);
       this.limit(`playlist:${actor.memberId}`, LOOKUP_LIMIT);
       return this.playlists.open(input.url);
+    });
+  }
+
+  @SubscribeMessage('songlist:match')
+  matchSongList(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('songlist:match', s, body, async (input, actor) => {
+      await this.requireMember(actor);
+      this.limit(`songlist:${actor.memberId}`, SONGLIST_LIMIT);
+      return this.songlist.match(actor.memberId, input.lines);
     });
   }
 

@@ -20,6 +20,7 @@ import { MembersService } from './members/members.service';
 import { ApiDataRetentionService } from './music/api-data-retention.service';
 import { PlaylistService } from './music/playlist.service';
 import { SearchService } from './music/search.service';
+import { SongListService } from './music/songlist.service';
 import { TrackCacheService } from './music/track-cache.service';
 import { YouTubeProvider } from './music/youtube.provider';
 import { LeaseService } from './playback/lease.service';
@@ -63,6 +64,7 @@ export class AppModule {
         SuggestService,
         LyricsService,
         SearchService,
+        SongListService,
         ApiDataRetentionService,
         PlaylistService,
         PlaybackService,
