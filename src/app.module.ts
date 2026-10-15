@@ -5,6 +5,9 @@ import { ENV, type Env } from './config/env';
 import { HealthController } from './health/health.controller';
 import { LibraryService } from './library/library.service';
 import { AiService } from './ai/ai.service';
+import { DjService } from './ai/dj.service';
+import { McService } from './ai/mc.service';
+import { ModerationService } from './ai/moderation.service';
 import { LastFmService } from './music/lastfm.service';
 import { LyricsService } from './music/lyrics.service';
 import { SuggestService } from './music/suggest.service';
@@ -48,6 +51,9 @@ export class AppModule {
         YouTubeProvider,
         TrackCacheService,
         AiService,
+        ModerationService,
+        McService,
+        DjService,
         LastFmService,
         TrackMetaService,
         SuggestService,

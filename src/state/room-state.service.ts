@@ -37,6 +37,13 @@ export class RoomStateService implements OnModuleDestroy {
     private readonly broadcaster: Broadcaster,
   ) {}
 
+  private readonly committedListeners = new Set<(roomId: string) => void>();
+
+  /** Called after every committed room change (e.g. the MC prepares intros). */
+  onCommitted(listener: (roomId: string) => void): void {
+    this.committedListeners.add(listener);
+  }
+
   mutate<T>(
     roomId: string,
     fn: (tx: Tx, ctx: MutateCtx) => Promise<T>,
@@ -82,6 +89,7 @@ export class RoomStateService implements OnModuleDestroy {
           this.logger.error(`afterCommit effect failed: ${(e as Error).stack}`);
       }
     }
+    for (const l of this.committedListeners) l(roomId);
     return result;
   }
 

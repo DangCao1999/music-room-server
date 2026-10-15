@@ -10,24 +10,43 @@ import { ENV, type Env } from '../config/env';
 
 const TIMEOUT_MS = 15_000;
 const REST_MS = 10 * 60_000;
+/** Quota, bad key or unknown model: that provider is useless for a while. */
+const REST_ON = [401, 403, 404, 429];
+
+export interface AiOptions {
+  timeoutMs?: number;
+  /** 0.2 for extraction, higher for writing (MC lines, DJ picks). */
+  temperature?: number;
+}
 
 interface Provider {
   name: string;
-  call(system: string, user: string): Promise<string>;
+  call(
+    system: string,
+    user: string,
+    opts: Required<AiOptions>,
+  ): Promise<string>;
+}
+
+class HttpError extends Error {
+  constructor(readonly status: number) {
+    super(`HTTP ${status}`);
+  }
 }
 
 async function post(
   url: string,
   headers: Record<string, string>,
   body: unknown,
+  timeoutMs: number,
 ): Promise<unknown> {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
   });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) throw new HttpError(res.status);
   return res.json();
 }
 
@@ -40,19 +59,20 @@ function chatCompletions(
 ): Provider {
   return {
     name,
-    async call(system, user) {
+    async call(system, user, opts) {
       const body = (await post(
         url,
         { authorization: `Bearer ${key}` },
         {
           model,
-          temperature: 0.2,
+          temperature: opts.temperature,
           response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: system },
             { role: 'user', content: user },
           ],
         },
+        opts.timeoutMs,
       )) as { choices?: { message?: { content?: string } }[] };
       const text = body.choices?.[0]?.message?.content;
       if (!text) throw new Error('empty answer');
@@ -73,7 +93,7 @@ export class AiService {
       const model = env.GEMINI_MODEL;
       this.providers.push({
         name: 'gemini',
-        async call(system, user) {
+        async call(system, user, opts) {
           const body = (await post(
             `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
             { 'x-goog-api-key': key },
@@ -81,10 +101,11 @@ export class AiService {
               systemInstruction: { parts: [{ text: system }] },
               contents: [{ role: 'user', parts: [{ text: user }] }],
               generationConfig: {
-                temperature: 0.2,
+                temperature: opts.temperature,
                 responseMimeType: 'application/json',
               },
             },
+            opts.timeoutMs,
           )) as {
             candidates?: { content?: { parts?: { text?: string }[] } }[];
           };
@@ -125,18 +146,25 @@ export class AiService {
   }
 
   /** First provider that answers with valid JSON, or null. `task` only names it in logs. */
-  async json<T>(task: string, system: string, user: string): Promise<T | null> {
+  async json<T>(
+    task: string,
+    system: string,
+    user: string,
+    options: AiOptions = {},
+  ): Promise<T | null> {
+    const opts = { timeoutMs: TIMEOUT_MS, temperature: 0.2, ...options };
     const now = Date.now();
     for (const p of this.providers) {
       if ((this.restingUntil.get(p.name) ?? 0) > now) continue;
       try {
-        const text = await p.call(system, user);
+        const text = await p.call(system, user, opts);
         // Some models wrap JSON in ``` fences despite JSON mode.
         return JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, '')) as T;
       } catch (e) {
-        this.restingUntil.set(p.name, Date.now() + REST_MS);
+        const rest = e instanceof HttpError && REST_ON.includes(e.status);
+        if (rest) this.restingUntil.set(p.name, Date.now() + REST_MS);
         this.logger.warn(
-          `AI ${task} via ${p.name} failed (${String(e)}); resting it ${REST_MS / 60_000} min`,
+          `AI ${task} via ${p.name} failed (${String(e)})${rest ? `; resting it ${REST_MS / 60_000} min` : ''}`,
         );
       }
     }

@@ -24,7 +24,7 @@ export interface LyricsView {
 }
 
 /** Why a song is suggested (A3). */
-export type SuggestionReason = 'similar' | 'room' | 'artist' | 'popular';
+export type SuggestionReason = 'similar' | 'room' | 'artist' | 'popular' | 'dj';
 
 /**
  * `track`: a song the server knows, added in one tap. `search`: a song Last.fm suggests
@@ -32,7 +32,24 @@ export type SuggestionReason = 'similar' | 'room' | 'artist' | 'popular';
  */
 export type SuggestionView =
   | { kind: 'track'; track: TrackSummary; reason: SuggestionReason }
-  | { kind: 'search'; artist: string; song: string; reason: 'similar' };
+  | { kind: 'search'; artist: string; song: string; reason: 'similar' | 'dj' };
+
+/** A8: what a room played over a period. */
+export interface RecapView {
+  plays: number;
+  minutes: number;
+  skipped: number;
+  topSongs: { track: TrackSummary; plays: number; hearts: number }[];
+  topPickers: {
+    member: { id: string; displayName: string };
+    songs: number;
+    hearts: number;
+  }[];
+  /** Songs started in each local hour, index 0–23. */
+  byHour: number[];
+  /** A one-line, light-hearted comment written by AI (null without AI). */
+  summary: string | null;
+}
 
 export interface MemberView {
   id: string;
@@ -100,6 +117,8 @@ export interface RoomSnapshot {
   nowPlaying: NowPlayingView | null;
   player: { memberId: string | null; online: boolean };
   searchEnabled: boolean;
+  /** A free AI provider is configured (DJ, MC, smarter radio, recap comment). */
+  aiEnabled: boolean;
 }
 
 export interface ChatMessageView {
@@ -126,6 +145,8 @@ export interface PlayerCommand {
   positionSec: number;
   positionAt: number;
   wish: { message: string; voicePreset: VoicePreset | null } | null;
+  /** AI3: the MC's line for this song, read when there is no wish. */
+  intro: string | null;
 }
 
 export type RevokeReason = 'kicked' | 'left' | 'invalid';

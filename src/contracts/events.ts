@@ -5,6 +5,7 @@ import type {
   DjEvent,
   LibraryItemView,
   LyricsView,
+  RecapView,
   SuggestionView,
   PlayerCommand,
   PlayerRevokeReason,
@@ -41,6 +42,8 @@ export interface CommandResults {
   };
   'library:room': { items: LibraryItemView[] };
   'suggest:next': { items: SuggestionView[] };
+  'dj:ask': { items: SuggestionView[] };
+  'room:recap': RecapView;
   'playlist:open': { playlistId: string; tracks: TrackSummary[] };
   /** Skipped songs say why (ALREADY_QUEUED, PLAYED_RECENTLY, TRACK_TOO_LONG, QUEUE_LIMIT…). */
   'queue:add-many': {
