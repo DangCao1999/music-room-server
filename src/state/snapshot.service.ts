@@ -5,7 +5,6 @@ import { LeaseService } from '../playback/lease.service';
 import { countVotes, requiredVotes } from '../playback/skip-votes';
 import { PrismaService } from '../prisma/prisma.service';
 import { orderQueue } from '../queue/fair-queue';
-import { lastPlayedMap } from '../queue/last-played';
 import { PresenceService } from '../realtime/presence.service';
 import { readSettings } from './settings';
 import {
@@ -68,7 +67,6 @@ export class SnapshotService {
         : null,
     ]);
 
-    const lastPlayed = await lastPlayedMap(this.prisma, roomId);
     const ordered = orderQueue(
       queued.map((q) => ({
         ...q,
@@ -77,7 +75,6 @@ export class SnapshotService {
         hearts: q.hearts.length,
         _row: q,
       })),
-      lastPlayed,
     );
 
     const members: MemberView[] = room.members.map((m) => ({
@@ -100,7 +97,7 @@ export class SnapshotService {
         voters,
       );
       nowPlaying = {
-        item: toItemView(current, 0),
+        item: toItemView(current),
         status: ps.status,
         positionSec: estimatePosition(ps, now),
         positionAt: now,
@@ -121,9 +118,7 @@ export class SnapshotService {
         hasPin: room.adminPinHash !== null,
       },
       members,
-      queue: ordered.map((o) =>
-        toItemView(o._row as ItemWithRelations, o.round),
-      ),
+      queue: ordered.map((o) => toItemView(o._row as ItemWithRelations)),
       status: nowPlaying ? ps.status : 'IDLE',
       nowPlaying,
       player: {

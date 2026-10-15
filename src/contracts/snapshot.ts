@@ -145,8 +145,6 @@ export interface QueueItemView {
   addedBy: { id: string; displayName: string } | null;
   /** Set when the room added it itself (addedBy is null): radio (A4) or fallback playlist. */
   auto: 'radio' | 'fallback' | null;
-  /** 1-based fair-queue round (0 for pinned / now playing). */
-  round: number;
   hearts: number;
   heartedBy: string[];
   pinned: boolean;

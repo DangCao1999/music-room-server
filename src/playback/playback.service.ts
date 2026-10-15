@@ -16,7 +16,6 @@ import {
 } from '../contracts';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
 import { orderQueue } from '../queue/fair-queue';
-import { lastPlayedMap } from '../queue/last-played';
 import { Broadcaster } from '../realtime/broadcaster.service';
 import { ActivityService } from '../social/activity.service';
 import {
@@ -113,12 +112,10 @@ export class PlaybackService
     const ordered = orderQueue(
       queued.map((q) => ({
         id: q.id,
-        addedById: q.addedById,
         addedAt: q.addedAt.getTime(),
         pinnedAt: q.pinnedAt?.getTime() ?? null,
         hearts: q.hearts.length,
       })),
-      await lastPlayedMap(tx, roomId),
     );
     // Members' songs first; an empty queue goes to the radio (A4), then the fallback playlist.
     const nextId =

@@ -39,14 +39,13 @@ export function toTrackSummary(t: Track): TrackSummary {
   };
 }
 
-export function toItemView(i: ItemWithRelations, round: number): QueueItemView {
+export function toItemView(i: ItemWithRelations): QueueItemView {
   return {
     id: i.id,
     track: toTrackSummary(i.track),
     addedBy: i.addedBy
       ? { id: i.addedBy.id, displayName: i.addedBy.displayName }
       : null,
-    round,
     hearts: i.hearts.length,
     heartedBy: i.hearts.map((h) => h.memberId),
     pinned: i.pinnedAt !== null,

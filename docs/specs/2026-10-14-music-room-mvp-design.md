@@ -299,23 +299,21 @@ Tên sự kiện của code cũ được giữ lại khi có thể. Các sự ki
 
 ## 8. Hành vi cốt lõi
 
-### 8.1 Thuật toán xếp lượt công bằng (`fair-queue.ts`)
+### 8.1 Thuật toán xếp hàng chờ (`fair-queue.ts`)
 
-Hàm thuần: `orderQueue(items: QueuedItem[], members: Map<id, { lastPlayedAt: Date | null }>): QueuedItem[]`
+Hàm thuần: `orderQueue(items: QueuedItem[]): QueuedItem[]`
 
 1. **Bài được ghim** (`pinnedAt != null`) đứng đầu, xếp theo `pinnedAt` tăng dần.
-2. Các bài còn lại được nhóm theo `addedById`. Trong mỗi nhóm, bài xếp theo `addedAt` tăng dần, và bài thứ *i* (đếm từ 0) thuộc **vòng *i***.
-3. Xếp theo vòng tăng dần. Trong cùng một vòng, xếp theo thứ tự:
-   1. Số ❤️ **giảm dần**.
-   2. `lastPlayedAt` của người thêm **tăng dần**; ai chưa từng có bài được phát (`null`) đứng trước.
-   3. `addedAt` tăng dần.
-   4. `id`, để thứ tự luôn xác định.
-4. Bài từ playlist dự phòng (`addedById = null`) **không** nằm trong hàng chờ. Server chỉ lấy chúng khi hàng chờ trống (§8.2).
+2. Các bài còn lại xếp theo thứ tự:
+   1. Số ❤️ **giảm dần** (mỗi ❤️ nâng bài lên).
+   2. `addedAt` tăng dần: **ai thêm trước hát trước**.
+   3. `id`, để thứ tự luôn xác định.
+3. Bài từ playlist dự phòng (`addedById = null`) **không** nằm trong hàng chờ. Server chỉ lấy chúng khi hàng chờ trống (§8.2).
 
-Ví dụ (không có ❤️, không ai từng có bài được phát):
-- An thêm A1, A2, A3; sau đó Bình thêm B1. Thứ tự: **A1, B1, A2, A3**.
-- A1 phát xong, Chi thêm C1. Lúc này `lastPlayedAt` của An là mới nhất. Thứ tự: **B1, C1, A2, A3**. B1 và C1 cùng vòng 0, Bình và Chi đều chưa có bài được phát, Bình thêm trước.
-- Nếu C1 có 2 ❤️, thứ tự là: **C1, B1, A2, A3**.
+Ví dụ (không có ❤️):
+- An thêm A1, A2, A3; sau đó Bình thêm B1. Thứ tự: **A1, A2, A3, B1**.
+- Nếu B1 có 1 ❤️, thứ tự là: **B1, A1, A2, A3**.
+- Nếu A3 được ghim phát tiếp theo: **A3, B1, A1, A2**.
 
 Hàm được gọi mỗi khi tạo snapshot và mỗi khi chọn bài tiếp theo. **Thứ tự không bao giờ được lưu vào database.**
 
