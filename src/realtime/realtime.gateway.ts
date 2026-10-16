@@ -83,6 +83,7 @@ export const YT_IMPORT_LIMIT = { count: 20, windowMs: 600_000 };
 export const SONGLIST_LIMIT = { count: 20, windowMs: 600_000 };
 /** V1: skip votes (✅ / ❌ can be changed while a vote is open). */
 export const VOTE_LIMIT = { count: 20, windowMs: 60_000 };
+export const LISTEN_LIMIT = { count: 20, windowMs: 60_000 };
 
 export function clientIp(socket: Socket, trustProxy: boolean): string {
   if (trustProxy) {
@@ -207,6 +208,14 @@ export class RealtimeGateway
     if (!b) return;
     await socket.leave(roomChannel(b.roomId));
     const r = this.presence.remove(socket.id);
+    // Still online elsewhere but no longer listening: others' "🎧" lists must update.
+    if (r?.stoppedListening && !r.wentOffline && !this.state.isClosing) {
+      await this.state
+        .touch(b.roomId)
+        .catch((e: unknown) =>
+          this.logger.warn(`presence update failed: ${String(e)}`),
+        );
+    }
     if (r?.wentOffline && !this.state.isClosing) {
       await this.state
         .mutate(b.roomId, (tx, ctx) =>
@@ -647,6 +656,18 @@ export class RealtimeGateway
       await this.requireMember(actor);
       this.limit(`songlist:${actor.memberId}`, SONGLIST_LIMIT);
       return this.songlist.match(actor.memberId, input.lines);
+    });
+  }
+
+  /** N1: this socket plays the room on its own device (or stops). Shown as "🎧" to others. */
+  @SubscribeMessage('listen:set')
+  setListening(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('listen:set', s, body, async (input, actor) => {
+      await this.requireMember(actor);
+      this.limit(`listen:${actor.memberId}`, LISTEN_LIMIT);
+      if (this.presence.setListening(s.id, input.on))
+        await this.state.touch(actor.roomId);
+      return {};
     });
   }
 

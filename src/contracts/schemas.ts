@@ -240,6 +240,8 @@ export const C2S = {
       .max(LIMITS.input)
       .refine((v) => parseYouTubePlaylist(v) !== null),
   }),
+  /** N1: this device plays the room for itself ("Nghe cùng") — or stops. */
+  'listen:set': z.strictObject({ on: z.boolean() }),
   /** L4: find a song for each pasted line (free sources first, then YouTube search). */
   'songlist:match': z.strictObject({
     lines: z.array(line(SONGLIST_LINE_MAX)).min(1).max(SONGLIST_MAX_LINES),
