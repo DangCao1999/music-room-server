@@ -29,9 +29,17 @@ export interface ChatUser {
   platform: ChatPlatformName;
   teamId: string;
   userId: string;
+  /** The person's display name in the chat app; '' when the app did not tell us. */
   name: string;
   email: string | null;
 }
+
+/** Shown while the chat app hides the person's name. */
+export const CHAT_PLACEHOLDER_NAME = 'Người dùng Slack';
+/** A raw Slack user id ("U0956R22J11"), used as a name by an earlier version. */
+const SLACK_ID = /^[UW][A-Z0-9]{8,}$/;
+const isPlaceholder = (name: string) =>
+  SLACK_ID.test(name) || name.startsWith(CHAT_PLACEHOLDER_NAME);
 
 export interface NowView {
   roomName: string;
@@ -167,7 +175,21 @@ export class ChatRoomService {
       orderBy: { createdAt: 'desc' },
     });
     if (tied?.kickedAt) throw new AppError('FORBIDDEN');
-    if (tied && !tied.leftAt) return tied;
+    if (tied && !tied.leftAt) {
+      // Named after a Slack id or the placeholder before: take the real name once known.
+      if (user.name && isPlaceholder(tied.displayName)) {
+        const name = await this.freeName(roomId, user.name);
+        if (name) {
+          return this.state.mutate(roomId, (tx) =>
+            tx.member.update({
+              where: { id: tied.id },
+              data: { displayName: name, displayNameKey: nameKey(name) },
+            }),
+          );
+        }
+      }
+      return tied;
+    }
 
     if (user.email) {
       const account = await this.prisma.user.findFirst({
@@ -186,26 +208,16 @@ export class ChatRoomService {
       }
     }
 
-    const base = cleanLine(user.name).slice(0, 30) || 'Slack';
     const room = await this.prisma.room.findUniqueOrThrow({
       where: { id: roomId },
       select: { settings: true },
     });
     const settings = readSettings(room.settings);
-    for (const name of [
-      base,
-      `${base.slice(0, 22)} (Slack)`,
-      ...[2, 3, 4, 5].map((n) => `${base.slice(0, 26)} ${n}`),
-    ]) {
-      const taken = await this.prisma.member.findFirst({
-        where: {
-          roomId,
-          displayNameKey: nameKey(name),
-          leftAt: null,
-          kickedAt: null,
-        },
-      });
-      if (taken) continue;
+    const name = await this.freeName(
+      roomId,
+      user.name || CHAT_PLACEHOLDER_NAME,
+    );
+    if (name) {
       return this.state.mutate(roomId, async (tx, ctx) => {
         const m = await tx.member.create({
           data: {
@@ -230,6 +242,32 @@ export class ChatRoomService {
       });
     }
     throw new AppError('NAME_TAKEN');
+  }
+
+  /** The first of "Lan", "Lan (Slack)", "Lan 2"… that nobody active in the room uses. */
+  private async freeName(
+    roomId: string,
+    wanted: string,
+  ): Promise<string | null> {
+    const base = cleanLine(wanted).slice(0, 30) || CHAT_PLACEHOLDER_NAME;
+    for (const name of [
+      base,
+      ...(base === CHAT_PLACEHOLDER_NAME
+        ? []
+        : [`${base.slice(0, 22)} (Slack)`]),
+      ...[2, 3, 4, 5, 6, 7, 8, 9].map((n) => `${base.slice(0, 26)} ${n}`),
+    ]) {
+      const taken = await this.prisma.member.findFirst({
+        where: {
+          roomId,
+          displayNameKey: nameKey(name),
+          leftAt: null,
+          kickedAt: null,
+        },
+      });
+      if (!taken) return name;
+    }
+    return null;
   }
 
   private actor(m: Member, platform: ChatPlatformName): Actor {

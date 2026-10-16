@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ENV, type Env } from '../../config/env';
 
 export interface SlackProfile {
+  /** '' when Slack did not tell us (users.info failed or the user has no name). */
   name: string;
   email: string | null;
 }
@@ -106,7 +107,7 @@ export class SlackApi {
   }
 
   /** Display name and email (needs users:read and users:read.email), cached for an hour. */
-  async profile(userId: string, fallbackName: string): Promise<SlackProfile> {
+  async profile(userId: string): Promise<SlackProfile> {
     const hit = this.profiles.get(userId);
     if (hit && Date.now() - hit.at < PROFILE_TTL_MS) return hit.p;
     const r = await this.call<{
@@ -123,10 +124,14 @@ export class SlackApi {
         u?.profile?.real_name ||
         u?.real_name ||
         u?.name ||
-        fallbackName,
+        '',
       email: u?.profile?.email ?? null,
     };
-    if (r) this.profiles.set(userId, { at: Date.now(), p });
+    if (r && p.name) this.profiles.set(userId, { at: Date.now(), p });
+    else
+      this.logger.warn(
+        `slack users.info gave no name for ${userId} (needs users:read; reinstall the app after changing scopes)`,
+      );
     return p;
   }
 
