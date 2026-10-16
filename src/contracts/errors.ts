@@ -42,6 +42,10 @@ export const ERROR_CODES = [
   'QUOTA_EXCEEDED',
   'RATE_LIMITED',
   'STALE_ITEM',
+  /** V1: this song was voted to stay; `seconds` until a new vote may start. */
+  'SKIP_BLOCKED',
+  /** V1: ❌ needs an open vote. */
+  'VOTE_CLOSED',
   'INTERNAL',
 ] as const;
 

@@ -61,7 +61,7 @@ export class SnapshotService {
             where: { id: ps.currentItemId },
             include: {
               ...ITEM_INCLUDE,
-              skipVotes: { select: { memberId: true } },
+              skipVotes: { select: { memberId: true, approve: true } },
             },
           })
         : null,
@@ -92,18 +92,34 @@ export class SnapshotService {
     let nowPlaying: RoomSnapshot['nowPlaying'] = null;
     if (current && ps.status !== 'IDLE') {
       const voters = this.onlineVoters(roomId, room.members);
-      const skip = countVotes(
-        current.skipVotes.map((v) => v.memberId),
-        voters,
-      );
+      const tally = (approve: boolean) =>
+        countVotes(
+          current.skipVotes
+            .filter((v) => v.approve === approve)
+            .map((v) => v.memberId),
+          voters,
+        );
+      const yes = tally(true);
+      const no = tally(false);
+      const opener = current.skipVoteById
+        ? room.members.find((m) => m.id === current.skipVoteById)
+        : undefined;
+      const blocked = current.skipBlockedUntil?.getTime() ?? null;
       nowPlaying = {
         item: toItemView(current),
         status: ps.status,
         positionSec: estimatePosition(ps, now),
         positionAt: now,
         skip: {
-          ...skip,
+          ...yes,
+          against: no.votes,
+          againstVoters: no.voters,
           required: requiredVotes(voters.size, settings.skipThreshold),
+          openedBy: opener
+            ? { id: opener.id, displayName: opener.displayName }
+            : null,
+          endsAt: current.skipVoteEndsAt?.getTime() ?? null,
+          blockedUntil: blocked !== null && blocked > now ? blocked : null,
         },
       };
     }

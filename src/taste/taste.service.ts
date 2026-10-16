@@ -79,8 +79,9 @@ export class TasteService {
           where: { playlist: { ownerId: userId } },
           select: { trackId: true },
         }),
+        // Only ✅: a ❌ ("keep listening") is not a dislike.
         this.prisma.skipVote.findMany({
-          where: { memberId: { in: memberIds } },
+          where: { memberId: { in: memberIds }, approve: true },
           select: { queueItem: { select: { trackId: true } } },
         }),
         this.prisma.queueItem.findMany({

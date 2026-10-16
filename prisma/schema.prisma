@@ -125,6 +125,10 @@ model QueueItem {
   addedAt     DateTime    @default(now())
   startedAt   DateTime?
   endedAt     DateTime?
+  /// Skip vote (V1): who opened it and when it closes; no new vote before skipBlockedUntil.
+  skipVoteById     String?
+  skipVoteEndsAt   DateTime?
+  skipBlockedUntil DateTime?
   hearts      Heart[]
   skipVotes   SkipVote[]
 
@@ -218,6 +222,8 @@ model SkipVote {
   queueItem   QueueItem @relation(fields: [queueItemId], references: [id], onDelete: Cascade)
   memberId    String
   member      Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// true = ✅ skip it, false = ❌ keep listening (V1).
+  approve     Boolean   @default(true)
 
   @@id([queueItemId, memberId])
 }

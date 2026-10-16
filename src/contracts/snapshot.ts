@@ -175,7 +175,21 @@ export interface NowPlayingView {
   /** Position at `positionAt` (server epoch ms). Clients extrapolate while PLAYING. */
   positionSec: number;
   positionAt: number;
-  skip: { votes: number; required: number; voters: string[] };
+  /**
+   * V1 skip vote. `votes` / `voters`: ✅ from online members; `against` / `againstVoters`: ❌.
+   * `endsAt` (server epoch ms) while a vote is open; `blockedUntil` after a vote that kept the
+   * song, until which no new vote can start.
+   */
+  skip: {
+    votes: number;
+    required: number;
+    voters: string[];
+    against: number;
+    againstVoters: string[];
+    openedBy: { id: string; displayName: string } | null;
+    endsAt: number | null;
+    blockedUntil: number | null;
+  };
 }
 
 export interface RoomSnapshot {
