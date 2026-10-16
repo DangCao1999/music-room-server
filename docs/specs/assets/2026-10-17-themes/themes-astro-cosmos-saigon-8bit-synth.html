@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Space+Grotesk:wght@400;500;600;700&family=Bungee&family=Patrick+Hand&family=Pixelify+Sans:wght@500;700&family=VT323&family=Exo+2:ital,wght@0,500;1,800;1,900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f0e0d;color:#e9e4da;font:15px/1.5 'Be Vietnam Pro',system-ui,sans-serif;padding:32px 32px 90px}
+.intro{max-width:860px;margin:0 0 26px}.intro h1{font:700 28px/1.15 'Be Vietnam Pro';margin:0 0 8px}.intro p{color:#a9a196;margin:0}
+.toc{position:sticky;top:0;z-index:5;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 0;margin:0 0 26px;background:#0f0e0dee}.toc a{color:#e9e4da;text-decoration:none;border:1px solid #ffffff26;border-radius:999px;padding:5px 12px;font-size:13px}
+.concept{margin:0 0 70px}
+.chead{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin:0 0 14px}.chead h2{margin:0;font:700 22px 'Be Vietnam Pro'}.chead p{margin:0;color:#a9a196;max-width:720px}
+.pick{margin-left:auto;border:1px solid #ffffff2e;border-radius:999px;padding:6px 14px;font-weight:600;font-size:14px;cursor:pointer}.pick.selected{background:#e3b24a;color:#1a1714;border-color:#e3b24a}
+.row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.notes{margin-top:12px;max-width:1440px;color:#a9a196;font-size:13.5px;columns:3 300px;column-gap:28px}.notes p{margin:0 0 6px;break-inside:avoid}.notes b{color:#e9e4da;font-weight:600}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}svg.i.sm{width:15px;height:15px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* ---------- shared skeleton (each theme sets the variables) ---------- */
+.T{background:var(--bg);color:var(--text);font-family:var(--fb);position:relative;overflow:hidden}
+.desk.T{width:1080px;max-width:100%;border-radius:16px}.phone.T{width:336px;border-radius:38px;border:8px solid #050505;flex:none}
+.T .top{display:flex;align-items:center;gap:16px;padding:16px 36px;border-bottom:1px solid var(--line);position:relative;z-index:2}
+.T .top h1{margin:0;font:var(--fh1)}.T .code{color:var(--mute);font-size:14px;display:inline-flex;gap:6px;align-items:center}.T .code b{color:var(--accent);letter-spacing:.14em;font-weight:600}
+.T .acts{margin-left:auto;display:flex;gap:4px;color:var(--mute)}.T .ib{width:38px;height:38px;display:grid;place-items:center;border-radius:var(--rbtn)}
+.T .wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:44px;padding:30px 36px 38px;position:relative;z-index:2}
+.T .state{display:inline-flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}.T .dot{width:7px;height:7px;border-radius:50%;background:var(--live)}
+.T .title{font:var(--ftitle);margin:10px 0 8px}.T .by{color:var(--mute);margin:0}.T .by b{color:var(--text);font-weight:500}
+.T .ctrl{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.T .b{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:var(--rbtn);border:1px solid var(--line);color:var(--text);font-weight:500;font-size:14px;background:var(--btnbg,transparent)}
+.T .b.p{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}.T .b.ic{width:42px;padding:0;justify-content:center;color:var(--mute)}
+.T .vote{margin-top:20px;display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:var(--rcard);background:var(--panel)}
+.T .vote .txt{flex:1;font-size:14px}.T .sb{height:34px;padding:0 12px;border-radius:var(--rbtn);display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px;border:1px solid var(--line)}.T .sb.p{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.T .wish{margin-top:22px;padding-left:14px;border-left:3px solid var(--accent2,var(--accent));font:var(--fwish)}.T .wish small{display:block;font:500 13px var(--fb);color:var(--mute);margin-bottom:4px}
+.T .lyr{margin-top:18px;color:var(--lyr);font-size:16px;line-height:1.7}.T .lyr b{color:var(--text);font-weight:600;font-size:19px}
+.T h3{font:var(--fh3);margin:30px 0 8px}
+.T .q{display:flex;align-items:center;gap:14px;padding:11px 0;border-top:1px solid var(--line)}.T .q .th{width:44px;height:44px;background:center/cover;border-radius:var(--rthumb);flex:none}
+.T .q .t{flex:1;min-width:0}.T .q .t b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.T .q .t span{color:var(--mute);font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.T .q .a{display:flex;color:var(--mute)}.T .q .a span{width:34px;height:34px;display:grid;place-items:center}
+.T .side{display:flex;flex-direction:column;gap:18px}
+.T .chat{border:1px solid var(--line);border-radius:var(--rcard);padding:16px;background:var(--panel)}.T .chat h3{margin:0 0 10px}
+.T .m{margin:0 0 10px;font-size:14.5px}.T .m small{display:block;color:var(--mute);font-size:12px}.T .m.me{text-align:right}.T .m.me span{display:inline-block;background:var(--me);color:var(--me-ink,var(--text));border-radius:12px 12px 3px 12px;padding:6px 10px}
+.T .react{display:flex;gap:4px;margin:8px 0 10px}.T .react span{width:32px;height:32px;border-radius:var(--rbtn);border:1px solid var(--line);display:grid;place-items:center;font-size:15px}
+.T .in{display:flex;gap:8px}.T .in div{flex:1;height:42px;border-radius:var(--rbtn);border:1px solid var(--line);display:flex;align-items:center;padding:0 14px;color:var(--mute);font-size:14px}.T .in span{width:42px;height:42px;border-radius:var(--rbtn);background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.T .seg{display:flex;gap:6px}.T .seg span{flex:1;padding:9px 0;border-radius:var(--rbtn);text-align:center;font-weight:500;font-size:14px;display:inline-flex;gap:6px;justify-content:center;align-items:center;border:1px solid var(--line);color:var(--mute)}.T .seg .on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.T .pb{padding:16px;position:relative;z-index:2}.T .tabbar{display:grid;grid-template-columns:repeat(3,1fr);padding:10px 0 16px;font-size:11.5px;text-align:center;border-top:1px solid var(--line);color:var(--mute);position:relative;z-index:2;background:var(--bar,var(--bg))}.T .tabbar span{display:flex;flex-direction:column;align-items:center;gap:3px}.T .tabbar .on{color:var(--accent)}
+.T .hero{display:grid;grid-template-columns:260px 1fr;gap:34px;align-items:center}
+
+/* ========== CHIÊM TINH ========== */
+.astro{--bg:#12142f;--text:#ece6d6;--mute:#9a9cc4;--line:#2b2e5a;--accent:#d6b25e;--accent-ink:#17142a;--panel:#171a3a;--live:#d6b25e;--me:#2b2e5a;--lyr:#6e70a0;--rbtn:999px;--rcard:18px;--rthumb:50%;
+  --fb:'Be Vietnam Pro',sans-serif;--fh1:600 24px 'Cormorant Garamond',serif;--ftitle:500 48px/1 'Cormorant Garamond',serif;--fh3:600 22px 'Cormorant Garamond',serif;--fwish:italic 500 21px/1.35 'Cormorant Garamond',serif}
+.astro::before{content:"";position:absolute;inset:0;background:radial-gradient(1px 1px at 10% 20%,#fff9 50%,#0000),radial-gradient(1px 1px at 30% 70%,#fff7 50%,#0000),radial-gradient(1.5px 1.5px at 70% 15%,#fffa 50%,#0000),radial-gradient(1px 1px at 85% 60%,#fff8 50%,#0000),radial-gradient(1px 1px at 55% 40%,#fff6 50%,#0000),radial-gradient(1px 1px at 20% 90%,#fff7 50%,#0000),radial-gradient(1px 1px at 92% 85%,#fff6 50%,#0000);pointer-events:none}
+.astro .wheel{position:relative;width:260px;height:260px}
+.astro .wheel svg{position:absolute;inset:0;width:100%;height:100%}
+.astro .wheel .cv{position:absolute;inset:44px;border-radius:50%;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;box-shadow:0 0 0 1px #d6b25e66}
+.astro .moon{width:30px;height:30px;border-radius:50%;background:#ece6d6;box-shadow:inset -12px 0 0 0 #171a3a;flex:none}
+.astro .sign{display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-size:13px}
+
+/* ========== VŨ TRỤ ========== */
+.cosmos{--bg:#070b1a;--text:#e6ecff;--mute:#8a93b8;--line:#1d2645;--accent:#7fd4ff;--accent-ink:#06121c;--accent2:#ffb86b;--panel:#0c1330cc;--live:#ffb86b;--me:#173357;--lyr:#55608a;--rbtn:12px;--rcard:16px;--rthumb:50%;
+  --fb:'Space Grotesk',sans-serif;--fh1:600 22px 'Space Grotesk';--ftitle:600 46px/1 'Space Grotesk';--fh3:600 20px 'Space Grotesk';--fwish:500 19px/1.4 'Space Grotesk'}
+.cosmos::before{content:"";position:absolute;inset:0;background:radial-gradient(40% 50% at 18% 30%,#3b1f6b88,#0000 70%),radial-gradient(35% 40% at 80% 70%,#0e4a5c88,#0000 70%),radial-gradient(1px 1px at 40% 20%,#fff 50%,#0000),radial-gradient(1px 1px at 65% 35%,#fffb 50%,#0000),radial-gradient(1px 1px at 88% 15%,#fff9 50%,#0000),radial-gradient(1px 1px at 12% 75%,#fffa 50%,#0000),radial-gradient(1.5px 1.5px at 52% 88%,#fff 50%,#0000);pointer-events:none}
+.cosmos .planet{position:relative;width:260px;height:260px}
+.cosmos .planet .ball{position:absolute;inset:40px;border-radius:50%;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;box-shadow:inset -30px -20px 50px #000c,0 0 60px #7fd4ff33}
+.cosmos .planet svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.cosmos .orbitq{display:flex;align-items:center;gap:18px;margin-top:6px}
+.cosmos .orbitq .p{border-radius:50%;background:center/cover;flex:none;box-shadow:0 0 0 1px #7fd4ff44}
+.cosmos .stars{display:flex;gap:6px;align-items:center;color:var(--mute);font-size:13px}.cosmos .stars i{width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 6px #7fd4ff}
+
+/* ========== SÀI GÒN XƯA ========== */
+.saigon{--bg:#f3ead6;--text:#1f2a28;--mute:#5d6b67;--line:#d7cbb0;--accent:#1d6b66;--accent-ink:#fff8e6;--accent2:#b8442f;--panel:#fbf5e7;--live:#b8442f;--me:#e8c547;--me-ink:#1f2a28;--lyr:#9aa49f;--rbtn:6px;--rcard:8px;--rthumb:4px;
+  --fb:'Be Vietnam Pro',sans-serif;--fh1:400 22px 'Bungee';--ftitle:700 40px/1.05 'Be Vietnam Pro';--fh3:400 18px 'Bungee';--fwish:400 22px/1.3 'Patrick Hand'}
+.saigon .tiles{height:26px;background:
+  radial-gradient(circle at 50% 50%,#e8c547 0 5px,#0000 6px) 0 0/26px 26px,
+  conic-gradient(from 45deg,#1d6b66 0 25%,#f3ead6 0 50%,#1d6b66 0 75%,#f3ead6 0) 0 0/13px 13px;border-bottom:3px solid #b8442f}
+.saigon .sign{background:#1d6b66;color:#fff8e6;border:3px solid #e8c547;outline:2px solid #1d6b66;padding:4px 14px;border-radius:4px;font:400 20px 'Bungee';letter-spacing:.02em;box-shadow:4px 4px 0 #b8442f}
+.saigon .frame{position:relative;width:260px;height:260px;padding:12px;background:#fbf5e7;border:1px solid var(--line);box-shadow:6px 6px 0 #1d6b66}
+.saigon .frame .cv{width:100%;height:100%;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;filter:saturate(.85) sepia(.15)}
+.saigon .tape{margin-top:18px;height:10px;background:#e2d7bd;border-radius:5px;position:relative}.saigon .tape i{position:absolute;left:0;top:0;bottom:0;width:19%;background:#b8442f;border-radius:5px}
+.saigon .tt{display:flex;justify-content:space-between;font:400 18px 'Patrick Hand';color:var(--mute);margin-top:4px}
+.saigon .board{margin-top:6px;background:#22372f;color:#f4efe1;border:8px solid #6b4a2b;border-radius:4px;padding:12px 16px;font:400 20px/1.45 'Patrick Hand'}
+.saigon .board .r{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed #f4efe144;padding:3px 0}.saigon .board .r span{color:#e8c547}
+.saigon .chat{background:#fbf5e7}
+
+/* ========== 8-BIT ========== */
+.pix{--bg:#1d1b33;--text:#fcfcfc;--mute:#9a97c8;--line:#3d3a6b;--accent:#f8b800;--accent-ink:#1d1b33;--accent2:#e45c10;--panel:#26244a;--live:#00d000;--me:#3cbcfc;--me-ink:#0d0c1d;--lyr:#6d6aa0;--rbtn:0;--rcard:0;--rthumb:0;
+  --fb:'Be Vietnam Pro',sans-serif;--fh1:700 22px 'Pixelify Sans';--ftitle:700 40px/1.05 'Pixelify Sans';--fh3:700 20px 'Pixelify Sans';--fwish:400 24px/1.25 'VT323'}
+.pix .b,.pix .sb,.pix .in span,.pix .seg span,.pix .react span{box-shadow:3px 3px 0 #000;border-width:2px}
+.pix .b.p{box-shadow:3px 3px 0 #a86f00}
+.pix .screen{width:260px;height:260px;padding:10px;background:#000;border:4px solid #fcfcfc;box-shadow:6px 6px 0 #000;position:relative}
+.pix .screen .cv{width:100%;height:100%;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/mqdefault.jpg) center/cover;image-rendering:pixelated;filter:contrast(1.1) saturate(1.2)}
+.pix .hud{font:400 22px 'VT323';color:var(--mute)}
+.pix .hp{margin-top:18px;display:flex;align-items:center;gap:10px;font:400 22px 'VT323'}
+.pix .hp .bar{flex:1;height:18px;border:3px solid #fcfcfc;background:#000;display:flex;gap:2px;padding:2px}.pix .hp .bar i{flex:1;background:#00d000}.pix .hp .bar i.e{background:#222}
+.pix .boss{border:3px solid #e45c10;background:#2a1414}.pix .boss .bb{flex:1;height:14px;border:2px solid #fcfcfc;display:flex;gap:2px;padding:1px}.pix .boss .bb i{flex:1;background:#e45c10}.pix .boss .bb i.e{background:#222}
+.pix .lyr{font:400 22px/1.4 'VT323'}.pix .lyr b{font:400 28px 'VT323'}
+.pix .coin{color:#f8b800;font:400 20px 'VT323'}
+
+/* ========== SYNTHWAVE ========== */
+.synth{--bg:#140428;--text:#fbe9ff;--mute:#b48fd6;--line:#3b1a66;--accent:#ff3ea5;--accent-ink:#1b0430;--accent2:#29e7ff;--panel:#1d0838cc;--live:#29e7ff;--me:#5a1f8f;--lyr:#7d5aa6;--rbtn:10px;--rcard:14px;--rthumb:6px;
+  --fb:'Be Vietnam Pro',sans-serif;--fh1:italic 900 24px 'Exo 2';--ftitle:italic 900 48px/1 'Exo 2';--fh3:italic 800 22px 'Exo 2';--fwish:italic 800 20px/1.35 'Exo 2'}
+.synth .title{background:linear-gradient(180deg,#fff 0%,#ffd23f 45%,#ff3ea5 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 12px #ff3ea566)}
+.synth .scene{position:relative;width:260px;height:260px;border-radius:14px;overflow:hidden;background:linear-gradient(#1b0636 0 55%,#2a0a4a 55%)}
+.synth .sun{position:absolute;left:50%;top:26px;width:150px;height:150px;transform:translateX(-50%);border-radius:50%;background:linear-gradient(#ffd23f,#ff3ea5 70%);-webkit-mask:repeating-linear-gradient(#000 0 14px,#0000 14px 18px) 0 70px/100% 100% no-repeat,linear-gradient(#000,#000) 0 0/100% 70px no-repeat;mask:linear-gradient(#000,#000) top/100% 70px no-repeat,repeating-linear-gradient(#000 0 13px,#0000 13px 18px) bottom/100% 80px no-repeat}
+.synth .grid{position:absolute;left:-50%;right:-50%;bottom:-10px;height:120px;background:repeating-linear-gradient(90deg,#29e7ff88 0 2px,#0000 2px 34px),repeating-linear-gradient(#29e7ff88 0 2px,#0000 2px 22px);transform:perspective(160px) rotateX(55deg);transform-origin:top}
+.synth .scene .cv{position:absolute;left:84px;top:66px;width:92px;height:92px;border-radius:8px;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;box-shadow:0 0 0 2px #29e7ff,0 0 24px #29e7ff88}
+.synth .neon{margin-top:18px;height:4px;border-radius:2px;background:#3b1a66;position:relative}.synth .neon i{position:absolute;left:0;top:0;bottom:0;width:19%;background:linear-gradient(90deg,#29e7ff,#ff3ea5);box-shadow:0 0 10px #ff3ea5;border-radius:2px}
+.synth .tt{display:flex;justify-content:space-between;font:italic 800 14px 'Exo 2';color:var(--mute);margin-top:6px}
+.synth .led{font:italic 900 22px 'Exo 2';color:#29e7ff;text-shadow:0 0 8px #29e7ff}
+.synth .b.p{box-shadow:0 0 18px #ff3ea566}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="skip" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></symbol>
+  <symbol id="headphones" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></symbol>
+  <symbol id="bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+  <symbol id="pip" viewBox="0 0 24 24"><path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4"/><rect x="12" y="13" width="10" height="7" rx="2"/></symbol>
+  <symbol id="more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+  <symbol id="pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+  <symbol id="send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol>
+  <symbol id="share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></symbol>
+  <symbol id="history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+  <symbol id="logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="radio" viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></symbol>
+  <symbol id="link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="disc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="star" viewBox="0 0 24 24"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></symbol>
+</svg>
+
+<div class="intro"><h1>Năm chủ đề mới</h1><p>Chiêm tinh, Vũ trụ, Sài Gòn xưa, 8-bit và Synthwave 80s. Bố cục và tính năng giống hệt mọi chủ đề khác (bài đang phát, thời gian, bỏ phiếu, nghe cùng, lưu, thu nhỏ, menu ⋯, lời chúc, lời bài hát, Tiếp theo, trò chuyện luôn mở, Thêm bài / Mọi người, mời người ở thanh trên). Chỉ đổi màu, chữ và chi tiết đặc trưng. Icon nét mảnh; emoji chỉ còn ở hàng thả cảm xúc.</p></div>
+<nav class="toc"><a href="#astro">Chiêm tinh</a><a href="#cosmos">Vũ trụ</a><a href="#saigon">Sài Gòn xưa</a><a href="#pix">8-bit</a><a href="#synth">Synthwave 80s</a></nav>
+
+<!-- ============ CHIÊM TINH ============ -->
+<section class="concept" id="astro">
+  <div class="chead"><h2>Chiêm tinh</h2><p>Bầu trời chàm lấm tấm sao, chữ có chân thanh mảnh, vàng kim. Ảnh bìa nằm giữa vòng 12 cung; thời gian là cung vàng chạy quanh vòng; đếm ngược bỏ phiếu là trăng khuyết dần.</p><span class="pick" data-choice="astro" onclick="toggleSelect(this)">Thích chủ đề này</span></div>
+  <div class="row">
+    <div class="desk T astro">
+      <div class="top"><h1>Nhạc Quẩy</h1><span class="code">Mã phòng <b>V6ZRXA</b><svg class="i sm"><use href="#link"/></svg></span><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span><span class="ib"><svg class="i"><use href="#logout"/></svg></span></span></div>
+      <div class="wrap"><main>
+        <div class="hero">
+          <div class="wheel"><svg viewBox="0 0 260 260"><circle cx="130" cy="130" r="122" stroke="#2b2e5a" stroke-width="1" fill="none"/><circle cx="130" cy="130" r="104" stroke="#2b2e5a" stroke-width="1" fill="none"/>
+            <g stroke="#d6b25e88" stroke-width="1"><line x1="130" y1="8" x2="130" y2="26"/><line x1="191" y1="24.3" x2="182" y2="39.9"/><line x1="235.7" y1="69" x2="220.1" y2="78"/><line x1="252" y1="130" x2="234" y2="130"/><line x1="235.7" y1="191" x2="220.1" y2="182"/><line x1="191" y1="235.7" x2="182" y2="220.1"/><line x1="130" y1="252" x2="130" y2="234"/><line x1="69" y1="235.7" x2="78" y2="220.1"/><line x1="24.3" y1="191" x2="39.9" y2="182"/><line x1="8" y1="130" x2="26" y2="130"/><line x1="24.3" y1="69" x2="39.9" y2="78"/><line x1="69" y1="24.3" x2="78" y2="39.9"/></g>
+            <circle cx="130" cy="130" r="113" stroke="#d6b25e" stroke-width="3" fill="none" stroke-dasharray="135 710" transform="rotate(-90 130 130)" stroke-linecap="round"/>
+            <circle cx="215" cy="57" r="4" fill="#d6b25e"/></svg><div class="cv"></div></div>
+          <div><span class="state"><i class="dot"></i>Đang phát</span><p class="title">Shape of You<br>(The Biggest Weekend)</p><p class="by">Ed Sheeran, <b>Khanh Nguyen</b> chọn</p><p class="sign" style="margin-top:10px"><svg class="i sm"><use href="#star"/></svg>0:52 trên 4:42</p></div>
+        </div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua 0/3</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe cùng</span><span class="b ic"><svg class="i"><use href="#bookmark"/></svg></span><span class="b ic"><svg class="i"><use href="#pip"/></svg></span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div>
+        <div class="vote"><span class="moon"></span><span class="txt">Minh muốn qua bài. 2/3 đồng ý, trăng tắt sau 12 giây</span><span class="sb p"><svg class="i sm"><use href="#check"/></svg>Qua bài</span><span class="sb"><svg class="i sm"><use href="#x"/></svg>Nghe tiếp</span></div>
+        <p class="wish"><small>Lời chúc của Khanh Nguyen</small>Chúc cả team chiều thứ Sáu thật chill.</p>
+        <div class="lyr">Dòng lời trước đó<br><b>Dòng lời đang hát hiện ở đây</b><br>Dòng lời kế tiếp</div>
+        <h3>Tiếp theo</h3>
+        <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></div><div class="t"><b>Shape Of You in the Live Lounge</b><span>Khanh Nguyen</span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+        <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg)"></div><div class="t"><b>Bohemian Rhapsody</b><span>Lan<svg class="i sm"><use href="#pin"/></svg><svg class="i sm"><use href="#mail"/></svg></span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+      </main><aside class="side">
+        <div class="chat"><h3>Trò chuyện</h3><p class="m"><small>Lan, 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi</p><p class="m"><small>Minh, 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p><p class="m me"><small>14:04</small><span>Ok để mình xếp Despacito sau</span></p><div class="react"><span>❤️</span><span>🔥</span><span>👏</span><span>😂</span><span>🎉</span><span style="color:var(--mute)"><svg class="i sm"><use href="#disc"/></svg></span></div><div class="in"><div>Nhắn cho cả phòng…</div><span><svg class="i"><use href="#send"/></svg></span></div></div>
+        <div class="seg"><span class="on"><svg class="i sm"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i sm"><use href="#users"/></svg>Mọi người</span></div>
+      </aside></div>
+    </div>
+    <div class="phone T astro"><div class="top" style="padding:14px 18px"><h1 style="font-size:21px">Nhạc Quẩy</h1><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span></span></div>
+      <div class="pb"><div class="wheel" style="width:200px;height:200px;margin:0 auto"><svg viewBox="0 0 260 260"><circle cx="130" cy="130" r="122" stroke="#2b2e5a" fill="none"/><circle cx="130" cy="130" r="113" stroke="#d6b25e" stroke-width="3" fill="none" stroke-dasharray="135 710" transform="rotate(-90 130 130)" stroke-linecap="round"/></svg><div class="cv" style="inset:34px"></div></div>
+        <p class="title" style="font-size:34px;text-align:center">Shape of You</p><p class="by" style="text-align:center">Khanh Nguyen chọn</p>
+        <div class="ctrl" style="justify-content:center"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe</span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div></div>
+      <div class="tabbar"><span class="on"><svg class="i"><use href="#radio"/></svg>Phòng</span><span><svg class="i"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i"><use href="#users"/></svg>Mọi người</span></div></div>
+  </div>
+  <div class="notes"><p><b>Điểm nhấn:</b> vòng 12 cung quanh ảnh bìa tròn; cung vàng chạy theo thời gian bài.</p><p><b>Bỏ phiếu:</b> mặt trăng khuyết dần theo đếm ngược.</p><p><b>Chữ:</b> Cormorant Garamond cho tên bài và lời chúc, Be Vietnam Pro cho phần còn lại.</p></div>
+</section>
+
+<!-- ============ VŨ TRỤ ============ -->
+<section class="concept" id="cosmos">
+  <div class="chead"><h2>Vũ trụ</h2><p>Không gian xanh đen với tinh vân tím và xanh. Ảnh bìa là một hành tinh có quỹ đạo nghiêng; vệ tinh chạy trên quỹ đạo là thời gian; bài tiếp theo là các hành tinh nhỏ dần; người nghe cùng là những ngôi sao.</p><span class="pick" data-choice="cosmos" onclick="toggleSelect(this)">Thích chủ đề này</span></div>
+  <div class="row">
+    <div class="desk T cosmos">
+      <div class="top"><h1>Nhạc Quẩy</h1><span class="code">Mã phòng <b>V6ZRXA</b><svg class="i sm"><use href="#link"/></svg></span><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span><span class="ib"><svg class="i"><use href="#logout"/></svg></span></span></div>
+      <div class="wrap"><main>
+        <div class="hero">
+          <div class="planet"><div class="ball"></div><svg viewBox="0 0 260 260"><ellipse cx="130" cy="130" rx="128" ry="40" transform="rotate(-18 130 130)" stroke="#7fd4ff55" stroke-width="1.5" fill="none"/><ellipse cx="130" cy="130" rx="128" ry="40" transform="rotate(-18 130 130)" stroke="#7fd4ff" stroke-width="2" fill="none" stroke-dasharray="100 600" stroke-linecap="round"/><circle cx="34" cy="176" r="6" fill="#ffb86b"/></svg></div>
+          <div><span class="state"><i class="dot"></i>Đang phát</span><p class="title">Shape of You (The Biggest Weekend)</p><p class="by">Ed Sheeran, <b>Khanh Nguyen</b> chọn</p><p class="stars" style="margin-top:12px"><i></i><i></i>2 người đang nghe cùng</p><p style="margin:10px 0 0;color:var(--mute);font-size:14px">0:52 trên 4:42</p></div>
+        </div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua 0/3</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe cùng</span><span class="b ic"><svg class="i"><use href="#bookmark"/></svg></span><span class="b ic"><svg class="i"><use href="#pip"/></svg></span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div>
+        <div class="vote"><span class="txt">Minh muốn qua bài. 2/3 đồng ý, còn 12 giây</span><span style="width:120px;height:3px;background:var(--line);border-radius:2px"><i style="display:block;width:60%;height:100%;background:var(--accent2)"></i></span><span class="sb p"><svg class="i sm"><use href="#check"/></svg>Qua bài</span><span class="sb"><svg class="i sm"><use href="#x"/></svg>Nghe tiếp</span></div>
+        <p class="wish"><small>Lời chúc của Khanh Nguyen</small>Chúc cả team chiều thứ Sáu thật chill.</p>
+        <div class="lyr">Dòng lời trước đó<br><b>Dòng lời đang hát hiện ở đây</b><br>Dòng lời kế tiếp</div>
+        <h3>Quỹ đạo tiếp theo</h3>
+        <div class="orbitq"><span class="p" style="width:64px;height:64px;background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></span><span class="p" style="width:52px;height:52px;background-image:url(https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg)"></span><span class="p" style="width:42px;height:42px;background-image:url(https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg)"></span><span style="color:var(--mute);font-size:13px">Bấm một hành tinh để xem tên, tim, ghim, lời chúc</span></div>
+        <div class="q" style="margin-top:12px"><div class="th" style="background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></div><div class="t"><b>Shape Of You in the Live Lounge</b><span>Khanh Nguyen</span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+      </main><aside class="side">
+        <div class="chat"><h3>Tín hiệu</h3><p class="m"><small>Lan, 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi</p><p class="m"><small>Minh, 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p><p class="m me"><small>14:04</small><span>Ok để mình xếp Despacito sau</span></p><div class="react"><span>❤️</span><span>🔥</span><span>👏</span><span>😂</span><span>🎉</span><span style="color:var(--mute)"><svg class="i sm"><use href="#disc"/></svg></span></div><div class="in"><div>Gửi tín hiệu cho cả phòng…</div><span><svg class="i"><use href="#send"/></svg></span></div></div>
+        <div class="seg"><span class="on"><svg class="i sm"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i sm"><use href="#users"/></svg>Mọi người</span></div>
+      </aside></div>
+    </div>
+    <div class="phone T cosmos"><div class="top" style="padding:14px 18px"><h1 style="font-size:19px">Nhạc Quẩy</h1><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span></span></div>
+      <div class="pb"><div class="planet" style="width:210px;height:210px;margin:0 auto"><div class="ball" style="inset:32px"></div><svg viewBox="0 0 260 260"><ellipse cx="130" cy="130" rx="128" ry="40" transform="rotate(-18 130 130)" stroke="#7fd4ff" stroke-width="2" fill="none" stroke-dasharray="100 600"/><circle cx="34" cy="176" r="6" fill="#ffb86b"/></svg></div>
+        <p class="title" style="font-size:30px">Shape of You</p><p class="by">Khanh Nguyen chọn</p>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe</span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div></div>
+      <div class="tabbar"><span class="on"><svg class="i"><use href="#radio"/></svg>Phòng</span><span><svg class="i"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i"><use href="#users"/></svg>Mọi người</span></div></div>
+  </div>
+  <div class="notes"><p><b>Điểm nhấn:</b> ảnh bìa thành hành tinh có bóng tối, quỹ đạo nghiêng có vệ tinh cam chạy theo thời gian.</p><p><b>Tiếp theo:</b> các hành tinh nhỏ dần theo thứ tự phát, kèm danh sách đầy đủ bên dưới.</p><p><b>Chữ:</b> Space Grotesk cho cả trang, gọn và hiện đại.</p></div>
+</section>
+
+<!-- ============ SÀI GÒN XƯA ============ -->
+<section class="concept" id="saigon">
+  <div class="chead"><h2>Sài Gòn xưa</h2><p>Gạch bông xanh ngọc, vàng chanh, đỏ gạch trên nền vôi ngà. Tên phòng là biển hiệu tiệm; "Tiếp theo" là bảng phấn viết tay; lời chúc viết tay như thiệp.</p><span class="pick" data-choice="saigon" onclick="toggleSelect(this)">Thích chủ đề này</span></div>
+  <div class="row">
+    <div class="desk T saigon">
+      <div class="tiles"></div>
+      <div class="top"><span class="sign">Nhạc Quẩy</span><span class="code">Mã phòng <b>V6ZRXA</b><svg class="i sm"><use href="#link"/></svg></span><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span><span class="ib"><svg class="i"><use href="#logout"/></svg></span></span></div>
+      <div class="wrap"><main>
+        <div class="hero">
+          <div class="frame"><div class="cv"></div></div>
+          <div><span class="state"><i class="dot"></i>Đang phát</span><p class="title">Shape of You (The Biggest Weekend)</p><p class="by">Ed Sheeran, <b>Khanh Nguyen</b> chọn</p>
+            <div class="tape"><i></i></div><div class="tt"><span>0:52</span><span>4:42</span></div></div>
+        </div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua 0/3</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe cùng</span><span class="b ic"><svg class="i"><use href="#bookmark"/></svg></span><span class="b ic"><svg class="i"><use href="#pip"/></svg></span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div>
+        <div class="vote" style="border-color:#b8442f"><span class="txt">Minh muốn qua bài. 2/3 đồng ý, còn 12 giây</span><span class="sb p"><svg class="i sm"><use href="#check"/></svg>Qua bài</span><span class="sb"><svg class="i sm"><use href="#x"/></svg>Nghe tiếp</span></div>
+        <p class="wish"><small>Lời chúc của Khanh Nguyen</small>Chúc cả team chiều thứ Sáu thật chill.</p>
+        <div class="lyr">Dòng lời trước đó<br><b>Dòng lời đang hát hiện ở đây</b><br>Dòng lời kế tiếp</div>
+        <h3>Tiếp theo</h3>
+        <div class="board"><div class="r">Shape Of You (Live Lounge)<span>Khanh</span></div><div class="r">Bohemian Rhapsody · có lời chúc<span>Lan</span></div><div class="r">Despacito<span>Minh</span></div></div>
+        <p style="margin:8px 0 0;color:var(--mute);font-size:13px">Mỗi dòng có tim và menu ⋯ (ghim, lời chúc, xoá, chặn) khi bấm vào.</p>
+      </main><aside class="side">
+        <div class="chat"><h3>Trò chuyện</h3><p class="m"><small>Lan, 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi</p><p class="m"><small>Minh, 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p><p class="m me"><small>14:04</small><span>Ok để mình xếp Despacito sau</span></p><div class="react"><span>❤️</span><span>🔥</span><span>👏</span><span>😂</span><span>🎉</span><span style="color:var(--mute)"><svg class="i sm"><use href="#disc"/></svg></span></div><div class="in"><div>Nhắn cho cả phòng…</div><span><svg class="i"><use href="#send"/></svg></span></div></div>
+        <div class="seg"><span class="on"><svg class="i sm"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i sm"><use href="#users"/></svg>Mọi người</span></div>
+      </aside></div>
+    </div>
+    <div class="phone T saigon"><div class="tiles"></div><div class="top" style="padding:12px 16px"><span class="sign" style="font-size:16px">Nhạc Quẩy</span><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span></span></div>
+      <div class="pb"><div class="frame" style="width:100%;height:190px"><div class="cv"></div></div><p class="title" style="font-size:28px">Shape of You</p><p class="by">Khanh Nguyen chọn</p><div class="tape"><i></i></div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe</span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div></div>
+      <div class="tabbar" style="--bar:#fbf5e7"><span class="on"><svg class="i"><use href="#radio"/></svg>Phòng</span><span><svg class="i"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i"><use href="#users"/></svg>Mọi người</span></div></div>
+  </div>
+  <div class="notes"><p><b>Điểm nhấn:</b> dải gạch bông trên đầu trang, biển hiệu tên phòng, ảnh bìa trong khung có bóng xanh ngọc.</p><p><b>Tiếp theo:</b> bảng phấn khung gỗ viết tay.</p><p><b>Sáng:</b> chủ đề nền sáng, dễ đọc ban ngày.</p></div>
+</section>
+
+<!-- ============ 8-BIT ============ -->
+<section class="concept" id="pix">
+  <div class="chead"><h2>Máy chơi game 8-bit</h2><p>Chữ pixel, khung vuông bóng đổ cứng, màu như máy game cũ. Thời gian là thanh máu; bỏ phiếu qua bài là "đánh boss"; nút bấm như nút game.</p><span class="pick" data-choice="pix" onclick="toggleSelect(this)">Thích chủ đề này</span></div>
+  <div class="row">
+    <div class="desk T pix">
+      <div class="top" style="border-bottom:3px solid #000"><h1>NHẠC QUẨY</h1><span class="code">Mã phòng <b>V6ZRXA</b><svg class="i sm"><use href="#link"/></svg></span><span class="coin">x 8 người</span><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span><span class="ib"><svg class="i"><use href="#logout"/></svg></span></span></div>
+      <div class="wrap"><main>
+        <div class="hero">
+          <div class="screen"><div class="cv"></div></div>
+          <div><span class="hud">Màn 1: đang phát</span><p class="title">Shape of You (The Biggest Weekend)</p><p class="by">Ed Sheeran, người chơi <b>Khanh Nguyen</b> chọn</p>
+            <div class="hp">0:52<span class="bar"><i></i><i></i><i></i><i></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i></span>4:42</div></div>
+        </div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua 0/3</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe cùng</span><span class="b ic"><svg class="i"><use href="#bookmark"/></svg></span><span class="b ic"><svg class="i"><use href="#pip"/></svg></span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div>
+        <div class="vote boss"><span class="txt" style="flex:none">Boss: Minh muốn qua bài</span><span class="bb"><i></i><i></i><i class="e"></i></span><span class="hud">2/3, 12s</span><span class="sb p"><svg class="i sm"><use href="#check"/></svg>Qua bài</span><span class="sb"><svg class="i sm"><use href="#x"/></svg>Nghe tiếp</span></div>
+        <p class="wish"><small>Lời chúc của Khanh Nguyen</small>Chúc cả team chiều thứ Sáu thật chill.</p>
+        <div class="lyr">Dòng lời trước đó<br><b>Dòng lời đang hát hiện ở đây</b><br>Dòng lời kế tiếp</div>
+        <h3>Màn tiếp theo</h3>
+        <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></div><div class="t"><b>Shape Of You in the Live Lounge</b><span>Khanh Nguyen</span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+        <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg)"></div><div class="t"><b>Bohemian Rhapsody</b><span>Lan<svg class="i sm"><use href="#pin"/></svg><svg class="i sm"><use href="#mail"/></svg></span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+      </main><aside class="side">
+        <div class="chat" style="border-width:3px"><h3>Trò chuyện</h3><p class="m"><small>Lan, 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi</p><p class="m"><small>Minh, 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p><p class="m me"><small>14:04</small><span>Ok để mình xếp Despacito sau</span></p><div class="react"><span>❤️</span><span>🔥</span><span>👏</span><span>😂</span><span>🎉</span><span style="color:var(--mute)"><svg class="i sm"><use href="#disc"/></svg></span></div><div class="in"><div>Nhắn cho cả phòng…</div><span><svg class="i"><use href="#send"/></svg></span></div></div>
+        <div class="seg"><span class="on"><svg class="i sm"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i sm"><use href="#users"/></svg>Mọi người</span></div>
+      </aside></div>
+    </div>
+    <div class="phone T pix"><div class="top" style="padding:12px 16px;border-bottom:3px solid #000"><h1 style="font-size:18px">NHẠC QUẨY</h1><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span></span></div>
+      <div class="pb"><div class="screen" style="width:100%;height:180px"><div class="cv"></div></div><p class="title" style="font-size:28px">Shape of You</p><p class="by">Khanh Nguyen chọn</p>
+        <div class="hp" style="font-size:18px">0:52<span class="bar"><i></i><i></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i></span>4:42</div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe</span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div></div>
+      <div class="tabbar"><span class="on"><svg class="i"><use href="#radio"/></svg>Phòng</span><span><svg class="i"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i"><use href="#users"/></svg>Mọi người</span></div></div>
+  </div>
+  <div class="notes"><p><b>Điểm nhấn:</b> ảnh bìa trong khung màn hình game, thanh máu từng ô cho thời gian.</p><p><b>Bỏ phiếu:</b> thanh máu boss, mỗi ô là một phiếu đồng ý.</p><p><b>Chữ:</b> Pixelify Sans cho tiêu đề, VT323 cho số; trò chuyện và nội dung dài vẫn dùng chữ thường cho dễ đọc.</p></div>
+</section>
+
+<!-- ============ SYNTHWAVE ============ -->
+<section class="concept" id="synth">
+  <div class="chead"><h2>Synthwave 80s</h2><p>Tím đêm, hồng neon, xanh lơ. Mặt trời sọc trên lưới chân trời; tên bài chữ nghiêng phát sáng; thanh thời gian chuyển màu neon. Hợp "giờ quẩy" chiều thứ Sáu.</p><span class="pick" data-choice="synth" onclick="toggleSelect(this)">Thích chủ đề này</span></div>
+  <div class="row">
+    <div class="desk T synth">
+      <div class="top"><h1>Nhạc Quẩy</h1><span class="code">Mã phòng <b>V6ZRXA</b><svg class="i sm"><use href="#link"/></svg></span><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span><span class="ib"><svg class="i"><use href="#logout"/></svg></span></span></div>
+      <div class="wrap"><main>
+        <div class="hero">
+          <div class="scene"><div class="sun"></div><div class="grid"></div><div class="cv"></div></div>
+          <div><span class="state"><i class="dot"></i>Đang phát</span><p class="title">Shape of You (The Biggest Weekend)</p><p class="by">Ed Sheeran, <b>Khanh Nguyen</b> chọn</p>
+            <div class="neon"><i></i></div><div class="tt"><span>0:52</span><span>4:42</span></div></div>
+        </div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua 0/3</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe cùng</span><span class="b ic"><svg class="i"><use href="#bookmark"/></svg></span><span class="b ic"><svg class="i"><use href="#pip"/></svg></span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div>
+        <div class="vote"><span class="led">12</span><span class="txt">Minh muốn qua bài. 2/3 đồng ý</span><span class="sb p"><svg class="i sm"><use href="#check"/></svg>Qua bài</span><span class="sb"><svg class="i sm"><use href="#x"/></svg>Nghe tiếp</span></div>
+        <p class="wish"><small>Lời chúc của Khanh Nguyen</small>Chúc cả team chiều thứ Sáu thật chill.</p>
+        <div class="lyr">Dòng lời trước đó<br><b>Dòng lời đang hát hiện ở đây</b><br>Dòng lời kế tiếp</div>
+        <h3>Tiếp theo</h3>
+        <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></div><div class="t"><b>Shape Of You in the Live Lounge</b><span>Khanh Nguyen</span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+        <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg)"></div><div class="t"><b>Bohemian Rhapsody</b><span>Lan<svg class="i sm"><use href="#pin"/></svg><svg class="i sm"><use href="#mail"/></svg></span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+      </main><aside class="side">
+        <div class="chat"><h3>Trò chuyện</h3><p class="m"><small>Lan, 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi</p><p class="m"><small>Minh, 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p><p class="m me"><small>14:04</small><span>Ok để mình xếp Despacito sau</span></p><div class="react"><span>❤️</span><span>🔥</span><span>👏</span><span>😂</span><span>🎉</span><span style="color:var(--mute)"><svg class="i sm"><use href="#disc"/></svg></span></div><div class="in"><div>Nhắn cho cả phòng…</div><span><svg class="i"><use href="#send"/></svg></span></div></div>
+        <div class="seg"><span class="on"><svg class="i sm"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i sm"><use href="#users"/></svg>Mọi người</span></div>
+      </aside></div>
+    </div>
+    <div class="phone T synth"><div class="top" style="padding:14px 18px"><h1 style="font-size:20px">Nhạc Quẩy</h1><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span></span></div>
+      <div class="pb"><div class="scene" style="width:100%;height:200px"><div class="sun" style="width:130px;height:130px"></div><div class="grid"></div><div class="cv" style="left:calc(50% - 40px);top:58px;width:80px;height:80px"></div></div>
+        <p class="title" style="font-size:32px">Shape of You</p><p class="by">Khanh Nguyen chọn</p><div class="neon"><i></i></div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe</span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div></div>
+      <div class="tabbar"><span class="on"><svg class="i"><use href="#radio"/></svg>Phòng</span><span><svg class="i"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i"><use href="#users"/></svg>Mọi người</span></div></div>
+  </div>
+  <div class="notes"><p><b>Điểm nhấn:</b> mặt trời sọc và lưới chân trời phía sau ảnh bìa có viền neon.</p><p><b>Bỏ phiếu:</b> số đếm ngược phát sáng như đèn LED.</p><p><b>Chữ:</b> Exo 2 nghiêng đậm cho tiêu đề, chữ thường cho nội dung.</p></div>
+</section>
+</body></html>

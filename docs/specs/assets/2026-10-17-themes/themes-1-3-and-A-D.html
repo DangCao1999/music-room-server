@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600&family=Archivo:wdth,wght@75,700;100,500;100,600&family=Big+Shoulders+Display:wght@600;800&family=Bungee&family=Patrick+Hand&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0f0e0d;color:#e9e4da;font:15px/1.5 'Be Vietnam Pro',system-ui,sans-serif;padding:32px 32px 90px}
+.intro{max-width:820px;margin:0 0 34px}.intro h1{font:600 30px/1.15 'Fraunces',serif;margin:0 0 10px}.intro p{color:#a9a196;margin:0}
+.concept{margin:0 0 64px}
+.chead{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin:0 0 14px}.chead h2{margin:0;font:600 22px 'Fraunces',serif}.chead p{margin:0;color:#a9a196;max-width:700px}
+.pick{margin-left:auto;border:1px solid #ffffff2e;border-radius:999px;padding:6px 14px;font-weight:600;font-size:14px;cursor:pointer}
+.pick.selected{background:#d8a24a;color:#1a1714;border-color:#d8a24a}
+.row{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.desk{width:1080px;max-width:100%;border-radius:16px;overflow:hidden}
+.phone{width:336px;border-radius:38px;border:8px solid #050505;overflow:hidden;flex:none}
+.notes{margin-top:12px;max-width:1440px;color:#a9a196;font-size:13.5px;columns:3 300px;column-gap:28px}.notes p{margin:0 0 6px;break-inside:avoid}.notes b{color:#e9e4da;font-weight:600}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.i.sm{width:15px;height:15px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* ===== 1 · Phòng nghe nhạc (listening bar) ===== */
+.K{--bg:#1a1714;--panel:#211d19;--line:#3a332b;--text:#ece5d8;--mute:#a59a8a;--amber:#d8a24a;--ink:#1a1714}
+.K.desk,.K.phone{background:var(--bg);color:var(--text)}
+.K .top{display:flex;align-items:center;gap:18px;padding:18px 40px;border-bottom:1px solid var(--line)}
+.K .top h1{margin:0;font:600 22px 'Fraunces',serif}.K .top .code{color:var(--mute);font-size:14px;display:inline-flex;gap:6px;align-items:center}.K .top .code b{color:var(--amber);letter-spacing:.14em;font-weight:600}
+.K .top .acts{margin-left:auto;display:flex;gap:6px}.K .ib{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--mute);border:1px solid transparent}.K .ib:hover{border-color:var(--line)}
+.K .wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:48px;padding:36px 40px 40px}
+.K .hero{display:grid;grid-template-columns:220px 1fr;gap:34px;align-items:end}
+.K .cover{position:relative;width:220px;height:220px}
+.K .cover .rec{position:absolute;left:46px;top:6px;width:208px;height:208px;border-radius:50%;background:repeating-radial-gradient(circle,#0c0b0a 0 1.5px,#171513 1.5px 3px);box-shadow:0 0 0 1px #2b2621}
+.K .cover .rec::after{content:"";position:absolute;inset:78px;border-radius:50%;background:var(--amber)}
+.K .cover .sl{position:absolute;inset:0;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;box-shadow:0 18px 40px #000a}
+.K .state{display:inline-flex;align-items:center;gap:8px;color:var(--mute);font-size:13px}.K .dot{width:7px;height:7px;border-radius:50%;background:#e2553d;box-shadow:0 0 0 4px #e2553d22}
+.K .title{font:400 46px/1.02 'Fraunces',serif;letter-spacing:-.01em;margin:10px 0 8px}
+.K .by{color:var(--mute)}.K .by b{color:var(--text);font-weight:500}
+.K .dial{margin-top:30px}.K .ticks{height:22px;position:relative;background:repeating-linear-gradient(90deg,var(--line) 0 1px,#0000 1px 2.2%);border-bottom:1px solid var(--line)}
+.K .ticks i{position:absolute;left:0;bottom:-1px;height:2px;width:19%;background:var(--amber)}.K .ticks em{position:absolute;left:19%;bottom:-1px;width:2px;height:30px;background:var(--amber)}
+.K .tt{display:flex;justify-content:space-between;color:var(--mute);font-size:13px;margin-top:8px;font-variant-numeric:tabular-nums}
+.K .ctrl{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.K .b{display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:999px;border:1px solid var(--line);color:var(--text);font-weight:500;font-size:14px}
+.K .b.p{background:var(--amber);color:var(--ink);border-color:var(--amber)}.K .b.ic{width:42px;padding:0;justify-content:center;color:var(--mute)}
+.K .wish{margin-top:30px;font:italic 400 20px/1.4 'Fraunces',serif;max-width:620px}.K .wish small{display:block;font:500 13px 'Be Vietnam Pro';color:var(--mute);font-style:normal;margin-bottom:6px}
+.K .lyr{margin-top:22px;color:#6f665a;font-size:16px;line-height:1.7}.K .lyr b{color:var(--text);font-weight:500;font-size:19px}
+.K .vote{margin-top:24px;display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:12px}
+.K .vote .bar{grid-column:1/-1;height:2px;background:var(--line)}.K .vote .bar i{display:block;width:60%;height:100%;background:var(--amber)}
+.K h3{font:600 18px 'Fraunces',serif;margin:38px 0 8px}
+.K .q{display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--line)}.K .q .th{width:44px;height:44px;background:center/cover;flex:none}
+.K .q .t{flex:1;min-width:0}.K .q .t b{font-weight:500;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.K .q .t span{color:var(--mute);font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.K .q .a{display:flex;gap:2px;color:var(--mute)}.K .q .a span{width:34px;height:34px;display:grid;place-items:center;border-radius:50%}
+.K .side{display:flex;flex-direction:column;gap:22px}
+.K .share{display:flex;align-items:center;gap:12px;padding-bottom:20px;border-bottom:1px solid var(--line)}.K .share .c{font:400 30px 'Fraunces',serif;letter-spacing:.12em}.K .share small{display:block;color:var(--mute);font-size:12px}
+.K .chat h3{margin:0 0 12px}.K .m{margin:0 0 12px}.K .m small{color:var(--mute);font-size:12px;display:block}.K .m.me{text-align:right}.K .m.me span{display:inline-block;background:#2c261f;border-radius:12px 12px 2px 12px;padding:6px 10px}
+.K .react{display:flex;gap:4px;margin:6px 0 10px}.K .react span{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);font-size:15px}
+.K .in{display:flex;gap:8px}.K .in div{flex:1;height:42px;border-radius:999px;border:1px solid var(--line);display:flex;align-items:center;padding:0 16px;color:#6f665a;font-size:14px}.K .in span{width:42px;height:42px;border-radius:50%;background:var(--amber);color:var(--ink);display:grid;place-items:center}
+.K .seg{display:flex;border:1px solid var(--line);border-radius:999px;padding:3px}.K .seg span{flex:1;text-align:center;padding:8px 0;border-radius:999px;font-size:14px;display:inline-flex;justify-content:center;gap:6px;align-items:center;color:var(--mute)}.K .seg .on{background:#2c261f;color:var(--text)}
+
+/* ===== 2 · Dàn máy Nhật 1982 (aluminium) ===== */
+.N{--bg:#e7e4dd;--plate:#f3f1ec;--line:#cfcac0;--text:#1d1c1a;--mute:#6f6a61;--sig:#e0552b;--lcd:#232720;--lcdt:#ffb547}
+.N.desk,.N.phone{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif}
+.N .top{display:flex;align-items:center;gap:16px;padding:16px 36px;background:linear-gradient(#f6f4ef,#e3e0d8);border-bottom:1px solid var(--line)}
+.N .top h1{margin:0;font:600 22px 'Barlow Condensed'}.N .led{width:8px;height:8px;border-radius:50%;background:var(--sig);box-shadow:0 0 6px var(--sig)}
+.N .top .code{font:500 15px 'Barlow Condensed';color:var(--mute);letter-spacing:.12em}
+.N .top .acts{margin-left:auto;display:flex;gap:8px}.N .ib{width:36px;height:36px;border-radius:8px;border:1px solid var(--line);background:var(--plate);display:grid;place-items:center;color:var(--mute)}
+.N .wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:40px;padding:32px 36px 36px}
+.N .deck{background:var(--plate);border:1px solid var(--line);border-radius:14px;padding:26px;box-shadow:inset 0 1px 0 #fff}
+.N .hero{display:grid;grid-template-columns:180px 1fr;gap:26px}
+.N .art{width:180px;height:180px;border-radius:6px;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;box-shadow:0 1px 0 #fff,0 10px 24px -10px #0006}
+.N .lbl{display:flex;align-items:center;gap:8px;font:500 13px 'Barlow Condensed';color:var(--mute);letter-spacing:.04em}
+.N .title{font:600 40px/1 'Barlow Condensed';margin:8px 0 6px;letter-spacing:-.005em}.N .by{color:var(--mute)}
+.N .lcd{margin-top:18px;background:var(--lcd);border-radius:6px;padding:12px 14px;color:var(--lcdt);font:500 30px 'Barlow Condensed';display:flex;align-items:baseline;gap:14px;box-shadow:inset 0 2px 6px #000}
+.N .lcd small{font-size:13px;color:#b78a3c;letter-spacing:.06em}.N .lcd .meter{flex:1;height:8px;align-self:center;background:repeating-linear-gradient(90deg,var(--lcdt) 0 4px,#0000 4px 7px);opacity:.9;clip-path:inset(0 66% 0 0)}
+.N .ctrl{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:22px}
+.N .key{height:58px;border-radius:8px;border:1px solid var(--line);background:linear-gradient(#fbfaf7,#e9e6df);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:500 12.5px 'Barlow';color:var(--text);box-shadow:0 2px 0 #c9c4b9}
+.N .key.on{color:var(--sig)}.N .key.on svg{stroke:var(--sig)}
+.N .wish{margin-top:22px;border-top:1px solid var(--line);padding-top:16px;font-size:18px}.N .wish small{display:block;font:500 13px 'Barlow Condensed';color:var(--mute);letter-spacing:.04em}
+.N .lyr{margin-top:14px;color:#a39d92;font-size:16px;line-height:1.7}.N .lyr b{color:var(--text);font-weight:600;font-size:19px}
+.N .vote{margin-top:18px;display:flex;gap:10px;align-items:center;border:1px solid var(--sig);border-radius:10px;padding:10px 14px;color:var(--text)}.N .vote .cd{flex:1;height:3px;background:var(--line)}.N .vote .cd i{display:block;width:60%;height:100%;background:var(--sig)}
+.N .sb{height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;gap:6px;font-weight:500;font-size:13px}
+.N h3{font:600 18px 'Barlow Condensed';margin:28px 0 6px;letter-spacing:.02em}
+.N .q{display:flex;align-items:center;gap:14px;padding:11px 0;border-top:1px solid var(--line)}.N .q .n{font:500 15px 'Barlow Condensed';color:var(--mute);width:16px}
+.N .q .th{width:42px;height:42px;border-radius:4px;background:center/cover}.N .q .t{flex:1;min-width:0}.N .q .t b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.N .q .t span{font-size:13px;color:var(--mute);display:inline-flex;gap:6px;align-items:center}
+.N .q .a{display:flex;color:var(--mute)}.N .q .a span{width:34px;height:34px;display:grid;place-items:center}
+.N .side{display:flex;flex-direction:column;gap:18px}
+.N .card{background:var(--plate);border:1px solid var(--line);border-radius:14px;padding:16px}
+.N .share{display:flex;align-items:center;gap:12px}.N .share .c{font:600 28px 'Barlow Condensed';letter-spacing:.14em}.N .share small{display:block;font-size:12px;color:var(--mute)}
+.N .m{margin:0 0 10px;font-size:14.5px}.N .m small{display:block;color:var(--mute);font-size:12px}.N .m.me{text-align:right}.N .m.me span{display:inline-block;background:#fff;border:1px solid var(--line);border-radius:10px;padding:5px 9px}
+.N .react{display:flex;gap:4px;margin:8px 0}.N .react span{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;background:#fff;font-size:15px}
+.N .in{display:flex;gap:8px}.N .in div{flex:1;height:40px;border-radius:8px;border:1px solid var(--line);background:#fff;display:flex;align-items:center;padding:0 12px;color:#9b958a;font-size:14px}.N .in span{width:40px;height:40px;border-radius:8px;background:var(--text);color:#fff;display:grid;place-items:center}
+.N .seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}.N .seg span{padding:9px 0;text-align:center;font-weight:500;font-size:14px;display:inline-flex;gap:6px;justify-content:center;align-items:center;color:var(--mute);background:var(--plate)}.N .seg .on{background:var(--text);color:#fff}
+
+/* ===== 3 · Áp phích giữa thế kỷ (mid-century) ===== */
+.M{--bg:#14303a;--deep:#0e2329;--line:#2a4a53;--text:#f0ead9;--mute:#9fb3b3;--sun:#e5b53e;--rust:#cf6a35}
+.M.desk,.M.phone{background:var(--bg);color:var(--text)}
+.M .top{display:flex;align-items:center;gap:16px;padding:18px 40px}
+.M .top h1{margin:0;font:600 24px/1 'Archivo';font-stretch:75%}.M .top .code{font:600 14px 'Archivo';letter-spacing:.16em;color:var(--sun)}
+.M .top .acts{margin-left:auto;display:flex;gap:4px;color:var(--mute)}.M .ib{width:38px;height:38px;display:grid;place-items:center;border-radius:50%}
+.M .wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:52px;padding:18px 40px 40px}
+.M .stage{position:relative;padding:34px 0 0}
+.M .sunarc{position:absolute;left:-30px;top:0;width:330px;height:330px;border-radius:50%;background:var(--sun);opacity:.9}
+.M .sunarc::after{content:"";position:absolute;left:150px;top:150px;width:260px;height:260px;border-radius:50%;background:var(--rust);mix-blend-mode:multiply;opacity:.8}
+.M .art{position:relative;width:260px;height:260px;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;border-radius:50%;margin-left:4px;box-shadow:0 0 0 10px var(--bg)}
+.M .info{position:relative;margin-top:-180px;margin-left:300px}
+.M .state{font:500 13px 'Archivo';color:var(--mute);display:inline-flex;gap:8px;align-items:center}.M .dot{width:8px;height:8px;border-radius:50%;background:var(--rust)}
+.M .title{font:700 54px/0.92 'Archivo';font-stretch:75%;margin:10px 0 10px;letter-spacing:-.01em}.M .by{color:var(--mute)}
+.M .prog{margin-top:110px;display:flex;align-items:center;gap:14px;color:var(--mute);font:500 14px 'Archivo';font-variant-numeric:tabular-nums}.M .prog .ln{flex:1;height:3px;background:var(--line);border-radius:2px}.M .prog .ln i{display:block;width:19%;height:100%;background:var(--sun);border-radius:2px}
+.M .ctrl{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.M .b{height:44px;padding:0 18px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;font:500 14px 'Archivo';background:var(--deep);color:var(--text)}.M .b.p{background:var(--sun);color:#1a1a12}.M .b.ic{width:44px;padding:0;justify-content:center;color:var(--mute)}
+.M .wish{margin-top:28px;display:grid;grid-template-columns:4px 1fr;gap:14px}.M .wish::before{content:"";background:var(--rust);border-radius:2px}.M .wish p{margin:0;font:500 20px/1.35 'Archivo'}.M .wish small{display:block;font:500 13px 'Be Vietnam Pro';color:var(--mute);margin-bottom:4px}
+.M .lyr{margin-top:20px;color:#6f8a8c;font-size:16px;line-height:1.7}.M .lyr b{color:var(--text);font:600 21px 'Archivo'}
+.M .vote{margin-top:22px;background:var(--deep);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:12px}.M .vote .cd{flex:1;height:3px;background:var(--line);border-radius:2px}.M .vote .cd i{display:block;width:60%;height:100%;background:var(--sun)}
+.M .sb{height:36px;padding:0 14px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;background:var(--sun);color:#1a1a12;font-weight:600;font-size:13px}.M .sb.o{background:transparent;border:1px solid var(--line);color:var(--text)}
+.M h3{font:700 22px 'Archivo';font-stretch:75%;margin:36px 0 8px}
+.M .q{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}.M .q .th{width:44px;height:44px;border-radius:50%;background:center/cover}.M .q .t{flex:1;min-width:0}.M .q .t b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.M .q .t span{font-size:13px;color:var(--mute);display:inline-flex;gap:6px;align-items:center}.M .q .a{display:flex;color:var(--mute)}.M .q .a span{width:34px;height:34px;display:grid;place-items:center}
+.M .side{display:flex;flex-direction:column;gap:20px}
+.M .share{background:var(--sun);color:#1a1a12;border-radius:20px;padding:16px 18px;display:flex;align-items:center;gap:12px}.M .share .c{font:700 30px 'Archivo';font-stretch:75%;letter-spacing:.12em}.M .share small{display:block;font-size:12px;opacity:.7}.M .share .x{margin-left:auto;display:flex;gap:6px}.M .share .x span{width:38px;height:38px;border-radius:50%;background:#1a1a1214;display:grid;place-items:center}
+.M .chat{background:var(--deep);border-radius:20px;padding:18px}.M .chat h3{margin:0 0 12px;font-size:20px}
+.M .m{margin:0 0 12px;font-size:14.5px}.M .m small{display:block;color:var(--mute);font-size:12px}.M .m.me{text-align:right}.M .m.me span{display:inline-block;background:var(--rust);color:#fff;border-radius:14px 14px 3px 14px;padding:6px 10px}
+.M .react{display:flex;gap:4px;margin:8px 0 10px}.M .react span{width:32px;height:32px;border-radius:50%;background:#ffffff0d;display:grid;place-items:center;font-size:15px}
+.M .in{display:flex;gap:8px}.M .in div{flex:1;height:42px;border-radius:999px;background:#ffffff0d;display:flex;align-items:center;padding:0 16px;color:#6f8a8c;font-size:14px}.M .in span{width:42px;height:42px;border-radius:50%;background:var(--sun);color:#1a1a12;display:grid;place-items:center}
+.M .seg{display:flex;gap:6px}.M .seg span{flex:1;padding:10px 0;border-radius:999px;text-align:center;font:500 14px 'Archivo';display:inline-flex;gap:6px;justify-content:center;align-items:center;background:var(--deep);color:var(--mute)}.M .seg .on{background:var(--text);color:var(--bg)}
+
+/* phones */
+.pb{padding:16px}.tabbar{display:grid;grid-template-columns:repeat(3,1fr);padding:10px 0 16px;font-size:11.5px;text-align:center;gap:2px}.tabbar span{display:flex;flex-direction:column;align-items:center;gap:3px}
+
+/* ===== A — Tủ hi-fi gỗ óc chó ===== */
+.A{--wal:#2f1d12;--wal2:#4a2d1a;--brass:#c99a3c;--brass2:#e8c674;--glass:#d6e8c8;--ink:#1d140c;--ivory:#ece3cf;font-family:'Be Vietnam Pro'}
+.A.desk,.A.phone{background:repeating-linear-gradient(92deg,#3a2415 0 3px,#2f1d12 3px 9px,#36210f 9px 14px);color:var(--ivory)}
+.A .bar{display:flex;align-items:center;gap:14px;padding:12px 22px;background:linear-gradient(#20140b,#160d07);border-bottom:2px solid var(--brass)}
+.A .brand{font:800 22px 'Fraunces',serif;color:var(--brass2)}.A .code{font:600 14px 'Be Vietnam Pro';letter-spacing:.18em;color:var(--ink);background:var(--brass);padding:2px 10px;border-radius:4px}
+.A .bar .ic{margin-left:auto;display:flex;gap:10px}.A .knob{width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#f6e7bf,#b38a39 60%,#6e521d);box-shadow:0 2px 0 #0008;display:grid;place-items:center;color:#2a1a0a;font-size:14px}
+.A .body{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:26px;padding:22px}
+.A .deck{background:linear-gradient(#1c120a,#120b06);border-radius:14px;padding:18px;border:1px solid #ffffff14;box-shadow:inset 0 2px 0 #ffffff10}
+.A .tt{display:grid;grid-template-columns:250px 1fr;gap:22px;align-items:center}
+.A .platter{width:250px;height:250px;border-radius:50%;background:repeating-radial-gradient(circle,#111 0 2px,#1c1c1c 2px 4px);position:relative;box-shadow:0 10px 30px #000a;animation:spin 6s linear infinite}
+.A .platter::after{content:"";position:absolute;inset:78px;border-radius:50%;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;box-shadow:0 0 0 4px #c99a3c}
+.A .arm{position:absolute;left:228px;top:6px;width:10px;height:150px;background:linear-gradient(#e8e2d4,#9a9488);border-radius:6px;transform:rotate(24deg);transform-origin:top center;box-shadow:2px 2px 4px #0008}
+@keyframes spin{to{transform:rotate(360deg)}}
+.A .title{font:800 32px/1.05 'Fraunces',serif;margin:0}.A .who{color:var(--brass2);margin:6px 0 0}
+.A .wish{margin-top:12px;padding:10px 12px;background:#ffffff0d;border-left:3px solid var(--brass);font:italic 500 16px 'Fraunces',serif}
+.A .vu{margin-top:14px;background:var(--glass);border-radius:10px;padding:10px 12px 8px;color:var(--ink);position:relative;box-shadow:inset 0 2px 6px #0005}
+.A .vu .scale{height:34px;background:repeating-linear-gradient(90deg,#1d140c 0 1px,#0000 1px 14px);border-bottom:2px solid #1d140c;position:relative}
+.A .vu .scale::after{content:"";position:absolute;left:34%;bottom:0;width:2px;height:44px;background:#a3262a;transform:rotate(8deg);transform-origin:bottom}
+.A .vu .t{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-top:4px}
+.A .lyr{margin-top:12px;font:500 15px 'Fraunces',serif;color:#cdbf9f}.A .lyr b{display:block;color:var(--ivory);font-size:20px}
+.A .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.A .btn{display:inline-flex;align-items:center;gap:7px;height:42px;padding:0 14px;border-radius:8px;background:linear-gradient(#e8c674,#b38a39);color:#2a1a0a;font-weight:700;font-size:14px;box-shadow:0 3px 0 #6e521d}
+.A .btn.dark{background:linear-gradient(#3b2a1c,#24180f);color:var(--ivory);box-shadow:0 3px 0 #0a0603;border:1px solid #ffffff1a}
+.A .vote{margin-top:14px;display:flex;align-items:center;gap:12px;background:#a3262a33;border:1px solid #a3262a88;border-radius:10px;padding:10px 12px}
+.A .vote .cd{flex:1;height:6px;border-radius:3px;background:#ffffff22;overflow:hidden}.A .vote .cd i{display:block;width:60%;height:100%;background:var(--brass2)}
+.A h3{font:800 20px 'Fraunces',serif;margin:20px 0 10px;color:var(--brass2)}
+.A .crate{display:flex;gap:12px;overflow:hidden}
+.A .sleeve{width:132px;flex:none}.A .sleeve .c{width:132px;height:132px;border-radius:4px;background:center/cover;box-shadow:3px 3px 0 #0008;position:relative}
+.A .sleeve .c .h{position:absolute;right:6px;bottom:6px;background:#000a;border-radius:999px;padding:1px 7px;font-size:12px}
+.A .sleeve b{display:block;font-size:13px;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.A .sleeve span{font-size:12px;color:#cdbf9f}
+.A .side{display:flex;flex-direction:column;gap:14px}
+.A .card{background:#1a110a;border:1px solid #ffffff17;border-radius:12px;padding:12px}
+.A .share{display:flex;align-items:center;gap:10px}.A .share .big{font:800 26px 'Fraunces',serif;letter-spacing:.12em;color:var(--brass2)}
+.A .msgs p{margin:0 0 8px;font-size:14px}.A .msgs small{color:#a8987a;display:block;font-size:12px}
+.A .emo{display:flex;justify-content:space-between;font-size:18px;margin:6px 0}.A .in{height:40px;border-radius:8px;background:#000;border:1px solid #ffffff24;color:#8d8170;display:flex;align-items:center;padding:0 10px;font-size:14px}
+.A .tabs{display:flex;gap:6px}.A .tabs span{flex:1;text-align:center;padding:8px 0;border-radius:8px;background:#ffffff0d;font-weight:600;font-size:13px}.A .tabs .on{background:var(--brass);color:#2a1a0a}
+
+/* ===== B — Đài bán dẫn ===== */
+.B{--cherry:#8f1f22;--cherry2:#b32b2e;--chrome:#c7cdd1;--glass:#f0b23a;--panel:#171513;--grille:#e8dcc2}
+.B.desk,.B.phone{background:linear-gradient(160deg,#a32628,#7c1a1d);color:#f6efe3}
+.B .bar{display:flex;align-items:center;gap:14px;padding:12px 22px;background:linear-gradient(#d9dee1,#9aa1a6);color:#1c1c1c;box-shadow:inset 0 -2px 0 #0004}
+.B .brand{font:800 26px 'Big Shoulders Display';letter-spacing:.04em}.B .code{font:800 18px 'Big Shoulders Display';letter-spacing:.2em;background:#1c1c1c;color:var(--glass);padding:0 10px;border-radius:4px}
+.B .bar .ic{margin-left:auto;display:flex;gap:12px;font-weight:600;font-size:13px}
+.B .body{padding:20px 22px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px}
+.B .dial{background:#1b1712;border-radius:14px;padding:16px 18px;border:3px solid var(--chrome);box-shadow:inset 0 0 30px #000}
+.B .band{position:relative;height:70px;background:linear-gradient(#2a2117,#18130d);border-radius:8px;overflow:hidden}
+.B .band .sc{position:absolute;inset:10px 12px 26px;background:repeating-linear-gradient(90deg,var(--glass) 0 1px,#0000 1px 12px);opacity:.75}
+.B .band .num{position:absolute;left:12px;right:12px;bottom:6px;display:flex;justify-content:space-between;font:600 14px 'Big Shoulders Display';color:var(--glass)}
+.B .band .needle{position:absolute;top:4px;bottom:4px;left:31%;width:3px;background:#ff3b2f;box-shadow:0 0 10px #ff3b2f}
+.B .np{display:grid;grid-template-columns:120px 1fr;gap:16px;margin-top:14px;align-items:center}
+.B .np .art{width:120px;height:120px;border-radius:10px;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;border:3px solid var(--chrome)}
+.B .np h4{margin:0;font:800 40px/0.95 'Big Shoulders Display';color:var(--glass);text-transform:none}.B .np p{margin:6px 0 0;color:#e7d9c4}
+.B .wish{margin-top:12px;background:var(--grille);color:#3a1a12;border-radius:10px;padding:10px 12px;font-size:15px}.B .wish small{display:block;color:#7b4a3a;font-size:12px}
+.B .lyr{margin-top:12px;color:#f6d79b}.B .lyr b{display:block;color:#fff;font-size:20px}
+.B .knobs{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;align-items:center}
+.B .knob{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:600}
+.B .knob i{width:58px;height:58px;border-radius:50%;background:conic-gradient(from 200deg,#f2f4f5,#8d959a,#f2f4f5,#8d959a,#f2f4f5);box-shadow:0 4px 10px #0007,inset 0 0 0 6px #ffffff40;display:block;position:relative}
+.B .knob i::after{content:"";position:absolute;left:50%;top:6px;width:3px;height:16px;background:#1c1c1c;transform:translateX(-50%)}
+.B .knob.red i{background:conic-gradient(from 200deg,#ff6b5e,#8f1f22,#ff6b5e,#8f1f22,#ff6b5e)}
+.B .presets{margin-top:18px}.B .presets h3,.B .side h3{font:800 24px 'Big Shoulders Display';margin:0 0 8px;color:#fff}
+.B .keys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.B .key{background:linear-gradient(#fbf6ea,#d9cdb3);color:#2a1a10;border-radius:6px 6px 10px 10px;padding:8px 10px;box-shadow:0 4px 0 #8d7d5c;font-size:13px}
+.B .key b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.B .key span{color:#6b5a3e;font-size:12px}
+.B .side{display:flex;flex-direction:column;gap:14px}
+.B .grille{border-radius:14px;padding:14px;background:radial-gradient(circle,#0000 0 2px,#1b171200 2.5px) 0 0/9px 9px, #1b1712;border:3px solid var(--chrome)}
+.B .letter{background:var(--grille);color:#2a1a10;border-radius:4px;padding:8px 10px;margin-bottom:8px;font-size:14px;box-shadow:2px 2px 0 #0006}.B .letter small{display:block;color:#7b4a3a;font-size:12px}
+.B .in{height:40px;border-radius:20px;background:#0e0c0a;border:2px solid var(--chrome);color:#9b8f7b;display:flex;align-items:center;padding:0 14px;font-size:14px}
+.B .tabs{display:flex;gap:6px}.B .tabs span{flex:1;text-align:center;padding:8px 0;border-radius:20px;background:#00000033;font-weight:600;font-size:13px}.B .tabs .on{background:var(--glass);color:#2a1a10}
+.B .vote{margin-top:12px;background:#000;border:2px solid var(--glass);border-radius:10px;padding:8px 12px;display:flex;gap:10px;align-items:center;font-weight:600;font-size:14px}
+
+/* ===== C — Băng cassette ===== */
+.C{--choc:#2e1d13;--choc2:#43291a;--must:#e3a62b;--teal:#2c6e69;--label:#f1ead9;--red:#c8401f}
+.C.desk,.C.phone{background:var(--choc);color:var(--label)}
+.C .stripe{height:10px;background:linear-gradient(#c8401f 0 33%,#e07a1f 33% 66%,#e3a62b 66%)}
+.C .bar{display:flex;align-items:center;gap:14px;padding:12px 22px}
+.C .brand{font:22px 'Bungee';color:var(--must)}.C .dymo{font:700 14px 'Barlow Condensed';letter-spacing:.14em;background:#111;color:#fff;padding:3px 10px;border-radius:3px;box-shadow:inset 0 -2px 0 #000}
+.C .bar .ic{margin-left:auto;display:flex;gap:8px}
+.C .body{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:24px;padding:6px 22px 22px}
+.C .tape{background:#1c1612;border-radius:16px;padding:16px;position:relative;box-shadow:0 12px 30px #0008}
+.C .label{background:var(--label);color:#2b1c12;border-radius:8px;padding:12px 16px;position:relative}
+.C .label::before{content:"";position:absolute;left:0;right:0;top:44px;height:6px;background:linear-gradient(#c8401f 0 33%,#e07a1f 33% 66%,#e3a62b 66%)}
+.C .label h4{margin:0 0 18px;font:30px/1 'Patrick Hand';}
+.C .label .meta{display:flex;justify-content:space-between;font:18px 'Patrick Hand';color:#5c4130}
+.C .window{display:flex;justify-content:space-between;align-items:center;margin:14px auto 0;width:78%;background:#3a2f27;border-radius:30px;padding:10px 26px}
+.C .reel{width:74px;height:74px;border-radius:50%;background:radial-gradient(circle,#eee 0 10px,#2a211a 10px 14px,#5a3f2a 14px);animation:spin 3s linear infinite;position:relative}
+.C .reel.r2{width:54px;height:54px;background:radial-gradient(circle,#eee 0 10px,#2a211a 10px 14px,#5a3f2a 14px)}
+.C .window .prog{flex:1;margin:0 14px;text-align:center;font:600 13px 'Barlow Condensed';letter-spacing:.06em;color:#e9dccb}
+.C .keys{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.C .k{background:linear-gradient(#d9d2c4,#a39b8c);color:#1c1612;border-radius:4px;padding:9px 12px;font:700 14px 'Barlow Condensed';letter-spacing:.06em;box-shadow:0 4px 0 #5e574b}
+.C .k.on{background:linear-gradient(#e3a62b,#b9811a);box-shadow:0 2px 0 #6f4a0c;transform:translateY(2px)}
+.C .note{margin-top:14px;background:#f7e48f;color:#3a2a0e;padding:10px 12px;transform:rotate(-1deg);font:19px 'Patrick Hand';box-shadow:3px 4px 0 #0006;max-width:520px}
+.C .lyr{margin-top:14px;font:20px 'Patrick Hand';color:#d9cbb4}.C .lyr b{color:#fff;font-size:26px;display:block}
+.C .vote{margin-top:12px;display:flex;align-items:center;gap:10px;font:600 14px 'Be Vietnam Pro'}.C .vote .dy{font:700 13px 'Barlow Condensed';letter-spacing:.12em;background:var(--red);color:#fff;padding:3px 8px;border-radius:3px}
+.C .jcard{margin-top:18px;background:var(--label);color:#2b1c12;border-radius:6px;padding:12px 16px}
+.C .jcard h3{margin:0 0 6px;font:18px 'Bungee';color:var(--red)}
+.C .jcard ol{margin:0;padding-left:24px;font:19px/1.5 'Patrick Hand'}.C .jcard li span{color:#7a5a43;font-size:16px}
+.C .side{display:flex;flex-direction:column;gap:12px}
+.C .postit{background:#f7e48f;color:#3a2a0e;padding:8px 10px;font:18px/1.25 'Patrick Hand';box-shadow:2px 3px 0 #0006}.C .postit.p2{background:#bfe3d9;transform:rotate(1deg)}.C .postit.p3{background:#f4c3b0;transform:rotate(-1.2deg)}.C .postit small{display:block;font:12px 'Be Vietnam Pro';color:#6b5333}
+.C .in{height:40px;border-radius:6px;background:#1c1612;border:1px dashed #e3a62b88;color:#a99a85;display:flex;align-items:center;padding:0 10px;font-size:14px}
+.C .tabs{display:flex;gap:6px}.C .tabs span{flex:1;text-align:center;padding:8px 0;font:700 14px 'Barlow Condensed';letter-spacing:.08em;background:#111;color:#fff;border-radius:3px}.C .tabs .on{background:var(--must);color:#2b1c12}
+
+/* ===== D — Bảng giờ tàu ===== */
+.D{--board:#0f1d17;--flap:#1b2a23;--amber:#ffb23f;--paper:#f2efe6;--sig:#e04434}
+.D.desk,.D.phone{background:var(--board);color:var(--paper);font-family:'Be Vietnam Pro'}
+.D .bar{display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:4px solid #2c3b33}
+.D .brand{font:700 26px 'Barlow Condensed';letter-spacing:.06em}.D .clock{margin-left:auto;font:700 22px 'Barlow Condensed';color:var(--amber)}
+.D .flaps{display:inline-flex;gap:3px}.D .flaps i{font:700 22px/1 'Barlow Condensed';font-style:normal;background:var(--flap);color:var(--paper);width:22px;height:32px;display:grid;place-items:center;border-radius:3px;position:relative}
+.D .flaps i::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:#0009}
+.D .body{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:24px;padding:20px 22px}
+.D .now{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:start}
+.D .now .art{width:150px;height:150px;background:url(https://i.ytimg.com/vi/Svtr-p4mrQ8/hqdefault.jpg) center/cover;border:4px solid #2c3b33}
+.D .tag{display:inline-flex;gap:6px;align-items:center;font:700 15px 'Barlow Condensed';letter-spacing:.06em;color:var(--board);background:var(--amber);padding:2px 10px}
+.D .now h4{margin:8px 0 0;font:700 40px/0.95 'Barlow Condensed'}.D .now p{margin:6px 0 0;color:#b9c4bd}
+.D .track{margin-top:14px;height:12px;background:#24342c;position:relative}.D .track i{position:absolute;left:0;top:0;bottom:0;width:30%;background:var(--amber)}.D .track b{position:absolute;left:30%;top:-5px;width:4px;height:22px;background:var(--paper)}
+.D .times{display:flex;justify-content:space-between;font:700 15px 'Barlow Condensed';color:#b9c4bd;margin-top:4px}
+.D .ann{margin-top:12px;border:2px solid var(--amber);padding:8px 12px;color:var(--amber);font-size:15px}.D .ann small{display:block;color:#d7c08f;font-size:12px}
+.D .lyr{margin-top:12px;color:#9fb0a7}.D .lyr b{display:block;color:var(--paper);font:700 24px 'Barlow Condensed'}
+.D .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.D .btn{height:42px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;background:#24342c;border:2px solid #3b4d44;font:700 16px 'Barlow Condensed';letter-spacing:.04em}.D .btn.go{background:var(--amber);color:var(--board);border-color:var(--amber)}
+.D table{width:100%;border-collapse:collapse;margin-top:18px;font:500 16px 'Barlow Condensed'}
+.D th{text-align:left;color:var(--amber);font-weight:700;font-size:14px;padding:6px 8px;border-bottom:2px solid #2c3b33}
+.D td{padding:8px;border-bottom:1px solid #22322a;background:#15241d}.D td.t{font-weight:700;color:var(--amber);width:70px}.D td .s{color:#9fb0a7;font-size:14px}
+.D .side{display:flex;flex-direction:column;gap:12px}
+.D .box{border:2px solid #2c3b33;padding:12px}.D .box h3{margin:0 0 8px;font:700 20px 'Barlow Condensed';letter-spacing:.04em;color:var(--amber)}
+.D .msg{font-size:14px;margin:0 0 8px}.D .msg small{display:block;color:#9fb0a7;font-size:12px}
+.D .ticker{background:var(--amber);color:var(--board);font:700 15px 'Barlow Condensed';padding:6px 12px;white-space:nowrap;overflow:hidden}
+.D .in{height:40px;background:#0a1410;border:2px solid #2c3b33;color:#7d8f86;display:flex;align-items:center;padding:0 10px;font-size:14px}
+.D .tabs{display:flex}.D .tabs span{flex:1;text-align:center;padding:8px 0;font:700 15px 'Barlow Condensed';border:2px solid #2c3b33;margin-right:-2px}.D .tabs .on{background:var(--amber);color:var(--board);border-color:var(--amber)}
+
+/* phones share */
+.phone .tabbar{font-weight:600}
+
+.map{max-width:1440px;margin-top:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 22px;font-size:13px;color:#cfc6b6}.map b{color:#fff;font-weight:600}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toc{position:sticky;top:0;z-index:5;display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:10px 0;margin:0 0 26px;background:#0f0e0dee;backdrop-filter:blur(6px)}.toc span{color:#a9a196;font-size:13px;margin-right:4px}.toc a{color:#e9e4da;text-decoration:none;border:1px solid #ffffff26;border-radius:999px;padding:5px 12px;font-size:13px}.toc a:hover{border-color:#d8a24a;color:#d8a24a}
+.group{font:600 15px 'Be Vietnam Pro';color:#d8a24a;margin:8px 0 18px}
+.cur{display:flex;gap:16px;align-items:center;border:1px solid #ffffff1f;border-radius:16px;padding:16px 18px;max-width:900px;color:#a9a196}.cur i{width:44px;height:44px;border-radius:10px;flex:none;background:linear-gradient(135deg,#173a34,#0f2a26);box-shadow:inset 0 0 0 1px #2a524a}.cur b{color:#e9e4da}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="skip" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></symbol>
+  <symbol id="pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></symbol>
+  <symbol id="headphones" viewBox="0 0 24 24"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></symbol>
+  <symbol id="bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+  <symbol id="pip" viewBox="0 0 24 24"><path d="M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4"/><rect x="12" y="13" width="10" height="7" rx="2"/></symbol>
+  <symbol id="more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+  <symbol id="heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+  <symbol id="pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></symbol>
+  <symbol id="mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+  <symbol id="send" viewBox="0 0 24 24"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></symbol>
+  <symbol id="share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></symbol>
+  <symbol id="history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+  <symbol id="logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+  <symbol id="users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="radio" viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></symbol>
+  <symbol id="qr" viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="16" y="3" width="5" height="5" rx="1"/><rect x="3" y="16" width="5" height="5" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></symbol>
+  <symbol id="link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="vote" viewBox="0 0 24 24"><path d="m9 12 2 2 4-4"/><path d="M5 7c0-1.1.9-2 2-2h10a2 2 0 0 1 2 2v12H5V7Z"/><path d="M22 19H2"/></symbol>
+  <symbol id="disc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="lines" viewBox="0 0 24 24"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></symbol>
+</svg>
+
+<div class="intro"><h1>Bộ chủ đề cho Music Room — bản sửa: mời người chỉ ở một chỗ</h1><p>Tất cả các chủ đề đã dựng, gom một chỗ để chuẩn bị cho tính năng đổi chủ đề. Mỗi chủ đề chỉ đổi màu, kiểu chữ và chi tiết trang trí; bố cục và tính năng giữ nguyên. Bấm "Thích hướng này" ở những chủ đề bạn muốn có trong bản đầu tiên.</p></div><nav class="toc"><span>Chủ đề:</span><a href="#t0">Hiện tại</a><a href="#t1">Phòng nghe nhạc</a><a href="#t2">Dàn máy Nhật 1982</a><a href="#t3">Áp phích giữa thế kỷ</a><a href="#tA">Tủ hi-fi gỗ</a><a href="#tB">Đài bán dẫn</a><a href="#tC">Băng cassette</a><a href="#tD">Bảng giờ tàu</a></nav><section class="concept" id="share"><div class="chead"><h2>Mời người vào phòng — một chỗ duy nhất</h2><p>Mọi chủ đề: bỏ thẻ "Mời mọi người" ở cột phải. Thanh trên giữ <b>mã phòng</b> (bấm là sao chép link) và <b>một nút chia sẻ</b> mở hộp dưới đây. Trò chuyện lên đầu cột phải.</p></div>
+<div class="row"><div class="K" style="border-radius:16px;overflow:hidden;width:520px;max-width:100%;background:#1a1714;border:1px solid #3a332b">
+  <div class="top" style="padding:14px 20px"><h1 style="font-size:19px">Nhạc Quẩy</h1><span class="code">Mã phòng <b>V6ZRXA</b><svg class="i sm"><use href="#link"/></svg></span><span class="acts"><span class="ib" style="border-color:#d8a24a;color:#d8a24a"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span><span class="ib"><svg class="i"><use href="#logout"/></svg></span></span></div>
+  <div style="padding:16px 20px;color:#a59a8a;font-size:13px">Bấm vào <b style="color:#ece5d8">mã phòng</b>: sao chép link ngay, hiện "Đã sao chép link phòng". Bấm <b style="color:#d8a24a">nút chia sẻ</b>: mở hộp bên phải.</div>
+</div>
+<div class="K" style="width:360px;border-radius:20px;background:#211d19;border:1px solid #3a332b;padding:22px;color:#ece5d8">
+  <p style="margin:0 0 4px;font:600 20px 'Fraunces',serif">Mời mọi người vào phòng</p><p style="margin:0 0 16px;color:#a59a8a;font-size:13px">Quét mã bằng camera điện thoại, hoặc gửi link.</p>
+  <div style="background:#ece5d8;border-radius:14px;padding:16px;display:grid;place-items:center"><svg viewBox="0 0 25 25" style="width:160px;height:160px;fill:#1a1714" shape-rendering="crispEdges"><rect x="0" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="1" y="0" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="2" y="0" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="3" y="0" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="4" y="0" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="5" y="0" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/><rect x="18" y="0" width="1" height="1"/><rect x="18" y="1" width="1" height="1"/><rect x="18" y="2" width="1" height="1"/><rect x="18" y="3" width="1" height="1"/><rect x="18" y="4" width="1" height="1"/><rect x="18" y="5" width="1" height="1"/><rect x="18" y="6" width="1" height="1"/><rect x="19" y="0" width="1" height="1"/><rect x="19" y="6" width="1" height="1"/><rect x="20" y="0" width="1" height="1"/><rect x="20" y="2" width="1" height="1"/><rect x="20" y="3" width="1" height="1"/><rect x="20" y="4" width="1" height="1"/><rect x="20" y="6" width="1" height="1"/><rect x="21" y="0" width="1" height="1"/><rect x="21" y="2" width="1" height="1"/><rect x="21" y="3" width="1" height="1"/><rect x="21" y="4" width="1" height="1"/><rect x="21" y="6" width="1" height="1"/><rect x="22" y="0" width="1" height="1"/><rect x="22" y="2" width="1" height="1"/><rect x="22" y="3" width="1" height="1"/><rect x="22" y="4" width="1" height="1"/><rect x="22" y="6" width="1" height="1"/><rect x="23" y="0" width="1" height="1"/><rect x="23" y="6" width="1" height="1"/><rect x="24" y="0" width="1" height="1"/><rect x="24" y="1" width="1" height="1"/><rect x="24" y="2" width="1" height="1"/><rect x="24" y="3" width="1" height="1"/><rect x="24" y="4" width="1" height="1"/><rect x="24" y="5" width="1" height="1"/><rect x="24" y="6" width="1" height="1"/><rect x="0" y="18" width="1" height="1"/><rect x="0" y="19" width="1" height="1"/><rect x="0" y="20" width="1" height="1"/><rect x="0" y="21" width="1" height="1"/><rect x="0" y="22" width="1" height="1"/><rect x="0" y="23" width="1" height="1"/><rect x="0" y="24" width="1" height="1"/><rect x="1" y="18" width="1" height="1"/><rect x="1" y="24" width="1" height="1"/><rect x="2" y="18" width="1" height="1"/><rect x="2" y="20" width="1" height="1"/><rect x="2" y="21" width="1" height="1"/><rect x="2" y="22" width="1" height="1"/><rect x="2" y="24" width="1" height="1"/><rect x="3" y="18" width="1" height="1"/><rect x="3" y="20" width="1" height="1"/><rect x="3" y="21" width="1" height="1"/><rect x="3" y="22" width="1" height="1"/><rect x="3" y="24" width="1" height="1"/><rect x="4" y="18" width="1" height="1"/><rect x="4" y="20" width="1" height="1"/><rect x="4" y="21" width="1" height="1"/><rect x="4" y="22" width="1" height="1"/><rect x="4" y="24" width="1" height="1"/><rect x="5" y="18" width="1" height="1"/><rect x="5" y="24" width="1" height="1"/><rect x="6" y="18" width="1" height="1"/><rect x="6" y="19" width="1" height="1"/><rect x="6" y="20" width="1" height="1"/><rect x="6" y="21" width="1" height="1"/><rect x="6" y="22" width="1" height="1"/><rect x="6" y="23" width="1" height="1"/><rect x="6" y="24" width="1" height="1"/><rect x="0" y="8" width="1" height="1"/><rect x="0" y="9" width="1" height="1"/><rect x="0" y="11" width="1" height="1"/><rect x="0" y="13" width="1" height="1"/><rect x="0" y="14" width="1" height="1"/><rect x="0" y="16" width="1" height="1"/><rect x="1" y="8" width="1" height="1"/><rect x="1" y="9" width="1" height="1"/><rect x="1" y="10" width="1" height="1"/><rect x="1" y="11" width="1" height="1"/><rect x="1" y="13" width="1" height="1"/><rect x="1" y="14" width="1" height="1"/><rect x="2" y="9" width="1" height="1"/><rect x="2" y="11" width="1" height="1"/><rect x="2" y="13" width="1" height="1"/><rect x="2" y="14" width="1" height="1"/><rect x="2" y="15" width="1" height="1"/><rect x="2" y="16" width="1" height="1"/><rect x="3" y="9" width="1" height="1"/><rect x="3" y="12" width="1" height="1"/><rect x="3" y="14" width="1" height="1"/><rect x="3" y="15" width="1" height="1"/><rect x="3" y="16" width="1" height="1"/><rect x="4" y="9" width="1" height="1"/><rect x="4" y="10" width="1" height="1"/><rect x="4" y="12" width="1" height="1"/><rect x="4" y="13" width="1" height="1"/><rect x="4" y="16" width="1" height="1"/><rect x="5" y="12" width="1" height="1"/><rect x="5" y="14" width="1" height="1"/><rect x="5" y="15" width="1" height="1"/><rect x="6" y="8" width="1" height="1"/><rect x="6" y="10" width="1" height="1"/><rect x="6" y="15" width="1" height="1"/><rect x="7" y="10" width="1" height="1"/><rect x="7" y="13" width="1" height="1"/><rect x="7" y="15" width="1" height="1"/><rect x="8" y="3" width="1" height="1"/><rect x="8" y="4" width="1" height="1"/><rect x="8" y="6" width="1" height="1"/><rect x="8" y="7" width="1" height="1"/><rect x="8" y="8" width="1" height="1"/><rect x="8" y="9" width="1" height="1"/><rect x="8" y="10" width="1" height="1"/><rect x="8" y="12" width="1" height="1"/><rect x="8" y="13" width="1" height="1"/><rect x="8" y="14" width="1" height="1"/><rect x="8" y="16" width="1" height="1"/><rect x="8" y="17" width="1" height="1"/><rect x="8" y="22" width="1" height="1"/><rect x="8" y="23" width="1" height="1"/><rect x="8" y="24" width="1" height="1"/><rect x="9" y="2" width="1" height="1"/><rect x="9" y="3" width="1" height="1"/><rect x="9" y="4" width="1" height="1"/><rect x="9" y="5" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="9" y="9" width="1" height="1"/><rect x="9" y="10" width="1" height="1"/><rect x="9" y="11" width="1" height="1"/><rect x="9" y="18" width="1" height="1"/><rect x="9" y="23" width="1" height="1"/><rect x="9" y="24" width="1" height="1"/><rect x="10" y="0" width="1" height="1"/><rect x="10" y="2" width="1" height="1"/><rect x="10" y="3" width="1" height="1"/><rect x="10" y="4" width="1" height="1"/><rect x="10" y="5" width="1" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="10" y="7" width="1" height="1"/><rect x="10" y="8" width="1" height="1"/><rect x="10" y="9" width="1" height="1"/><rect x="10" y="10" width="1" height="1"/><rect x="10" y="11" width="1" height="1"/><rect x="10" y="12" width="1" height="1"/><rect x="10" y="15" width="1" height="1"/><rect x="10" y="16" width="1" height="1"/><rect x="10" y="17" width="1" height="1"/><rect x="10" y="18" width="1" height="1"/><rect x="10" y="19" width="1" height="1"/><rect x="10" y="22" width="1" height="1"/><rect x="10" y="24" width="1" height="1"/><rect x="11" y="0" width="1" height="1"/><rect x="11" y="1" width="1" height="1"/><rect x="11" y="2" width="1" height="1"/><rect x="11" y="4" width="1" height="1"/><rect x="11" y="5" width="1" height="1"/><rect x="11" y="8" width="1" height="1"/><rect x="11" y="10" width="1" height="1"/><rect x="11" y="15" width="1" height="1"/><rect x="11" y="16" width="1" height="1"/><rect x="11" y="17" width="1" height="1"/><rect x="11" y="21" width="1" height="1"/><rect x="11" y="22" width="1" height="1"/><rect x="12" y="4" width="1" height="1"/><rect x="12" y="6" width="1" height="1"/><rect x="12" y="7" width="1" height="1"/><rect x="12" y="8" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="12" y="10" width="1" height="1"/><rect x="12" y="13" width="1" height="1"/><rect x="12" y="17" width="1" height="1"/><rect x="12" y="18" width="1" height="1"/><rect x="12" y="19" width="1" height="1"/><rect x="12" y="20" width="1" height="1"/><rect x="12" y="21" width="1" height="1"/><rect x="13" y="0" width="1" height="1"/><rect x="13" y="3" width="1" height="1"/><rect x="13" y="8" width="1" height="1"/><rect x="13" y="9" width="1" height="1"/><rect x="13" y="11" width="1" height="1"/><rect x="13" y="14" width="1" height="1"/><rect x="13" y="15" width="1" height="1"/><rect x="13" y="18" width="1" height="1"/><rect x="13" y="19" width="1" height="1"/><rect x="13" y="20" width="1" height="1"/><rect x="13" y="23" width="1" height="1"/><rect x="14" y="2" width="1" height="1"/><rect x="14" y="4" width="1" height="1"/><rect x="14" y="5" width="1" height="1"/><rect x="14" y="10" width="1" height="1"/><rect x="14" y="13" width="1" height="1"/><rect x="14" y="14" width="1" height="1"/><rect x="14" y="15" width="1" height="1"/><rect x="14" y="16" width="1" height="1"/><rect x="14" y="18" width="1" height="1"/><rect x="14" y="19" width="1" height="1"/><rect x="14" y="20" width="1" height="1"/><rect x="14" y="22" width="1" height="1"/><rect x="14" y="23" width="1" height="1"/><rect x="15" y="1" width="1" height="1"/><rect x="15" y="6" width="1" height="1"/><rect x="15" y="7" width="1" height="1"/><rect x="15" y="8" width="1" height="1"/><rect x="15" y="9" width="1" height="1"/><rect x="15" y="11" width="1" height="1"/><rect x="15" y="12" width="1" height="1"/><rect x="15" y="15" width="1" height="1"/><rect x="15" y="19" width="1" height="1"/><rect x="15" y="21" width="1" height="1"/><rect x="15" y="22" width="1" height="1"/><rect x="16" y="3" width="1" height="1"/><rect x="16" y="8" width="1" height="1"/><rect x="16" y="10" width="1" height="1"/><rect x="16" y="15" width="1" height="1"/><rect x="16" y="19" width="1" height="1"/><rect x="16" y="20" width="1" height="1"/><rect x="16" y="21" width="1" height="1"/><rect x="16" y="22" width="1" height="1"/><rect x="16" y="23" width="1" height="1"/><rect x="16" y="24" width="1" height="1"/><rect x="17" y="11" width="1" height="1"/><rect x="17" y="14" width="1" height="1"/><rect x="17" y="17" width="1" height="1"/><rect x="17" y="19" width="1" height="1"/><rect x="17" y="23" width="1" height="1"/><rect x="17" y="24" width="1" height="1"/><rect x="18" y="9" width="1" height="1"/><rect x="18" y="10" width="1" height="1"/><rect x="18" y="11" width="1" height="1"/><rect x="18" y="13" width="1" height="1"/><rect x="18" y="15" width="1" height="1"/><rect x="18" y="16" width="1" height="1"/><rect x="18" y="17" width="1" height="1"/><rect x="18" y="20" width="1" height="1"/><rect x="18" y="24" width="1" height="1"/><rect x="19" y="8" width="1" height="1"/><rect x="19" y="9" width="1" height="1"/><rect x="19" y="11" width="1" height="1"/><rect x="19" y="12" width="1" height="1"/><rect x="19" y="13" width="1" height="1"/><rect x="19" y="16" width="1" height="1"/><rect x="19" y="17" width="1" height="1"/><rect x="19" y="21" width="1" height="1"/><rect x="19" y="22" width="1" height="1"/><rect x="19" y="24" width="1" height="1"/><rect x="20" y="8" width="1" height="1"/><rect x="20" y="12" width="1" height="1"/><rect x="20" y="14" width="1" height="1"/><rect x="20" y="16" width="1" height="1"/><rect x="20" y="17" width="1" height="1"/><rect x="20" y="20" width="1" height="1"/><rect x="20" y="21" width="1" height="1"/><rect x="20" y="23" width="1" height="1"/><rect x="20" y="24" width="1" height="1"/><rect x="21" y="8" width="1" height="1"/><rect x="21" y="9" width="1" height="1"/><rect x="21" y="10" width="1" height="1"/><rect x="21" y="11" width="1" height="1"/><rect x="21" y="12" width="1" height="1"/><rect x="21" y="14" width="1" height="1"/><rect x="21" y="16" width="1" height="1"/><rect x="21" y="17" width="1" height="1"/><rect x="21" y="18" width="1" height="1"/><rect x="21" y="19" width="1" height="1"/><rect x="21" y="20" width="1" height="1"/><rect x="21" y="23" width="1" height="1"/><rect x="21" y="24" width="1" height="1"/><rect x="22" y="9" width="1" height="1"/><rect x="22" y="11" width="1" height="1"/><rect x="22" y="14" width="1" height="1"/><rect x="22" y="18" width="1" height="1"/><rect x="22" y="22" width="1" height="1"/><rect x="22" y="23" width="1" height="1"/><rect x="22" y="24" width="1" height="1"/><rect x="23" y="8" width="1" height="1"/><rect x="23" y="9" width="1" height="1"/><rect x="23" y="11" width="1" height="1"/><rect x="23" y="12" width="1" height="1"/><rect x="23" y="13" width="1" height="1"/><rect x="23" y="17" width="1" height="1"/><rect x="23" y="18" width="1" height="1"/><rect x="23" y="19" width="1" height="1"/><rect x="23" y="20" width="1" height="1"/><rect x="23" y="21" width="1" height="1"/><rect x="23" y="22" width="1" height="1"/><rect x="23" y="23" width="1" height="1"/><rect x="24" y="10" width="1" height="1"/><rect x="24" y="12" width="1" height="1"/><rect x="24" y="13" width="1" height="1"/><rect x="24" y="14" width="1" height="1"/><rect x="24" y="15" width="1" height="1"/><rect x="24" y="16" width="1" height="1"/><rect x="24" y="18" width="1" height="1"/><rect x="24" y="20" width="1" height="1"/><rect x="24" y="21" width="1" height="1"/><rect x="24" y="22" width="1" height="1"/><rect x="24" y="23" width="1" height="1"/><rect x="24" y="24" width="1" height="1"/></svg></div>
+  <p style="text-align:center;margin:14px 0 2px;font:400 30px 'Fraunces',serif;letter-spacing:.14em">V6ZRXA</p><p style="text-align:center;margin:0 0 14px;color:#a59a8a;font-size:13px">musicroom.io.vn/r/V6ZRXA</p>
+  <div style="display:flex;gap:8px"><span class="b p" style="flex:1;justify-content:center"><svg class="i"><use href="#link"/></svg>Sao chép link</span><span class="b" style="flex:1;justify-content:center"><svg class="i"><use href="#share"/></svg>Gửi qua…</span></div>
+</div></div></section><section class="concept" id="t0"><div class="chead"><h2>0 · Hiện tại (mặc định)</h2><p>Giao diện đang chạy: nền xanh đậm, nền mờ đổi theo ảnh bìa, màu nhấn vàng. Giữ làm chủ đề mặc định.</p><span class="pick" data-choice="current" onclick="toggleSelect(this)">Giữ trong danh sách</span></div><div class="cur"><i></i><span><b>Mặc định</b> · là trang bạn đang dùng tại musicroom.io.vn — không cần mockup.</span></div></section><p class="group">Vintage hiện đại, tối giản</p><section class="concept" id="t1">
+  <div class="chead"><h2>1 · Phòng nghe nhạc</h2><p>Như một quán nghe đĩa: nền nâu cà phê, chữ có chân thanh mảnh, một màu nhấn hổ phách. Chi tiết vintage duy nhất: đĩa than hé ra sau bìa đĩa.</p><span class="pick" data-choice="listening" onclick="toggleSelect(this)">Thích hướng này</span></div>
+  <div class="row">
+    <div class="desk K">
+      <div class="top"><h1>Nhạc Quẩy</h1><span class="code">Mã phòng <b>V6ZRXA</b><svg class="i sm"><use href="#link"/></svg></span><span class="acts"><span class="ib" title="Chia sẻ"><svg class="i"><use href="#share"/></svg></span><span class="ib" title="Lịch sử"><svg class="i"><use href="#history"/></svg></span><span class="ib" title="Rời phòng"><svg class="i"><use href="#logout"/></svg></span></span></div>
+      <div class="wrap">
+        <main>
+          <div class="hero">
+            <div class="cover"><div class="rec"></div><div class="sl"></div></div>
+            <div><span class="state"><i class="dot"></i>Đang phát</span><p class="title">Shape of You<br>(The Biggest Weekend)</p><p class="by">Ed Sheeran, <b>Khanh Nguyen</b> chọn</p></div>
+          </div>
+          <div class="dial"><div class="ticks"><i></i><em></em></div><div class="tt"><span>0:52</span><span>4:42</span></div></div>
+          <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua 0/3</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe cùng</span><span class="b ic" title="Lưu"><svg class="i"><use href="#bookmark"/></svg></span><span class="b ic" title="Thu nhỏ"><svg class="i"><use href="#pip"/></svg></span><span class="b ic" title="Thêm"><svg class="i"><use href="#more"/></svg></span></div>
+          <div class="vote"><span><svg class="i sm" style="vertical-align:-3px"><use href="#vote"/></svg> Minh muốn qua bài. 2/3 đồng ý, 1 nghe tiếp, còn 12 giây</span><span class="b p" style="height:36px"><svg class="i sm"><use href="#check"/></svg>Qua bài</span><span class="b" style="height:36px"><svg class="i sm"><use href="#x"/></svg>Nghe tiếp</span><span class="bar"><i></i></span></div>
+          <p class="wish"><small>Lời chúc của Khanh Nguyen</small>Chúc cả team chiều thứ Sáu thật chill.</p>
+          <div class="lyr">Dòng lời trước đó<br><b>Dòng lời đang hát hiện ở đây</b><br>Dòng lời kế tiếp</div>
+          <h3>Tiếp theo</h3>
+          <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></div><div class="t"><b>Shape Of You in the Live Lounge</b><span>Khanh Nguyen</span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+          <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg)"></div><div class="t"><b>Bohemian Rhapsody</b><span>Lan <svg class="i sm"><use href="#pin"/></svg><svg class="i sm"><use href="#mail"/></svg></span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+          <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg)"></div><div class="t"><b>Despacito</b><span>Minh</span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+        </main>
+        <aside class="side">
+          <div class="chat"><h3>Trò chuyện</h3>
+            <p class="m"><small>Lan, 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi</p>
+            <p class="m"><small>Minh, 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p>
+            <p class="m me"><small>14:04</small><span>Ok để mình xếp Despacito sau</span></p>
+            <div class="react"><span>❤️</span><span>🔥</span><span>👏</span><span>😂</span><span>🎉</span><span title="Bàn DJ" style="color:var(--mute)"><svg class="i sm"><use href="#disc"/></svg></span></div>
+            <div class="in"><div>Nhắn cho cả phòng…</div><span><svg class="i"><use href="#send"/></svg></span></div></div>
+          <div class="seg"><span class="on"><svg class="i sm"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i sm"><use href="#users"/></svg>Mọi người</span></div>
+        </aside>
+      </div>
+    </div>
+    <div class="phone K"><div class="top" style="padding:14px 18px"><h1 style="font-size:19px">Nhạc Quẩy</h1><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span></span></div>
+      <div class="pb"><div class="cover" style="width:170px;height:170px;margin:4px 0 0"><div class="rec" style="left:36px;width:160px;height:160px"></div><div class="sl"></div></div>
+        <p class="title" style="font-size:30px;margin-top:16px">Shape of You</p><p class="by" style="margin:0">Khanh Nguyen chọn</p>
+        <div class="dial" style="margin-top:18px"><div class="ticks"><i></i><em></em></div><div class="tt"><span>0:52</span><span>4:42</span></div></div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe</span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div>
+        <h3 style="margin-top:24px">Tiếp theo</h3><div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></div><div class="t"><b>Live Lounge</b><span>Khanh Nguyen</span></div></div></div>
+      <div class="tabbar" style="border-top:1px solid #3a332b;color:#a59a8a"><span style="color:#d8a24a"><svg class="i"><use href="#radio"/></svg>Phòng</span><span><svg class="i"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i"><use href="#users"/></svg>Mọi người</span></div></div>
+  </div>
+  <div class="notes"><p><b>Điểm nhấn:</b> bìa đĩa vuông, đĩa than hé ra phía sau; tên bài chữ có chân cỡ lớn.</p><p><b>Nút:</b> một nút chính màu hổ phách (Bỏ qua), còn lại viền mảnh; Lưu, Thu nhỏ, ⋯ chỉ có icon kèm tên khi rê chuột.</p><p><b>Bỏ phiếu:</b> khung viền mảnh với thanh đếm ngược chạy, nút Qua bài / Nghe tiếp.</p><p><b>Lời chúc:</b> chữ nghiêng có chân, không khung.</p><p><b>Tiếp theo:</b> danh sách phẳng, icon ghim / lời chúc nhỏ cạnh tên người chọn.</p><p><b>Trò chuyện:</b> luôn mở cột phải; tin của mình bên phải.</p></div>
+</section><section class="concept" id="t2">
+  <div class="chead"><h2>2 · Dàn máy Nhật 1982</h2><p>Sáng, sạch như mặt máy nhôm xước: xám ấm, đèn tín hiệu cam, màn hình LCD hổ phách cho thời gian. Phím bấm vuông có icon và chữ.</p><span class="pick" data-choice="aluminium" onclick="toggleSelect(this)">Thích hướng này</span></div>
+  <div class="row">
+    <div class="desk N">
+      <div class="top"><span class="led"></span><h1>Nhạc Quẩy</h1><span class="code" style="display:inline-flex;gap:6px;align-items:center">V6ZRXA<svg class="i sm"><use href="#link"/></svg></span><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span><span class="ib"><svg class="i"><use href="#logout"/></svg></span></span></div>
+      <div class="wrap">
+        <main>
+          <div class="deck">
+            <div class="hero"><div class="art"></div><div><span class="lbl"><span class="led"></span>Đang phát</span><p class="title">Shape of You (The Biggest Weekend)</p><p class="by">Ed Sheeran. Khanh Nguyen chọn</p>
+              <div class="lcd"><span>0:52</span><span class="meter"></span><small>4:42</small></div></div></div>
+            <div class="ctrl"><span class="key on"><svg class="i"><use href="#skip"/></svg>Bỏ qua 0/3</span><span class="key"><svg class="i"><use href="#headphones"/></svg>Nghe cùng</span><span class="key"><svg class="i"><use href="#bookmark"/></svg>Lưu</span><span class="key"><svg class="i"><use href="#pip"/></svg>Thu nhỏ</span><span class="key"><svg class="i"><use href="#pause"/></svg>Tạm dừng</span><span class="key"><svg class="i"><use href="#more"/></svg>Thêm</span></div>
+            <div class="vote"><svg class="i"><use href="#vote"/></svg><span>Minh muốn qua bài. 2/3 đồng ý</span><span class="cd"><i></i></span><span>12s</span><span class="sb"><svg class="i sm"><use href="#check"/></svg>Qua</span><span class="sb"><svg class="i sm"><use href="#x"/></svg>Nghe tiếp</span></div>
+            <div class="wish"><small>Lời chúc của Khanh Nguyen</small>Chúc cả team chiều thứ Sáu thật chill.</div>
+            <div class="lyr">Dòng lời trước đó<br><b>Dòng lời đang hát hiện ở đây</b><br>Dòng lời kế tiếp</div>
+          </div>
+          <h3>Tiếp theo</h3>
+          <div class="q"><span class="n">1</span><div class="th" style="background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></div><div class="t"><b>Shape Of You in the Live Lounge</b><span>Khanh Nguyen</span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+          <div class="q"><span class="n">2</span><div class="th" style="background-image:url(https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg)"></div><div class="t"><b>Bohemian Rhapsody</b><span>Lan <svg class="i sm"><use href="#pin"/></svg><svg class="i sm"><use href="#mail"/></svg></span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+        </main>
+        <aside class="side">
+          <div class="card"><h3 style="margin:0 0 10px">Trò chuyện</h3>
+            <p class="m"><small>Lan, 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi</p><p class="m"><small>Minh, 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p><p class="m me"><small>14:04</small><span>Ok để mình xếp Despacito sau</span></p>
+            <div class="react"><span>❤️</span><span>🔥</span><span>👏</span><span>😂</span><span>🎉</span><span style="color:var(--mute)"><svg class="i sm"><use href="#disc"/></svg></span></div>
+            <div class="in"><div>Nhắn cho cả phòng…</div><span><svg class="i"><use href="#send"/></svg></span></div></div>
+          <div class="seg"><span class="on"><svg class="i sm"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i sm"><use href="#users"/></svg>Mọi người</span></div>
+        </aside>
+      </div>
+    </div>
+    <div class="phone N"><div class="top" style="padding:12px 16px"><span class="led"></span><h1 style="font-size:20px">Nhạc Quẩy</h1><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span></span></div>
+      <div class="pb"><div class="deck" style="padding:16px"><div class="art" style="width:100%;height:170px"></div><p class="title" style="font-size:28px;margin-top:12px">Shape of You</p><p class="by" style="margin:0">Khanh Nguyen chọn</p><div class="lcd" style="font-size:22px"><span>0:52</span><span class="meter"></span><small>4:42</small></div>
+        <div class="ctrl" style="grid-template-columns:repeat(4,1fr)"><span class="key on"><svg class="i"><use href="#skip"/></svg>Bỏ qua</span><span class="key"><svg class="i"><use href="#headphones"/></svg>Nghe</span><span class="key"><svg class="i"><use href="#bookmark"/></svg>Lưu</span><span class="key"><svg class="i"><use href="#more"/></svg>Thêm</span></div></div></div>
+      <div class="tabbar" style="border-top:1px solid #cfcac0;background:#f3f1ec;color:#6f6a61"><span style="color:#e0552b"><svg class="i"><use href="#radio"/></svg>Phòng</span><span><svg class="i"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i"><use href="#users"/></svg>Mọi người</span></div></div>
+  </div>
+  <div class="notes"><p><b>Điểm nhấn:</b> màn hình LCD hổ phách cho thời gian, đèn tín hiệu cam nhỏ.</p><p><b>Nút:</b> hàng phím vuông đều nhau, icon trên chữ, phím đang có tác dụng sáng màu cam.</p><p><b>Bỏ phiếu:</b> viền cam nằm trong mặt máy.</p><p><b>Tiếp theo:</b> có số thứ tự vì đó đúng là thứ tự phát.</p><p><b>Trò chuyện / Thêm bài / Mọi người:</b> các tấm nhôm cùng kiểu ở cột phải.</p><p><b>Điểm mạnh:</b> sáng, dễ đọc ban ngày ở văn phòng.</p></div>
+</section><section class="concept" id="t3">
+  <div class="chead"><h2>3 · Áp phích giữa thế kỷ</h2><p>Hình học kiểu poster thập niên 50–60: mặt trời vàng, vòng cam lồng nhau, chữ đứng hẹp, nền xanh rêu. Một mảng đồ hoạ lớn, phần còn lại rất gọn.</p><span class="pick" data-choice="midcentury" onclick="toggleSelect(this)">Thích hướng này</span></div>
+  <div class="row">
+    <div class="desk M">
+      <div class="top"><h1>Nhạc Quẩy</h1><span class="code">V6ZRXA</span><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span><span class="ib"><svg class="i"><use href="#history"/></svg></span><span class="ib"><svg class="i"><use href="#logout"/></svg></span></span></div>
+      <div class="wrap">
+        <main>
+          <div class="stage"><div class="sunarc"></div><div class="art"></div>
+            <div class="info"><span class="state"><i class="dot"></i>Đang phát</span><p class="title">Shape of You<br>(The Biggest Weekend)</p><p class="by">Ed Sheeran. Khanh Nguyen chọn</p></div></div>
+          <div class="prog"><span>0:52</span><span class="ln"><i></i></span><span>4:42</span></div>
+          <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua 0/3</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe cùng</span><span class="b ic"><svg class="i"><use href="#bookmark"/></svg></span><span class="b ic"><svg class="i"><use href="#pip"/></svg></span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div>
+          <div class="vote"><svg class="i"><use href="#vote"/></svg><span>Minh muốn qua bài. 2/3 đồng ý, còn 12 giây</span><span class="cd"><i></i></span><span class="sb"><svg class="i sm"><use href="#check"/></svg>Qua bài</span><span class="sb o"><svg class="i sm"><use href="#x"/></svg>Nghe tiếp</span></div>
+          <div class="wish"><div><small>Lời chúc của Khanh Nguyen</small><p>Chúc cả team chiều thứ Sáu thật chill.</p></div></div>
+          <div class="lyr">Dòng lời trước đó<br><b>Dòng lời đang hát hiện ở đây</b><br>Dòng lời kế tiếp</div>
+          <h3>Tiếp theo</h3>
+          <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></div><div class="t"><b>Shape Of You in the Live Lounge</b><span>Khanh Nguyen</span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+          <div class="q"><div class="th" style="background-image:url(https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg)"></div><div class="t"><b>Bohemian Rhapsody</b><span>Lan <svg class="i sm"><use href="#pin"/></svg><svg class="i sm"><use href="#mail"/></svg></span></div><div class="a"><span><svg class="i"><use href="#heart"/></svg></span><span><svg class="i"><use href="#more"/></svg></span></div></div>
+        </main>
+        <aside class="side">
+          <div class="chat"><h3>Trò chuyện</h3>
+            <p class="m"><small>Lan, 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi</p><p class="m"><small>Minh, 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p><p class="m me"><small>14:04</small><span>Ok để mình xếp Despacito sau</span></p>
+            <div class="react"><span>❤️</span><span>🔥</span><span>👏</span><span>😂</span><span>🎉</span><span style="color:var(--mute)"><svg class="i sm"><use href="#disc"/></svg></span></div>
+            <div class="in"><div>Nhắn cho cả phòng…</div><span><svg class="i"><use href="#send"/></svg></span></div></div>
+          <div class="seg"><span class="on"><svg class="i sm"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i sm"><use href="#users"/></svg>Mọi người</span></div>
+        </aside>
+      </div>
+    </div>
+    <div class="phone M"><div class="top" style="padding:14px 18px"><h1 style="font-size:21px">Nhạc Quẩy</h1><span class="acts"><span class="ib"><svg class="i"><use href="#share"/></svg></span></span></div>
+      <div class="pb" style="position:relative;overflow:hidden"><div class="sunarc" style="width:220px;height:220px;left:-40px;top:-10px"></div><div class="art" style="width:170px;height:170px;margin-top:14px"></div>
+        <p class="title" style="font-size:36px;position:relative;margin-top:18px">Shape of You</p><p class="by" style="margin:0;position:relative">Khanh Nguyen chọn</p>
+        <div class="prog" style="margin-top:16px"><span>0:52</span><span class="ln"><i></i></span><span>4:42</span></div>
+        <div class="ctrl"><span class="b p"><svg class="i"><use href="#skip"/></svg>Bỏ qua</span><span class="b"><svg class="i"><use href="#headphones"/></svg>Nghe</span><span class="b ic"><svg class="i"><use href="#more"/></svg></span></div></div>
+      <div class="tabbar" style="background:#0e2329;color:#9fb3b3"><span style="color:#e5b53e"><svg class="i"><use href="#radio"/></svg>Phòng</span><span><svg class="i"><use href="#plus"/></svg>Thêm bài</span><span><svg class="i"><use href="#users"/></svg>Mọi người</span></div></div>
+  </div>
+  <div class="notes"><p><b>Điểm nhấn:</b> ảnh bìa tròn đặt trên mặt trời vàng và vòng cam, chữ đứng hẹp cỡ lớn.</p><p><b>Nút:</b> viên thuốc bo tròn, nút chính vàng.</p><p><b>Mời người vào phòng:</b> mã phòng và nút chia sẻ ở thanh trên.</p><p><b>Tiếp theo:</b> ảnh bìa tròn nhỏ, gạch chân mảnh.</p><p><b>Trò chuyện:</b> khối xanh đậm, tin của mình màu cam.</p><p><b>Điểm mạnh:</b> cá tính mạnh nhất trong ba hướng, nhận diện rất rõ.</p></div>
+</section><p class="group">Vintage đậm chất (bản trước)</p><section class="concept" id="tA">
+  <div class="chead"><h2>A · Tủ hi-fi gỗ óc chó</h2><p>Mâm đĩa than quay với ảnh bìa ở nhãn đĩa, kim VU báo thời gian, nút đồng thau. Ấm, sang, hợp văn phòng.</p><span class="pick" data-choice="hifi" onclick="toggleSelect(this)">Thích hướng này</span></div>
+  <div class="row">
+    <div class="desk A">
+      <div class="bar"><span class="brand">Nhạc Quẩy</span><span class="code">V6ZRXA</span><span class="ic"><span class="knob">⤴</span><span class="knob">⟲</span><span class="knob">⇥</span></span></div>
+      <div class="body">
+        <div>
+          <div class="deck">
+            <div class="tt">
+              <div style="position:relative"><div class="platter"></div><div class="arm"></div></div>
+              <div>
+                <p class="title">Shape of You (The Biggest Weekend)</p>
+                <p class="who">Ed Sheeran · Khanh Nguyen chọn · ❤️ 3</p>
+                <div class="wish">“Chúc cả team chiều thứ Sáu thật chill 🎉” — Khanh Nguyen</div>
+                <div class="vu"><div class="scale"></div><div class="t"><span>0:52</span><span>còn 3:50</span><span>4:42</span></div></div>
+              </div>
+            </div>
+            <div class="lyr">♪ dòng trước<b>♪ Dòng lời đang hát hiện ở đây</b>♪ dòng kế tiếp</div>
+            <div class="vote">🗳 <span>Minh muốn qua bài · ✅ 2/3 · ❌ 1</span><span class="cd"><i></i></span><span>12s</span><span class="btn" style="height:34px">✅</span><span class="btn dark" style="height:34px">❌</span></div>
+            <div class="btns"><span class="btn">⏭ Bỏ qua</span><span class="btn">🎧 Nghe cùng</span><span class="btn">🔖 Lưu</span><span class="btn dark">⧉ Thu nhỏ</span><span class="btn dark">⋯ Thêm</span><span class="btn dark">⏸ Tạm dừng</span><span class="btn dark">⏭ Qua ngay</span></div>
+          </div>
+          <h3>Chồng đĩa tiếp theo</h3>
+          <div class="crate">
+            <div class="sleeve"><div class="c" style="background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"><span class="h">♡ 1</span></div><b>Shape Of You · Live Lounge</b><span>Khanh Nguyen · ⋯</span></div>
+            <div class="sleeve"><div class="c" style="background-image:url(https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg)"><span class="h">📌 ✉</span></div><b>Bohemian Rhapsody</b><span>Lan · ⋯</span></div>
+            <div class="sleeve"><div class="c" style="background-image:url(https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg)"><span class="h">♡</span></div><b>Despacito</b><span>Minh · ⋯</span></div>
+            <div class="sleeve"><div class="c" style="background-image:url(https://i.ytimg.com/vi/JGwWNGJdvx8/mqdefault.jpg)"><span class="h">♡ 2</span></div><b>Shape of You (Lyrics)</b><span>Hoa · ⋯</span></div>
+            <div class="sleeve"><div class="c" style="background-image:url(https://i.ytimg.com/vi/OPf0YbXqDm0/mqdefault.jpg)"><span class="h">gợi ý</span></div><b>Uptown Funk</b><span>Gợi ý · ＋ Thêm</span></div>
+          </div>
+        </div>
+        <aside class="side">
+          <div class="card msgs"><h3 style="margin:0 0 8px">Sổ lời nhắn</h3><p><small>Lan · 14:02</small>Bài này hay quá 😄</p><p><small>Minh · 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p><div class="emo">❤️ 🔥 👏 😂 🎉 😍 🤘 🎸 💿</div><div class="in">Nhắn cho cả phòng…</div></div>
+          <div class="tabs"><span class="on">＋ Thêm bài</span><span>Mọi người</span></div>
+          <div class="card" style="font-size:13px;color:#cdbf9f">Tìm kiếm · Đã phát · Của tôi · Hỏi DJ · Đã chặn<br>🔍 Tên bài hoặc link YouTube…</div>
+        </aside>
+      </div>
+    </div>
+    <div class="phone A"><div class="bar" style="padding:10px 14px"><span class="brand" style="font-size:18px">Nhạc Quẩy</span><span class="code">V6ZRXA</span></div>
+      <div class="pb"><div style="position:relative;width:200px;margin:0 auto"><div class="platter" style="width:200px;height:200px"></div></div>
+        <p class="title" style="font-size:24px;margin-top:12px">Shape of You (The Biggest Weekend)</p><p class="who">Khanh Nguyen chọn · ❤️ 3</p>
+        <div class="vu"><div class="scale" style="height:24px"></div><div class="t"><span>0:52</span><span>4:42</span></div></div>
+        <div class="btns"><span class="btn">⏭ Bỏ qua</span><span class="btn">🎧 Nghe</span><span class="btn dark">⋯</span></div>
+        <h3 style="font-size:17px">Chồng đĩa tiếp theo</h3><div class="crate"><div class="sleeve" style="width:90px"><div class="c" style="width:90px;height:90px;background-image:url(https://i.ytimg.com/vi/ZaJlLFavP6c/mqdefault.jpg)"></div></div><div class="sleeve" style="width:90px"><div class="c" style="width:90px;height:90px;background-image:url(https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg)"></div></div><div class="sleeve" style="width:90px"><div class="c" style="width:90px;height:90px;background-image:url(https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg)"></div></div></div>
+      </div>
+      <div class="tabbar" style="background:#140c06;border-top:2px solid #c99a3c"><span style="color:#e8c674">◉ Phòng</span><span>＋ Thêm bài</span><span>👥 Mọi người</span></div>
+    </div>
+  </div>
+  <div class="map"><span><b>Bài đang phát:</b> nhãn đĩa = ảnh bìa, tên + lời chúc bên phải</span><span><b>Thời gian:</b> kim VU trên mặt kính xanh</span><span><b>Bỏ phiếu:</b> dải đỏ có đếm ngược, nút ✅ ❌</span><span><b>Lời bài hát:</b> dưới mâm đĩa, 3 dòng</span><span><b>Tiếp theo:</b> "chồng đĩa" bìa vuông, ⋯ mỗi đĩa (ghim, lời chúc, xoá, chặn)</span><span><b>Gợi ý:</b> đĩa cuối chồng, nhãn "gợi ý"</span><span><b>Trò chuyện:</b> "Sổ lời nhắn" cột phải, luôn mở</span><span><b>Chia sẻ / lịch sử / rời phòng:</b> 3 núm đồng ở thanh trên</span></div>
+</section><section class="concept" id="tB">
+  <div class="chead"><h2>B · Đài bán dẫn</h2><p>Mặt kính dò sóng màu hổ phách, kim đỏ chạy theo bài; bài tiếp theo là các phím chọn đài; lời nhắn như thư thính giả.</p><span class="pick" data-choice="radio" onclick="toggleSelect(this)">Thích hướng này</span></div>
+  <div class="row">
+    <div class="desk B">
+      <div class="bar"><span class="brand">Nhạc Quẩy</span><span class="code">V6ZRXA</span><span class="ic"><span>⤴ Chia sẻ</span><span>⟲ Lịch sử</span><span>⇥ Rời phòng</span></span></div>
+      <div class="body">
+        <div>
+          <div class="dial">
+            <div class="band"><div class="sc"></div><div class="needle"></div><div class="num"><span>0:00</span><span>1</span><span>2</span><span>3</span><span>4:42</span></div></div>
+            <div class="np"><div class="art"></div><div><h4>Shape of You (The Biggest Weekend)</h4><p>Ed Sheeran · Khanh Nguyen chọn · đang phát 0:52</p></div></div>
+            <div class="wish"><small>Lời chúc của Khanh Nguyen</small>Chúc cả team chiều thứ Sáu thật chill 🎉</div>
+            <div class="lyr">♪ dòng trước<b>♪ Dòng lời đang hát hiện ở đây</b></div>
+            <div class="vote">🗳 Minh muốn qua bài · ✅ 2/3 · ❌ 1 · còn 12 giây <span style="margin-left:auto">[✅ Qua bài] [❌ Nghe tiếp]</span></div>
+            <div class="knobs"><span class="knob red"><i></i>Bỏ qua</span><span class="knob"><i></i>Nghe cùng</span><span class="knob"><i></i>Lưu</span><span class="knob"><i></i>Thu nhỏ</span><span class="knob"><i></i>⋯ Thêm</span><span class="knob"><i></i>⏸ / ⏭</span></div>
+          </div>
+          <div class="presets"><h3>Phím đài · Tiếp theo</h3>
+            <div class="keys"><span class="key"><b>Live Lounge</b><span>Khanh · ♡1</span></span><span class="key"><b>Bohemian Rhapsody</b><span>Lan · 📌 ✉</span></span><span class="key"><b>Despacito</b><span>Minh · ♡</span></span><span class="key"><b>＋ Thêm bài</b><span>hoặc gợi ý</span></span></div>
+          </div>
+        </div>
+        <aside class="side">
+          <div class="grille"><h3>Thư thính giả</h3><div class="letter"><small>Lan · 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi 😄</div><div class="letter"><small>Minh · 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</div><div style="font-size:18px;margin:8px 0">❤️ 🔥 👏 😂 🎉 😍</div><div class="in">Gửi thư cho cả phòng…</div></div>
+          <div class="tabs"><span class="on">＋ Thêm bài</span><span>Mọi người</span></div>
+          <div class="grille" style="font-size:13px;color:#e7d9c4">Tìm kiếm · Đã phát · Của tôi · Hỏi DJ · Đã chặn<br>🔍 Tên bài hoặc link…</div>
+        </aside>
+      </div>
+    </div>
+    <div class="phone B"><div class="bar" style="padding:10px 14px"><span class="brand" style="font-size:20px">Nhạc Quẩy</span><span class="code" style="font-size:15px">V6ZRXA</span></div>
+      <div class="pb"><div class="dial" style="padding:10px"><div class="band" style="height:52px"><div class="sc"></div><div class="needle"></div></div>
+        <div class="np" style="grid-template-columns:80px 1fr"><div class="art" style="width:80px;height:80px"></div><div><h4 style="font-size:26px">Shape of You</h4><p style="font-size:13px">Khanh Nguyen chọn</p></div></div>
+        <div class="knobs" style="gap:10px"><span class="knob red"><i style="width:44px;height:44px"></i>Bỏ qua</span><span class="knob"><i style="width:44px;height:44px"></i>Nghe</span><span class="knob"><i style="width:44px;height:44px"></i>Lưu</span><span class="knob"><i style="width:44px;height:44px"></i>⋯</span></div></div>
+        <div class="presets"><h3 style="font-size:20px">Phím đài</h3><div class="keys" style="grid-template-columns:1fr 1fr"><span class="key"><b>Live Lounge</b><span>Khanh</span></span><span class="key"><b>Bohemian…</b><span>Lan</span></span></div></div>
+      </div>
+      <div class="tabbar" style="background:#d9dee1;color:#1c1c1c"><span style="color:#8f1f22">◉ Phòng</span><span>＋ Thêm bài</span><span>👥 Mọi người</span></div>
+    </div>
+  </div>
+  <div class="map"><span><b>Thời gian:</b> kim đỏ trên mặt kính dò sóng</span><span><b>Nút chính:</b> núm vặn có chữ (Bỏ qua đỏ nổi bật)</span><span><b>Bỏ phiếu:</b> ô đèn hổ phách trên mặt đài</span><span><b>Tiếp theo:</b> phím đài màu ngà, ⋯ trong mỗi phím</span><span><b>Gợi ý:</b> phím "＋ Thêm bài" mở gợi ý</span><span><b>Trò chuyện:</b> "Thư thính giả" trên lưới loa, luôn mở</span><span><b>DJ pads:</b> nút trong khung thư (người có quyền)</span><span><b>Chia sẻ / lịch sử / rời phòng:</b> chữ rõ trên thanh crôm</span></div>
+</section><section class="concept" id="tC">
+  <div class="chead"><h2>C · Băng cassette tự thu</h2><p>Nhãn băng viết tay, hai cuộn băng quay theo thời gian, phím bấm như máy cassette; lời chúc và trò chuyện là giấy note viết tay. Vui, gần gũi.</p><span class="pick" data-choice="cassette" onclick="toggleSelect(this)">Thích hướng này</span></div>
+  <div class="row">
+    <div class="desk C">
+      <div class="stripe"></div>
+      <div class="bar"><span class="brand">Nhạc Quẩy</span><span class="dymo">MÃ V6ZRXA</span><span class="ic"><span class="dymo">CHIA SẺ</span><span class="dymo">LỊCH SỬ</span><span class="dymo">RỜI PHÒNG</span></span></div>
+      <div class="body">
+        <div>
+          <div class="tape">
+            <div class="label"><h4>Shape of You (The Biggest Weekend)</h4><div class="meta"><span>Mặt A · Ed Sheeran</span><span>Khanh Nguyen chọn ♡ 3</span></div></div>
+            <div class="window"><span class="reel"></span><span class="prog">0:52 ─────●──────────── 4:42</span><span class="reel r2"></span></div>
+            <div class="keys"><span class="k on">⏭ BỎ QUA</span><span class="k">🎧 NGHE CÙNG</span><span class="k">🔖 LƯU</span><span class="k">⧉ THU NHỎ</span><span class="k">⋯ THÊM</span><span class="k">⏸ DỪNG</span><span class="k">⏭ QUA NGAY</span></div>
+            <div class="vote"><span class="dy">BỎ PHIẾU</span> Minh muốn qua bài · ✅ 2/3 · ❌ 1 · còn 12 giây <span style="margin-left:auto">[✅] [❌]</span></div>
+          </div>
+          <div class="note">“Chúc cả team chiều thứ Sáu thật chill 🎉” — Khanh</div>
+          <div class="lyr">♪ dòng trước<b>♪ Dòng lời đang hát hiện ở đây</b></div>
+          <div class="jcard"><h3>Mặt B · Tiếp theo</h3><ol><li>Shape Of You · Live Lounge <span>— Khanh ♡1 ⋯</span></li><li>Bohemian Rhapsody <span>— Lan 📌 ✉ ⋯</span></li><li>Despacito <span>— Minh ♡ ⋯</span></li></ol><div style="font:16px 'Patrick Hand';color:#7a5a43;margin-top:6px">Gợi ý: Uptown Funk · Faded · ＋ Thêm</div></div>
+        </div>
+        <aside class="side">
+          <div class="postit"><small>Lan · 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi 😄</div>
+          <div class="postit p2"><small>Minh · 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</div>
+          <div class="postit p3"><small>Hoa · 14:05</small>❤️❤️</div>
+          <div style="font-size:18px">❤️ 🔥 👏 😂 🎉 😍 🤘</div><div class="in">Viết lời nhắn…</div>
+          <div class="tabs"><span class="on">＋ THÊM BÀI</span><span>MỌI NGƯỜI</span></div>
+        </aside>
+      </div>
+    </div>
+    <div class="phone C"><div class="stripe"></div><div class="bar" style="padding:10px 14px"><span class="brand" style="font-size:17px">Nhạc Quẩy</span><span class="dymo">V6ZRXA</span></div>
+      <div class="pb"><div class="tape" style="padding:10px"><div class="label" style="padding:8px 10px"><h4 style="font-size:22px;margin-bottom:14px">Shape of You</h4><div class="meta" style="font-size:15px"><span>Khanh chọn</span><span>♡ 3</span></div></div><div class="window" style="width:92%;padding:8px 14px"><span class="reel" style="width:46px;height:46px"></span><span class="prog">0:52 / 4:42</span><span class="reel r2" style="width:34px;height:34px"></span></div><div class="keys"><span class="k on">⏭ BỎ QUA</span><span class="k">🎧 NGHE</span><span class="k">⋯</span></div></div>
+        <div class="jcard"><h3 style="font-size:15px">Tiếp theo</h3><ol style="font-size:17px"><li>Live Lounge <span>— Khanh</span></li><li>Bohemian Rhapsody <span>— Lan</span></li></ol></div></div>
+      <div class="tabbar" style="background:#111;color:#fff;font-family:'Barlow Condensed';letter-spacing:.08em"><span style="color:#e3a62b">PHÒNG</span><span>THÊM BÀI</span><span>MỌI NGƯỜI</span></div>
+    </div>
+  </div>
+  <div class="map"><span><b>Thời gian:</b> băng chạy từ cuộn trái sang phải</span><span><b>Nút chính:</b> phím cơ có nhãn chữ, đang bấm thì lún</span><span><b>Lời chúc:</b> giấy note vàng viết tay</span><span><b>Tiếp theo:</b> bìa băng "Mặt B" có đánh số thứ tự phát</span><span><b>Trò chuyện:</b> giấy note nhiều màu, luôn mở</span><span><b>Chia sẻ / lịch sử:</b> nhãn dập nổi (Dymo)</span><span><b>Gợi ý:</b> dòng viết tay cuối bìa băng</span><span><b>Thêm bài / Mọi người:</b> 2 nhãn dập nổi cột phải</span></div>
+</section><section class="concept" id="tD">
+  <div class="chead"><h2>D · Bảng giờ tàu nhà ga</h2><p>Chữ lật kiểu bảng giờ tàu thập niên 70, hàng chờ là bảng "giờ khởi hành" có giờ phát dự kiến, lời nhắn chạy như loa nhà ga. Rõ ràng, nhìn xa vẫn đọc được.</p><span class="pick" data-choice="station" onclick="toggleSelect(this)">Thích hướng này</span></div>
+  <div class="row">
+    <div class="desk D">
+      <div class="bar"><span class="brand">NHẠC QUẨY</span><span class="flaps"><i>V</i><i>6</i><i>Z</i><i>R</i><i>X</i><i>A</i></span><span class="clock">14:06</span><span style="font-size:13px;color:#9fb0a7">⤴ Chia sẻ · ⟲ Lịch sử · ⇥ Rời phòng</span></div>
+      <div class="body">
+        <div>
+          <div class="now"><div class="art"></div><div><span class="tag">● Đang phát · Sân ga 1</span><h4>Shape of You (The Biggest Weekend)</h4><p>Ed Sheeran · Khanh Nguyen chọn · ❤️ 3</p><div class="track"><i></i><b></b></div><div class="times"><span>0:52</span><span>4:42</span></div></div></div>
+          <div class="ann"><small>Lời chúc của Khanh Nguyen</small>Chúc cả team chiều thứ Sáu thật chill 🎉</div>
+          <div class="lyr">♪ dòng trước<b>♪ Dòng lời đang hát hiện ở đây</b></div>
+          <div class="btns"><span class="btn go">⏭ Bỏ qua 0/3</span><span class="btn">🎧 Nghe cùng</span><span class="btn">🔖 Lưu</span><span class="btn">⧉ Thu nhỏ</span><span class="btn">⋯ Thêm</span><span class="btn">⏸</span><span class="btn">⏭ Qua ngay</span></div>
+          <table><tr><th>Dự kiến</th><th>Bài</th><th>Người chọn</th><th>Ghi chú</th><th></th></tr>
+            <tr><td class="t">14:10</td><td>Shape Of You · Live Lounge</td><td>Khanh Nguyen</td><td class="s">♡ 1</td><td>♡ ⋯</td></tr>
+            <tr><td class="t">14:15</td><td>Bohemian Rhapsody</td><td>Lan</td><td class="s">📌 Ghim · ✉ Lời chúc</td><td>♡ ⋯</td></tr>
+            <tr><td class="t">14:21</td><td>Despacito</td><td>Minh</td><td class="s"></td><td>♡ ⋯</td></tr>
+            <tr><td class="t" style="color:#9fb0a7">gợi ý</td><td style="color:#9fb0a7">Uptown Funk</td><td style="color:#9fb0a7">Phòng thích</td><td></td><td>＋ Thêm</td></tr></table>
+        </div>
+        <aside class="side">
+          <div class="ticker">📢 Minh: Chiều nay họp 3h nhớ giảm loa nhé · Lan: Bài này hay quá…</div>
+          <div class="box"><h3>Trò chuyện</h3><p class="msg"><small>Lan · 14:02</small>Bài này hay quá, cho thêm Ed Sheeran đi 😄</p><p class="msg"><small>Minh · 14:03</small>Chiều nay họp 3h nhớ giảm loa nhé</p><div style="font-size:18px;margin:6px 0">❤️ 🔥 👏 😂 🎉 😍</div><div class="in">Nhắn cho cả phòng…</div></div>
+          <div class="tabs"><span class="on">＋ Thêm bài</span><span>Mọi người</span></div>
+        </aside>
+      </div>
+    </div>
+    <div class="phone D"><div class="bar" style="padding:10px 14px"><span class="brand" style="font-size:20px">NHẠC QUẨY</span><span class="clock" style="font-size:18px">14:06</span></div>
+      <div class="pb"><span class="tag">● Đang phát</span><h4 style="margin:6px 0 0;font:700 30px/0.95 'Barlow Condensed'">Shape of You (The Biggest Weekend)</h4><p style="margin:4px 0;color:#b9c4bd;font-size:13px">Khanh Nguyen chọn</p><div class="track"><i></i><b></b></div>
+        <div class="btns"><span class="btn go">⏭ Bỏ qua</span><span class="btn">🎧 Nghe</span><span class="btn">⋯</span></div>
+        <table style="font-size:15px"><tr><th>Dự kiến</th><th>Bài</th></tr><tr><td class="t">14:10</td><td>Live Lounge<div class="s">Khanh</div></td></tr><tr><td class="t">14:15</td><td>Bohemian Rhapsody<div class="s">Lan · 📌</div></td></tr></table></div>
+      <div class="tabbar" style="background:#0a1410;border-top:2px solid #2c3b33"><span style="color:#ffb23f">Phòng</span><span>Thêm bài</span><span>Mọi người</span></div>
+    </div>
+  </div>
+  <div class="map"><span><b>Bài đang phát:</b> chữ lật lớn, nhãn "Đang phát"</span><span><b>Tiếp theo:</b> bảng giờ có cột "Dự kiến" (giờ sẽ phát)</span><span><b>Ghim / lời chúc / tim:</b> cột Ghi chú + ⋯</span><span><b>Gợi ý:</b> dòng mờ cuối bảng</span><span><b>Trò chuyện:</b> loa nhà ga (dòng chạy) + khung tin luôn mở</span><span><b>Bỏ phiếu:</b> nút vàng nổi bật, khung đếm ngược khi mở</span><span><b>Mã phòng:</b> chữ lật ở thanh trên</span><span><b>Mọi người / cài đặt / xoá phòng:</b> tab Mọi người</span></div>
+</section></body></html>

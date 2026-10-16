@@ -146,7 +146,12 @@ export class MembersService {
       where: { roomId: room.id, leftAt: null, kickedAt: null, isDevice: false },
     });
     const online = this.presence.onlineMembers(room.id).size;
-    return { name: room.name, memberCount, onlineCount: online };
+    return {
+      name: room.name,
+      memberCount,
+      onlineCount: online,
+      theme: readSettings(room.settings).theme,
+    };
   }
 
   /**
@@ -720,7 +725,9 @@ export class MembersService {
         actor.roomId,
         me,
         'settings_change',
-        'đã thay đổi cài đặt phòng',
+        Object.keys(patch).every((k) => k === 'theme')
+          ? 'đã đổi giao diện phòng'
+          : 'đã thay đổi cài đặt phòng',
       );
       await this.playback.reevaluateSkip(tx, ctx, actor.roomId);
       // Radio just switched on in a silent room: start it now (A4).

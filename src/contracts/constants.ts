@@ -48,6 +48,24 @@ export const DJ_SOUNDS = [
 ] as const;
 export type DjSound = (typeof DJ_SOUNDS)[number];
 
+/** Room themes (room default, or each person's own choice in their browser). */
+export const THEME_IDS = [
+  'default',
+  'listening',
+  'hifi82',
+  'midcentury',
+  'walnut',
+  'transistor',
+  'cassette',
+  'station',
+  'astro',
+  'cosmos',
+  'saigon',
+  'pixel',
+  'synthwave',
+] as const;
+export type ThemeId = (typeof THEME_IDS)[number];
+
 /** Library (A1) and favourites (A2). */
 export const LIBRARY_SORTS = ['recent', 'loved', 'most'] as const;
 export type LibrarySort = (typeof LIBRARY_SORTS)[number];
