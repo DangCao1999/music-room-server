@@ -196,7 +196,9 @@ export class SlackController {
         p.user?.id ?? '',
         p.user?.username ?? p.user?.name ?? 'Slack',
       );
-      switch (a.action_id) {
+      // react_heart / react_fire / react_clap: the emoji is in the value.
+      const action = a.action_id?.startsWith('react_') ? 'react' : a.action_id;
+      switch (action) {
         case 'vote_yes':
         case 'vote_no': {
           const approve = a.action_id === 'vote_yes';
