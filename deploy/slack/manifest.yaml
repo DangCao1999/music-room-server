@@ -5,6 +5,11 @@ display_information:
   description: Nghe nhạc chung văn phòng — thêm bài, bỏ phiếu qua bài ngay trên Slack
   background_color: "#0f2a26"
 features:
+  # Home tab: the room's player, vote and queue with buttons (published by the server).
+  app_home:
+    home_tab_enabled: true
+    messages_tab_enabled: false
+    messages_tab_read_only_enabled: true
   bot_user:
     display_name: Music Room
     always_online: true
@@ -28,6 +33,7 @@ settings:
     request_url: https://music-room-api-gp18.onrender.com/api/slack/events
     bot_events:
       - app_mention
+      - app_home_opened
   interactivity:
     is_enabled: true
     request_url: https://music-room-api-gp18.onrender.com/api/slack/interactions

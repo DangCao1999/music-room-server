@@ -11,9 +11,10 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { type Reaction, REACTIONS } from '../../contracts';
-import { type ChatUser, ChatRoomService } from '../chat-room.service';
+import { ChatRoomService } from '../chat-room.service';
 import { CHAT, chatError } from '../chat-text';
 import { SlackApi } from './slack-api.service';
+import { SlackHomeService, type SlackViewPayload } from './slack-home.service';
 import {
   SlackCommands,
   type SlackCtx,
@@ -42,6 +43,7 @@ export class SlackController {
     private readonly slack: SlackApi,
     private readonly chat: ChatRoomService,
     private readonly commands: SlackCommands,
+    private readonly home: SlackHomeService,
   ) {}
 
   private verify(req: RawBodyRequest<Request>): void {
@@ -99,14 +101,24 @@ export class SlackController {
     // A retry means Slack did not see our 200 in time; the first delivery is being handled.
     if (req.header('x-slack-retry-num')) return '';
     const e = body.event;
-    if (body.type !== 'event_callback' || e?.type !== 'app_mention' || e.bot_id)
-      return '';
+    if (body.type !== 'event_callback' || !e || e.bot_id) return '';
     if (body.event_id) {
       if (this.seen.has(body.event_id)) return '';
       this.seen.add(body.event_id);
       if (this.seen.size > SEEN_MAX)
         this.seen.delete(this.seen.values().next().value as string);
     }
+    // Someone opened the bot's Home tab: draw it for them.
+    if (e.type === 'app_home_opened') {
+      if (e.tab === 'home' && e.user)
+        void this.home.publish(
+          body.team_id ?? e.team ?? '',
+          e.user,
+          e.view?.private_metadata,
+        );
+      return '';
+    }
+    if (e.type !== 'app_mention') return '';
     void this.mention(body.team_id ?? e.team ?? '', e).catch((err: unknown) =>
       this.logger.warn(`slack mention failed: ${String(err)}`),
     );
@@ -149,10 +161,10 @@ export class SlackController {
 
   @Post('interactions')
   @HttpCode(200)
-  interactions(
+  async interactions(
     @Req() req: RawBodyRequest<Request>,
     @Body() body: Form,
-  ): string {
+  ): Promise<Reply | string> {
     this.verify(req);
     let p: SlackAction;
     try {
@@ -160,28 +172,21 @@ export class SlackController {
     } catch {
       return '';
     }
+    // "Tìm" in the Home tab's "Thêm bài" modal: the answer goes in the response.
+    if (p.type === 'view_submission') return this.home.submit(p);
     if (p.type !== 'block_actions' || !p.actions?.length) return '';
-    // Acknowledge at once; the outcome is reported through response_url.
-    void this.handleAction(p).catch((e: unknown) =>
+    // Acknowledge at once; the outcome follows (response_url, or the view redrawn).
+    const surface = p.view?.type;
+    const work =
+      surface === 'home'
+        ? this.home.homeAction(p)
+        : surface === 'modal'
+          ? this.home.modalAction(p)
+          : this.handleAction(p);
+    void work.catch((e: unknown) =>
       this.logger.warn(`slack action failed: ${String(e)}`),
     );
     return '';
-  }
-
-  private async user(
-    teamId: string,
-    userId: string,
-    fallbackName: string,
-  ): Promise<ChatUser> {
-    const p = await this.slack.profile(userId);
-    return {
-      platform: 'slack',
-      teamId,
-      userId,
-      name: p.name || fallbackName,
-      profileName: p.name,
-      email: p.email,
-    };
   }
 
   private async handleAction(p: SlackAction): Promise<void> {
@@ -199,7 +204,7 @@ export class SlackController {
     const link = await this.chat.link('slack', teamId, channelId);
     if (!link) return reply(CHAT.notLinked);
     try {
-      const user = await this.user(
+      const user = await this.slack.chatUser(
         teamId,
         p.user?.id ?? '',
         p.user?.username ?? p.user?.name ?? '',
@@ -243,6 +248,9 @@ function asResponse(out: SlackOut): Reply {
 
 interface SlackMention {
   type?: string;
+  /** app_home_opened: "home" or "messages", and the Home view the person last saw. */
+  tab?: string;
+  view?: { private_metadata?: string };
   user?: string;
   text?: string;
   channel?: string;
@@ -260,11 +268,7 @@ interface SlackEventBody {
   event?: SlackMention;
 }
 
-interface SlackAction {
-  type?: string;
-  user?: { id?: string; username?: string; name?: string; team_id?: string };
-  team?: { id?: string };
+interface SlackAction extends SlackViewPayload {
   channel?: { id?: string };
   response_url?: string;
-  actions?: { action_id?: string; value?: string }[];
 }

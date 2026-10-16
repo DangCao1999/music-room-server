@@ -25,6 +25,7 @@ import { ChatNotifierService } from './chat/chat-notifier.service';
 import { ChatRoomService } from './chat/chat-room.service';
 import { SlackApi } from './chat/slack/slack-api.service';
 import { SlackCommands } from './chat/slack/slack-commands.service';
+import { SlackHomeService } from './chat/slack/slack-home.service';
 import { SlackController } from './chat/slack/slack.controller';
 import { TrackCacheService } from './music/track-cache.service';
 import { YouTubeProvider } from './music/youtube.provider';
@@ -74,6 +75,7 @@ export class AppModule {
         ChatNotifierService,
         SlackApi,
         SlackCommands,
+        SlackHomeService,
         ApiDataRetentionService,
         PlaylistService,
         PlaybackService,
