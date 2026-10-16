@@ -29,6 +29,11 @@ const EnvSchema = z.object({
   GROQ_MODEL: z.string().default('qwen/qwen3.8-27b'),
   OPENROUTER_API_KEY: optionalString,
   OPENROUTER_MODEL: optionalString,
+  /** Đợt 3: the Slack app of this workspace ("/music"). Both needed; otherwise Slack is off. */
+  SLACK_BOT_TOKEN: optionalString,
+  SLACK_SIGNING_SECRET: optionalString,
+  /** Slack Web API base; only changed to point at a local stand-in while testing. */
+  SLACK_API_URL: httpUrl.default('https://slack.com/api'),
   /** Local time for the radio's "time of day" (AI5); the office's time zone. */
   ROOM_TIMEZONE: z.string().default('Asia/Ho_Chi_Minh'),
   JWT_SECRET: optionalString.refine((v) => v === undefined || v.length >= 32),
