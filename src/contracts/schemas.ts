@@ -266,6 +266,10 @@ export const C2S = {
   }),
   /** A1: songs this room has played, grouped by track. */
   'library:room': z.strictObject({ sort: z.enum(LIBRARY_SORTS) }),
+  /** Admin only: block a video in the room (skips / removes it), unblock it, list them. */
+  'track:block': z.strictObject({ trackId: TrackIdSchema }),
+  'track:unblock': z.strictObject({ trackId: TrackIdSchema }),
+  'track:blocked': z.strictObject({}),
   /** A2: save / unsave a song ("Lưu"). Idempotent. */
   'favorite:set': z.strictObject({
     trackId: z.string().regex(/^youtube:[A-Za-z0-9_-]{11}$/),

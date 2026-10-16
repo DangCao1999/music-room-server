@@ -305,7 +305,17 @@ export class LibraryService {
         pickers.set(p.addedBy.id, k);
       }
     }
+    // A song the admin blocked is not celebrated on the shared screen (nor fed to the AI).
+    const blocked = new Set(
+      (
+        await this.prisma.blockedTrack.findMany({
+          where: { roomId: actor.roomId },
+          select: { trackId: true },
+        })
+      ).map((b) => b.trackId),
+    );
     const topSongs = [...songs.values()]
+      .filter((s) => !blocked.has(s.track.id))
       .sort((a, b) => b.plays - a.plays || b.hearts - a.hearts)
       .slice(0, 5)
       .map((s) => ({
@@ -326,7 +336,8 @@ export class LibraryService {
       summary: null,
     };
     view.summary = await this.recapComment(
-      `${actor.roomId}|${since.toISOString()}`,
+      // Blocking a song makes a new comment, so a cached one never names it.
+      `${actor.roomId}|${since.toISOString()}|${[...blocked].sort().join(',')}`,
       view,
     );
     return view;

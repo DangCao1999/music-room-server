@@ -222,6 +222,8 @@ export class PlaybackService
       where: {
         id: { in: cache.videoIds.map((v) => `youtube:${v}`) },
         embeddable: true,
+        // Blocked by the admin: never picked by the fallback playlist either.
+        blockedTracks: { none: { roomId } },
       },
       select: { id: true, durationSec: true },
     });

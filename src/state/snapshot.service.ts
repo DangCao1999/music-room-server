@@ -44,6 +44,10 @@ export class SnapshotService {
           where: { leftAt: null, kickedAt: null },
           orderBy: { createdAt: 'asc' },
         },
+        blockedTracks: {
+          select: { trackId: true },
+          orderBy: { trackId: 'asc' },
+        },
       },
     });
     if (!room || !room.playback) return null;
@@ -134,6 +138,7 @@ export class SnapshotService {
         name: room.name,
         settings,
         hasPin: room.adminPinHash !== null,
+        blockedTrackIds: room.blockedTracks.map((b) => b.trackId),
       },
       members,
       queue: ordered.map((o) => toItemView(o._row as ItemWithRelations)),

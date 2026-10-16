@@ -37,6 +37,8 @@ export const ERROR_CODES = [
   'TRACK_NOT_EMBEDDABLE',
   'TRACK_NOT_FOUND',
   'TRACK_LIVE',
+  /** The room's admin blocked this video. */
+  'TRACK_BLOCKED',
   'LINK_UNSUPPORTED',
   'SEARCH_UNAVAILABLE',
   'QUOTA_EXCEEDED',

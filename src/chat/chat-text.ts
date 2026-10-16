@@ -28,6 +28,7 @@ const ERRORS: Partial<Record<ErrorCode, (p: ErrorParams) => string>> = {
     'Video này không cho phát ngoài YouTube. Hãy chọn bản khác.',
   TRACK_NOT_FOUND: () =>
     'Không tìm thấy video. Có thể video đã bị xóa hoặc để riêng tư.',
+  TRACK_BLOCKED: () => 'Bài này đã bị quản trị viên chặn trong phòng.',
   TRACK_LIVE: () =>
     'Không thể thêm video đang phát trực tiếp. Hãy chọn video thường.',
   LINK_UNSUPPORTED: () =>

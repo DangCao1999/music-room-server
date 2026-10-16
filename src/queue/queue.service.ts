@@ -12,6 +12,7 @@ import type { Member, QueueItem, Track } from '../generated/prisma/client';
 import { ModerationService } from '../ai/moderation.service';
 import { TrackCacheService } from '../music/track-cache.service';
 import { PlaybackService } from '../playback/playback.service';
+import { isBlocked } from './block.service';
 import type { Tx } from '../prisma/prisma.service';
 import { ActivityService } from '../social/activity.service';
 import { type Actor, RoomStateService } from '../state/room-state.service';
@@ -78,6 +79,9 @@ export class QueueService {
     settings: RoomSettings,
     now: Date,
   ): Promise<void> {
+    // Blocked by the admin: refused for everyone, the admin included.
+    if (await isBlocked(tx, roomId, track.id))
+      throw new AppError('TRACK_BLOCKED');
     const max = settings.maxTrackDurationSec;
     if (max > 0 && track.durationSec !== null && track.durationSec > max) {
       throw new AppError('TRACK_TOO_LONG', {
@@ -140,6 +144,9 @@ export class QueueService {
       },
     });
     if (queued >= max) throw new AppError('QUEUE_LIMIT', { max });
+    // Before looking the video up: a blocked one must not cost YouTube quota.
+    if (await isBlocked(this.prisma, actor.roomId, `youtube:${videoId}`))
+      throw new AppError('TRACK_BLOCKED');
     // Network work (track lookup, AI4 wish check) happens outside the room lock.
     await this.moderation.checkWish(input.wishMessage);
     const track = await this.tracks.resolve(videoId);
