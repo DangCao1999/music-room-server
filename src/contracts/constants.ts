@@ -56,6 +56,12 @@ export const LOOKUP_MAX_IDS = 50;
 /** A5: songs added from a playlist in one go (each member's queue limit still applies). */
 export const ADD_MANY_MAX = 20;
 
+/**
+ * V1 skip vote: when the time runs out, the song is skipped if ✅ outnumber ❌ and there
+ * are at least this many ✅ — people who stay silent do not count against it.
+ */
+export const SKIP_MIN_YES = 2;
+
 /** L2: per user / per playlist. */
 export const MAX_PLAYLISTS = 50;
 export const MAX_PLAYLIST_TRACKS = 200;

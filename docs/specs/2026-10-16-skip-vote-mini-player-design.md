@@ -9,8 +9,12 @@ Ngày: 2026-10-16 · Contracts: `2026-10-16.1` · Đợt 1 nhóm "cộng đồng
 - Ngưỡng giữ nguyên R-25: `required = ceil(số người online không phải máy phát × skipThreshold)`;
   chỉ tính phiếu của người đang online.
 - **Qua bài ngay** khi ✅ ≥ `required` (như cũ).
-- **Nghe tiếp sớm** khi ✅ + số người online chưa bỏ phiếu < `required`, hoặc ✅ = 0 (người mở rời đi).
-- **Hết giờ** mà chưa đủ → nghe tiếp. Nghe tiếp = xoá phiếu, đóng cuộc bỏ phiếu, khoá bài đó 2 phút
+- **Hết giờ** (sửa 2026-10-16): người không bấm không bị tính là phản đối → **qua bài nếu ✅ > ❌ và
+  ✅ ≥ `SKIP_MIN_YES` (2)**, ngược lại nghe tiếp. Lý do: ở văn phòng nhiều người mở tab rồi quên, nên
+  ngưỡng theo số người online (vd. cần 4/8) gần như không đạt được; 3 ✅ · 0 ❌ từng bị "nghe tiếp".
+- **Nghe tiếp sớm** khi ✅ không còn cách thắng: kể cả mọi người chưa bỏ phiếu đều ✅, vẫn không đạt
+  `required` và cũng không hơn ❌ (hoặc dưới 2 ✅); hoặc ✅ = 0 (người mở rời đi).
+- Thẻ (web, mini player, Slack) ghi luật: "Đủ N ✅ thì qua ngay. Hết giờ thì qua nếu ✅ nhiều hơn ❌ (ít nhất 2 ✅)."  Nghe tiếp = xoá phiếu, đóng cuộc bỏ phiếu, khoá bài đó 2 phút
   (`skipBlockedUntil`, `SKIP_BLOCKED { seconds }`), ghi nhật ký `skip_kept`.
 - Đánh giá lại sau mỗi phiếu, khi có người online/offline/rời/bị mời ra, khi đổi cài đặt và đúng hạn chót
   (hẹn giờ trong bộ nhớ, đặt lại khi khởi động; hạn đã qua thì xử lý ngay).

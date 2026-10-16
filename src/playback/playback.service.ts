@@ -12,6 +12,7 @@ import {
   type PlayerCommand,
   parseYouTubePlaylist,
   type PlayerRevokeReason,
+  SKIP_MIN_YES,
   type VoicePreset,
 } from '../contracts';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
@@ -262,9 +263,10 @@ export class PlaybackService
   }
 
   /**
-   * R-25 / V1: advances as soon as enough *online* voters say ✅. While a vote window is
-   * open, it closes early ("keep listening") once ✅ can no longer reach the threshold, or
-   * when the window ran out. Call after votes, presence or settings change, and at the deadline.
+   * R-25 / V1: advances as soon as enough *online* voters say ✅ (the threshold). When the
+   * window runs out, silence is not a "no": it advances if ✅ outnumber ❌ with at least
+   * SKIP_MIN_YES ✅, else keeps the song. It also keeps the song early once ✅ can win
+   * neither way. Call after votes, presence or settings change, and at the deadline.
    */
   async reevaluateSkip(tx: Tx, ctx: MutateCtx, roomId: string): Promise<void> {
     const ps = await tx.playbackState.findUniqueOrThrow({ where: { roomId } });
@@ -316,7 +318,22 @@ export class PlaybackService
     if (!item.skipVoteEndsAt) return;
     const undecided = Math.max(0, voters.size - yes - no);
     const expired = item.skipVoteEndsAt.getTime() <= ctx.now.getTime();
-    if (!expired && yes > 0 && yes + undecided >= required) return;
+    if (expired && yes > no && yes >= SKIP_MIN_YES) {
+      await this.advance(tx, ctx, roomId, ps.currentItemId, 'skip');
+      await this.activity.log(
+        tx,
+        ctx,
+        roomId,
+        null,
+        'track_skip',
+        `"${item.track.title}" đã bị bỏ qua khi hết giờ (✅ ${yes} · ❌ ${no})`,
+      );
+      return;
+    }
+    // Best case for ✅: every online voter who has not voted yet says ✅.
+    const best = yes + undecided;
+    const canWin = best >= required || (best > no && best >= SKIP_MIN_YES);
+    if (!expired && yes > 0 && canWin) return;
     await tx.skipVote.deleteMany({ where: { queueItemId: item.id } });
     await tx.queueItem.update({
       where: { id: item.id },
