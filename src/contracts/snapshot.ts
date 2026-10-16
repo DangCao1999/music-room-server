@@ -141,6 +141,8 @@ export interface MemberView {
   canControl: boolean;
   canDj: boolean;
   online: boolean;
+  /** N1: playing the room on their own device ("Nghe cùng"), usually away from the office. */
+  listening: boolean;
 }
 
 /** A1: one song this room has played (PLAYED or SKIPPED), all its plays together. */

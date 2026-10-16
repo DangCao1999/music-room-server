@@ -9,6 +9,8 @@ export class PresenceService {
     string,
     { memberId: string; roomId: string }
   >();
+  /** N1: sockets playing the room on their own device ("Nghe cùng"). */
+  private readonly listening = new Set<string>();
 
   /** Returns true when the member just came online. */
   add(memberId: string, roomId: string, socketId: string): boolean {
@@ -24,12 +26,17 @@ export class PresenceService {
   }
 
   /** Returns the binding and whether the member just went offline. */
-  remove(
-    socketId: string,
-  ): { memberId: string; roomId: string; wentOffline: boolean } | null {
+  remove(socketId: string): {
+    memberId: string;
+    roomId: string;
+    wentOffline: boolean;
+    stoppedListening: boolean;
+  } | null {
     const binding = this.bySocket.get(socketId);
     if (!binding) return null;
     this.bySocket.delete(socketId);
+    const wasListening = this.isListening(binding.memberId);
+    this.listening.delete(socketId);
     const sockets = this.socketsByMember.get(binding.memberId);
     sockets?.delete(socketId);
     const wentOffline = !sockets || sockets.size === 0;
@@ -37,7 +44,25 @@ export class PresenceService {
       this.socketsByMember.delete(binding.memberId);
       this.membersByRoom.get(binding.roomId)?.delete(binding.memberId);
     }
-    return { ...binding, wentOffline };
+    return {
+      ...binding,
+      wentOffline,
+      stoppedListening: wasListening && !this.isListening(binding.memberId),
+    };
+  }
+
+  /** Returns true when the member's listening state changed. */
+  setListening(socketId: string, on: boolean): boolean {
+    const binding = this.bySocket.get(socketId);
+    if (!binding) return false;
+    const before = this.isListening(binding.memberId);
+    if (on) this.listening.add(socketId);
+    else this.listening.delete(socketId);
+    return before !== this.isListening(binding.memberId);
+  }
+
+  isListening(memberId: string): boolean {
+    return this.socketsOf(memberId).some((s) => this.listening.has(s));
   }
 
   isOnline(memberId: string): boolean {

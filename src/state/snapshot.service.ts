@@ -87,6 +87,7 @@ export class SnapshotService {
       canControl: m.canControl,
       canDj: m.canDj,
       online: online.has(m.id),
+      listening: this.presence.isListening(m.id),
     }));
 
     let nowPlaying: RoomSnapshot['nowPlaying'] = null;
