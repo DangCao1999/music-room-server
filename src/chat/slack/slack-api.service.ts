@@ -34,9 +34,14 @@ export class SlackApi {
     return this.env.SLACK_SIGNING_SECRET ?? '';
   }
 
+  /**
+   * `form`: read methods such as users.info ignore JSON bodies and only take form-encoded
+   * arguments; posting methods accept JSON (needed for blocks).
+   */
   private async call<T>(
     method: string,
     body: Record<string, unknown>,
+    form = false,
   ): Promise<T | null> {
     try {
       const res = await this.fetchImpl(
@@ -44,10 +49,16 @@ export class SlackApi {
         {
           method: 'POST',
           headers: {
-            'content-type': 'application/json; charset=utf-8',
+            'content-type': form
+              ? 'application/x-www-form-urlencoded'
+              : 'application/json; charset=utf-8',
             authorization: `Bearer ${this.env.SLACK_BOT_TOKEN}`,
           },
-          body: JSON.stringify(body),
+          body: form
+            ? new URLSearchParams(
+                Object.entries(body).map(([k, v]) => [k, String(v)]),
+              ).toString()
+            : JSON.stringify(body),
           signal: AbortSignal.timeout(TIMEOUT_MS),
         },
       );
@@ -116,7 +127,7 @@ export class SlackApi {
         real_name?: string;
         profile?: { display_name?: string; real_name?: string; email?: string };
       };
-    }>('users.info', { user: userId });
+    }>('users.info', { user: userId }, true);
     const u = r?.user;
     const p: SlackProfile = {
       name:

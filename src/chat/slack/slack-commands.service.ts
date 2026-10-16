@@ -59,6 +59,7 @@ export class SlackCommands {
       userId: ctx.userId,
       // Slash commands also carry the handle; mentions carry no name at all.
       name: p.name || ctx.userName,
+      profileName: p.name,
       email: p.email,
     };
   }
