@@ -1,6 +1,7 @@
 import type { ErrorCode } from './errors';
 import type {
   ActivityLogView,
+  BlockedTrackView,
   ChatMessageView,
   DjEvent,
   LibraryItemView,
@@ -48,6 +49,8 @@ export interface CommandResults {
     source: 'library' | 'cache' | 'youtube';
   };
   'library:room': { items: LibraryItemView[] };
+  /** Admin only: the room's blocked videos, most recently blocked first. */
+  'track:blocked': { items: BlockedTrackView[] };
   'suggest:next': { items: SuggestionView[] };
   'dj:ask': { items: SuggestionView[] };
   'auth:google': { token: string; user: UserView };

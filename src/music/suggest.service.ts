@@ -190,7 +190,10 @@ export class SuggestService {
     return out;
   }
 
-  /** Drops the seed, songs already queued or on air, and songs the room's rules refuse. */
+  /**
+   * Drops the seed, songs already queued or on air, songs the admin blocked and songs the
+   * room's rules refuse.
+   */
   private async eligible(
     db: Db,
     roomId: string,
@@ -202,7 +205,15 @@ export class SuggestService {
       where: { roomId, status: { in: ['QUEUED', 'PLAYING'] } },
       select: { trackId: true },
     });
-    const skip = new Set([...extraExclude, ...waiting.map((w) => w.trackId)]);
+    const blocked = await db.blockedTrack.findMany({
+      where: { roomId },
+      select: { trackId: true },
+    });
+    const skip = new Set([
+      ...extraExclude,
+      ...waiting.map((w) => w.trackId),
+      ...blocked.map((b) => b.trackId),
+    ]);
     const seen = new Set<string>();
     const unique = candidates.filter(
       (c) => !skip.has(c.id) && !seen.has(c.id) && seen.add(c.id),

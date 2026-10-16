@@ -35,6 +35,7 @@ import { readSettings } from '../state/settings';
 import { PlaybackService } from '../playback/playback.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { QueueService } from '../queue/queue.service';
+import { BlockService } from '../queue/block.service';
 import { ActivityService } from '../social/activity.service';
 import { SocialService } from '../social/social.service';
 import { type Actor, RoomStateService } from '../state/room-state.service';
@@ -106,6 +107,7 @@ export class RealtimeGateway
     private readonly prisma: PrismaService,
     private readonly members: MembersService,
     private readonly queue: QueueService,
+    private readonly blocks: BlockService,
     private readonly playback: PlaybackService,
     private readonly social: SocialService,
     private readonly search: SearchService,
@@ -708,6 +710,27 @@ export class RealtimeGateway
   roomLibrary(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('library:room', s, body, (input, actor) =>
       this.library.roomLibrary(actor, input.sort),
+    );
+  }
+
+  @SubscribeMessage('track:block')
+  blockTrack(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('track:block', s, body, (input, actor) =>
+      this.blocks.block(actor, input.trackId),
+    );
+  }
+
+  @SubscribeMessage('track:unblock')
+  unblockTrack(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('track:unblock', s, body, (input, actor) =>
+      this.blocks.unblock(actor, input.trackId),
+    );
+  }
+
+  @SubscribeMessage('track:blocked')
+  blockedTracks(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('track:blocked', s, body, (_input, actor) =>
+      this.blocks.list(actor),
     );
   }
 

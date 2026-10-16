@@ -197,12 +197,16 @@ export interface NowPlayingView {
 export interface RoomSnapshot {
   version: number;
   serverTime: number;
-  /** `hasPin`: an admin PIN is set, so members can reclaim admin with it. */
+  /**
+   * `hasPin`: an admin PIN is set, so members can reclaim admin with it.
+   * `blockedTrackIds`: videos the admin blocked in this room (nobody can add them).
+   */
   room: {
     code: string;
     name: string;
     settings: RoomSettings;
     hasPin: boolean;
+    blockedTrackIds: string[];
   };
   members: MemberView[];
   /** Upcoming items, already in play order (R-18). */
@@ -213,6 +217,15 @@ export interface RoomSnapshot {
   searchEnabled: boolean;
   /** A free AI provider is configured (DJ, MC, smarter radio, recap comment). */
   aiEnabled: boolean;
+}
+
+/** A video the room's admin blocked (`track:blocked`). */
+export interface BlockedTrackView {
+  track: TrackSummary;
+  /** The admin's name when they blocked it. */
+  blockedByName: string;
+  /** ISO time. */
+  blockedAt: string;
 }
 
 export interface ChatMessageView {
