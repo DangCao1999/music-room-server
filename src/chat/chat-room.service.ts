@@ -29,8 +29,10 @@ export interface ChatUser {
   platform: ChatPlatformName;
   teamId: string;
   userId: string;
-  /** The person's display name in the chat app; '' when the app did not tell us. */
+  /** Name to use: the chat app's display name, else its handle; '' when unknown. */
   name: string;
+  /** The display name from the person's profile; '' when the app did not give it. */
+  profileName: string;
   email: string | null;
 }
 
@@ -176,10 +178,17 @@ export class ChatRoomService {
     });
     if (tied?.kickedAt) throw new AppError('FORBIDDEN');
     if (tied && !tied.leftAt) {
-      // Named after a Slack id or the placeholder before: take the real name once known.
-      if (user.name && isPlaceholder(tied.displayName)) {
-        const name = await this.freeName(roomId, user.name);
-        if (name) {
+      // A member made from Slack follows the person's Slack name; one that was named
+      // after an id or the placeholder takes any better name we have.
+      const wanted =
+        tied.userId === null && user.profileName
+          ? user.profileName
+          : isPlaceholder(tied.displayName)
+            ? user.name
+            : '';
+      if (wanted) {
+        const name = await this.freeName(roomId, wanted, tied.id);
+        if (name && name !== tied.displayName) {
           return this.state.mutate(roomId, (tx) =>
             tx.member.update({
               where: { id: tied.id },
@@ -248,6 +257,7 @@ export class ChatRoomService {
   private async freeName(
     roomId: string,
     wanted: string,
+    exceptId?: string,
   ): Promise<string | null> {
     const base = cleanLine(wanted).slice(0, 30) || CHAT_PLACEHOLDER_NAME;
     for (const name of [
@@ -263,6 +273,7 @@ export class ChatRoomService {
           displayNameKey: nameKey(name),
           leftAt: null,
           kickedAt: null,
+          ...(exceptId ? { id: { not: exceptId } } : {}),
         },
       });
       if (!taken) return name;

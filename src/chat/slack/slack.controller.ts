@@ -179,6 +179,7 @@ export class SlackController {
       teamId,
       userId,
       name: p.name || fallbackName,
+      profileName: p.name,
       email: p.email,
     };
   }
