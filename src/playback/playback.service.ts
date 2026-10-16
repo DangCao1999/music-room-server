@@ -38,12 +38,17 @@ export type AdvanceReason = 'ended' | 'timer' | 'skip' | 'error' | 'start';
 const DRIFT_SEC = 2;
 const FALLBACK_RECENT = 20;
 
+/** V1: after a vote keeps a song, no new vote on it for this long. */
+export const SKIP_BLOCK_MS = 2 * 60_000;
+
 @Injectable()
 export class PlaybackService
   implements OnApplicationBootstrap, OnModuleDestroy
 {
   private readonly logger = new Logger(PlaybackService.name);
   private readonly timers = new Map<string, NodeJS.Timeout>();
+  /** V1: one open skip vote per room at most; fires at its deadline. */
+  private readonly voteTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -65,6 +70,8 @@ export class PlaybackService
   onModuleDestroy(): void {
     for (const t of this.timers.values()) clearTimeout(t);
     this.timers.clear();
+    for (const t of this.voteTimers.values()) clearTimeout(t);
+    this.voteTimers.clear();
   }
 
   // ------------------------------------------------------------ transitions
@@ -254,7 +261,11 @@ export class PlaybackService
     }
   }
 
-  /** R-25: advances when enough *online* voters agree. Call after votes or presence change. */
+  /**
+   * R-25 / V1: advances as soon as enough *online* voters say ✅. While a vote window is
+   * open, it closes early ("keep listening") once ✅ can no longer reach the threshold, or
+   * when the window ran out. Call after votes, presence or settings change, and at the deadline.
+   */
   async reevaluateSkip(tx: Tx, ctx: MutateCtx, roomId: string): Promise<void> {
     const ps = await tx.playbackState.findUniqueOrThrow({ where: { roomId } });
     if (!ps.currentItemId || ps.status === 'IDLE') return;
@@ -268,38 +279,75 @@ export class PlaybackService
         },
       },
     });
-    const votes = await tx.skipVote.findMany({
-      where: { queueItemId: ps.currentItemId },
-      select: { memberId: true },
+    const item = await tx.queueItem.findUniqueOrThrow({
+      where: { id: ps.currentItemId },
+      include: {
+        track: { select: { title: true } },
+        skipVotes: { select: { memberId: true, approve: true } },
+      },
     });
     const voters = this.snapshots.onlineVoters(roomId, room.members);
-    const { votes: count } = countVotes(
-      votes.map((v) => v.memberId),
-      voters,
-    );
+    const tally = (approve: boolean) =>
+      countVotes(
+        item.skipVotes
+          .filter((v) => v.approve === approve)
+          .map((v) => v.memberId),
+        voters,
+      ).votes;
+    const yes = tally(true);
+    const no = tally(false);
     const required = requiredVotes(
       voters.size,
       readSettings(room.settings).skipThreshold,
     );
-    if (count === 0 || count < required) return;
-    const item = await tx.queueItem.findUniqueOrThrow({
-      where: { id: ps.currentItemId },
-      include: { track: { select: { title: true } } },
+    if (yes > 0 && yes >= required) {
+      await this.advance(tx, ctx, roomId, ps.currentItemId, 'skip');
+      await this.activity.log(
+        tx,
+        ctx,
+        roomId,
+        null,
+        'track_skip',
+        `"${item.track.title}" đã bị bỏ qua sau ${yes} phiếu`,
+      );
+      return;
+    }
+    // Votes from before V1 have no window: they simply wait for the threshold.
+    if (!item.skipVoteEndsAt) return;
+    const undecided = Math.max(0, voters.size - yes - no);
+    const expired = item.skipVoteEndsAt.getTime() <= ctx.now.getTime();
+    if (!expired && yes > 0 && yes + undecided >= required) return;
+    await tx.skipVote.deleteMany({ where: { queueItemId: item.id } });
+    await tx.queueItem.update({
+      where: { id: item.id },
+      data: {
+        skipVoteEndsAt: null,
+        skipVoteById: null,
+        skipBlockedUntil: new Date(ctx.now.getTime() + SKIP_BLOCK_MS),
+      },
     });
-    await this.advance(tx, ctx, roomId, ps.currentItemId, 'skip');
     await this.activity.log(
       tx,
       ctx,
       roomId,
       null,
-      'track_skip',
-      `"${item.track.title}" đã bị bỏ qua sau ${count} phiếu`,
+      'skip_kept',
+      `Cả phòng chọn nghe tiếp "${item.track.title}" (✅ ${yes} · ❌ ${no})`,
     );
+    ctx.afterCommit(() => this.clearVoteTimer(roomId));
   }
 
   // ------------------------------------------------------------ commands
 
-  async voteSkip(actor: Actor, queueItemId: string): Promise<void> {
+  /**
+   * V1: the first ✅ opens a vote for `skipVoteWindowSec`; later ✅ / ❌ (changeable) count
+   * while it is open. A song kept by a vote cannot be put to a vote again for a while.
+   */
+  async voteSkip(
+    actor: Actor,
+    queueItemId: string,
+    approve = true,
+  ): Promise<void> {
     await this.state.mutate(actor.roomId, async (tx, ctx) => {
       const me = await this.state.activeMember(tx, actor);
       if (me.isDevice) throw new AppError('FORBIDDEN');
@@ -309,9 +357,48 @@ export class PlaybackService
       if (ps.currentItemId !== queueItemId || ps.status === 'IDLE') {
         throw new AppError('STALE_ITEM');
       }
-      await tx.skipVote.createMany({
-        data: [{ queueItemId, memberId: me.id }],
-        skipDuplicates: true,
+      let item = await tx.queueItem.findUniqueOrThrow({
+        where: { id: queueItemId },
+      });
+      const now = ctx.now.getTime();
+      // A window that ran out but whose timer has not fired yet is settled first.
+      if (item.skipVoteEndsAt && item.skipVoteEndsAt.getTime() <= now) {
+        await this.reevaluateSkip(tx, ctx, actor.roomId);
+        const after = await tx.playbackState.findUniqueOrThrow({
+          where: { roomId: actor.roomId },
+        });
+        if (after.currentItemId !== queueItemId) return;
+        item = await tx.queueItem.findUniqueOrThrow({
+          where: { id: queueItemId },
+        });
+      }
+      if (!item.skipVoteEndsAt) {
+        if (!approve) throw new AppError('VOTE_CLOSED');
+        const blocked = item.skipBlockedUntil?.getTime() ?? 0;
+        if (blocked > now) {
+          throw new AppError('SKIP_BLOCKED', {
+            seconds: Math.ceil((blocked - now) / 1000),
+          });
+        }
+        const room = await tx.room.findUniqueOrThrow({
+          where: { id: actor.roomId },
+          select: { settings: true },
+        });
+        const endsAt = new Date(
+          now + readSettings(room.settings).skipVoteWindowSec * 1000,
+        );
+        await tx.queueItem.update({
+          where: { id: queueItemId },
+          data: { skipVoteEndsAt: endsAt, skipVoteById: me.id },
+        });
+        ctx.afterCommit(() =>
+          this.armVoteTimer(actor.roomId, queueItemId, endsAt.getTime()),
+        );
+      }
+      await tx.skipVote.upsert({
+        where: { queueItemId_memberId: { queueItemId, memberId: me.id } },
+        create: { queueItemId, memberId: me.id, approve },
+        update: { approve },
       });
       await this.reevaluateSkip(tx, ctx, actor.roomId);
     });
@@ -634,6 +721,39 @@ export class PlaybackService
     }
   }
 
+  private armVoteTimer(roomId: string, itemId: string, endsAt: number): void {
+    this.clearVoteTimer(roomId);
+    const t = setTimeout(
+      () => void this.onVoteTimer(roomId, itemId),
+      // A little late rather than early, so the deadline has surely passed.
+      Math.max(0, endsAt - Date.now() + 100),
+    );
+    t.unref();
+    this.voteTimers.set(roomId, t);
+  }
+
+  private clearVoteTimer(roomId: string): void {
+    const t = this.voteTimers.get(roomId);
+    if (t) clearTimeout(t);
+    this.voteTimers.delete(roomId);
+  }
+
+  private async onVoteTimer(roomId: string, itemId: string): Promise<void> {
+    this.voteTimers.delete(roomId);
+    try {
+      await this.state.mutate(roomId, async (tx, ctx) => {
+        const ps = await tx.playbackState.findUniqueOrThrow({
+          where: { roomId },
+        });
+        if (ps.currentItemId === itemId)
+          await this.reevaluateSkip(tx, ctx, roomId);
+      });
+    } catch (e) {
+      if (!this.state.isClosing)
+        this.logger.error(`skip vote timer failed for ${roomId}: ${String(e)}`);
+    }
+  }
+
   /** Re-arms timers after a restart; advances items that ended while we were down (TC-108). */
   async restore(): Promise<void> {
     const playing = await this.prisma.playbackState.findMany({
@@ -641,6 +761,13 @@ export class PlaybackService
       select: { roomId: true },
     });
     for (const { roomId } of playing) await this.scheduleTimer(roomId);
+    // V1: open skip votes (a vote that ended while we were down is settled at once).
+    const votes = await this.prisma.queueItem.findMany({
+      where: { status: 'PLAYING', skipVoteEndsAt: { not: null } },
+      select: { id: true, roomId: true, skipVoteEndsAt: true },
+    });
+    for (const v of votes)
+      this.armVoteTimer(v.roomId, v.id, v.skipVoteEndsAt!.getTime());
     if (playing.length)
       this.logger.log(`Restored ${playing.length} playing room(s)`);
   }

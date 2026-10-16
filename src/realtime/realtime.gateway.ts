@@ -81,6 +81,8 @@ export const PLAYLIST_WRITE_LIMIT = { count: 60, windowMs: 60_000 };
 export const YT_IMPORT_LIMIT = { count: 20, windowMs: 600_000 };
 /** L4: pasted lists (YouTube searches inside have their own hourly limit). */
 export const SONGLIST_LIMIT = { count: 20, windowMs: 600_000 };
+/** V1: skip votes (✅ / ❌ can be changed while a vote is open). */
+export const VOTE_LIMIT = { count: 20, windowMs: 60_000 };
 
 export function clientIp(socket: Socket, trustProxy: boolean): string {
   if (trustProxy) {
@@ -749,9 +751,10 @@ export class RealtimeGateway
 
   @SubscribeMessage('queue:vote-skip')
   voteSkip(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
-    return this.run('queue:vote-skip', s, body, (input, actor) =>
-      this.playback.voteSkip(actor, input.queueItemId),
-    );
+    return this.run('queue:vote-skip', s, body, (input, actor) => {
+      this.limit(`vote:${actor.memberId}`, VOTE_LIMIT);
+      return this.playback.voteSkip(actor, input.queueItemId, input.approve);
+    });
   }
 
   @SubscribeMessage('search:query')
