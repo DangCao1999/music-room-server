@@ -1,5 +1,5 @@
 import { AppError } from '../common/app-error';
-import { type ErrorCode, type ErrorParams, SKIP_MIN_YES } from '../contracts';
+import type { ErrorCode, ErrorParams } from '../contracts';
 
 // Đợt 3: Vietnamese text for chat apps (same wording as the web client's messages).
 
@@ -82,8 +82,6 @@ export const CHAT = {
   added: (title: string) => `✅ Đã thêm *${title}* vào hàng chờ.`,
   voted: (approve: boolean) =>
     approve ? '✅ Bạn đã bỏ phiếu qua bài.' : '❌ Bạn đã chọn nghe tiếp.',
-  voteRule: (required: number) =>
-    `Đủ ${required} ✅ thì qua ngay. Hết giờ thì qua nếu ✅ nhiều hơn ❌ (ít nhất ${SKIP_MIN_YES} ✅); ai không bấm không bị tính là phản đối.`,
   idle: 'Loa đang chờ bài. Gõ `/music add <tên bài>` để thêm.',
   queueEmpty: 'Hàng chờ đang trống.',
   queueTitle: '*Tiếp theo*',

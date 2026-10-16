@@ -119,10 +119,6 @@ export function voteMessage(c: VoteCard): { text: string; blocks: unknown[] } {
         ],
       },
       {
-        type: 'context',
-        elements: [{ type: 'mrkdwn', text: CHAT.voteRule(c.required) }],
-      },
-      {
         type: 'actions',
         elements: [
           button('✅ Qua bài', 'vote_yes', c.itemId, 'primary'),
