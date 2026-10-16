@@ -1,0 +1,172 @@
+import type { TrackSummary } from '../../contracts';
+import type { NowView } from '../chat-room.service';
+import { CHAT } from '../chat-text';
+
+// Block Kit messages. Action ids are read back in SlackController.
+
+export interface VoteCard {
+  itemId: string;
+  title: string;
+  thumbnailUrl: string | null;
+  openedBy: string | null;
+  votes: number;
+  required: number;
+  against: number;
+  secondsLeft: number;
+}
+
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const button = (
+  text: string,
+  actionId: string,
+  value: string,
+  style?: 'primary' | 'danger',
+) => ({
+  type: 'button',
+  text: { type: 'plain_text', text, emoji: true },
+  action_id: actionId,
+  value,
+  ...(style ? { style } : {}),
+});
+const thumb = (url: string | null, alt: string) =>
+  url
+    ? { type: 'image', image_url: url, alt_text: alt.slice(0, 2000) }
+    : undefined;
+
+export function nowMessage(v: NowView): { text: string; blocks: unknown[] } {
+  const head = `🎶 *<${v.roomUrl}|${esc(v.roomName)}>* · ${v.roomCode}`;
+  if (!v.playing) {
+    return {
+      text: CHAT.idle,
+      blocks: [
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: `${head}\n${CHAT.idle}` },
+        },
+      ],
+    };
+  }
+  const p = v.playing;
+  const when = p.durationSec
+    ? ` · ${CHAT.mmss(p.positionSec)} / ${CHAT.mmss(p.durationSec)}`
+    : '';
+  const blocks: unknown[] = [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `${head}\n${p.paused ? '⏸ Tạm dừng' : '🔴 Đang phát'}${when}\n*${esc(p.title)}*${p.pickedBy ? `\n${esc(p.pickedBy)} chọn` : ''}`,
+      },
+      ...(thumb(p.thumbnailUrl, p.title)
+        ? { accessory: thumb(p.thumbnailUrl, p.title) }
+        : {}),
+    },
+  ];
+  if (v.next.length) {
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `Tiếp theo: ${v.next
+            .slice(0, 3)
+            .map((n) => esc(n.title))
+            .join(' · ')}`,
+        },
+      ],
+    });
+  }
+  blocks.push({
+    type: 'actions',
+    elements: [
+      button('❤️', 'react', '❤️'),
+      button('🔥', 'react', '🔥'),
+      button('👏', 'react', '👏'),
+      button('⏭ Qua bài', 'vote_yes', p.itemId),
+      {
+        type: 'button',
+        text: { type: 'plain_text', text: '🎧 Nghe cùng', emoji: true },
+        url: v.roomUrl,
+        action_id: 'open_room',
+      },
+    ],
+  });
+  return { text: `Đang phát: ${p.title}`, blocks };
+}
+
+export function voteMessage(c: VoteCard): { text: string; blocks: unknown[] } {
+  const who = c.openedBy
+    ? `*${esc(c.openedBy)}* muốn qua bài`
+    : 'Có người muốn qua bài';
+  return {
+    text: `${c.openedBy ?? 'Có người'} muốn qua bài ${c.title}`,
+    blocks: [
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: `⏭ ${who}\n*${esc(c.title)}*` },
+        ...(thumb(c.thumbnailUrl, c.title)
+          ? { accessory: thumb(c.thumbnailUrl, c.title) }
+          : {}),
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `✅ ${c.votes}/${c.required} · ❌ ${c.against} · còn ${c.secondsLeft} giây`,
+          },
+        ],
+      },
+      {
+        type: 'actions',
+        elements: [
+          button('✅ Qua bài', 'vote_yes', c.itemId, 'primary'),
+          button('❌ Nghe tiếp', 'vote_no', c.itemId, 'danger'),
+        ],
+      },
+    ],
+  };
+}
+
+export function voteResultMessage(
+  title: string,
+  skipped: boolean,
+): { text: string; blocks: unknown[] } {
+  const text = skipped
+    ? `⏭ Đã qua bài *${esc(title)}*`
+    : `🎶 Cả phòng muốn nghe tiếp *${esc(title)}*`;
+  return {
+    text: text.replace(/\*/g, ''),
+    blocks: [{ type: 'section', text: { type: 'mrkdwn', text } }],
+  };
+}
+
+export function searchMessage(
+  q: string,
+  results: TrackSummary[],
+): { text: string; blocks: unknown[] } {
+  if (!results.length) return { text: CHAT.noResults(q), blocks: [] };
+  return {
+    text: `Kết quả cho "${q}"`,
+    blocks: results.map((t) => ({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*${esc(t.title)}*\n${esc(t.channel ?? '')}${t.durationSec ? ` · ${CHAT.mmss(t.durationSec)}` : ''}`,
+      },
+      accessory: button('Thêm', 'add', t.externalId, 'primary'),
+    })),
+  };
+}
+
+export function queueMessage(v: NowView): string {
+  if (!v.next.length) return CHAT.queueEmpty;
+  return [
+    CHAT.queueTitle,
+    ...v.next.map(
+      (n, i) =>
+        `${i + 1}. ${esc(n.title)}${n.pickedBy ? ` — ${esc(n.pickedBy)}` : ''}`,
+    ),
+  ].join('\n');
+}

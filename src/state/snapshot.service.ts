@@ -23,12 +23,13 @@ export class SnapshotService {
     @Inject(ENV) private readonly env: Env,
   ) {}
 
-  /** Members that still count for votes: online, not a device (R-25). */
+  /** Members that still count for votes: online (or voting from a chat app), not a device (R-25). */
   onlineVoters(
     roomId: string,
     members: { id: string; isDevice: boolean }[],
   ): Set<string> {
     const online = this.presence.onlineMembers(roomId);
+    for (const id of this.presence.activeChatVoters(roomId)) online.add(id);
     return new Set(
       members.filter((m) => !m.isDevice && online.has(m.id)).map((m) => m.id),
     );

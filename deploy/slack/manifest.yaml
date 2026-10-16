@@ -1,0 +1,31 @@
+# Slack app for Music Room (Đợt 3). Create it at https://api.slack.com/apps → Create New App →
+# From an app manifest → paste this file. Replace the API host if yours is not this one.
+display_information:
+  name: Music Room
+  description: Nghe nhạc chung văn phòng — thêm bài, bỏ phiếu qua bài ngay trên Slack
+  background_color: "#0f2a26"
+features:
+  bot_user:
+    display_name: Music Room
+    always_online: true
+  slash_commands:
+    - command: /music
+      url: https://music-room-api-gp18.onrender.com/api/slack/commands
+      description: Bài đang phát, thêm bài, bỏ phiếu qua bài
+      usage_hint: "[add <tên bài | link> | skip | queue | help | connect <MÃ PHÒNG> <PIN>]"
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - commands
+      - chat:write
+      - chat:write.public
+      - users:read
+      - users:read.email
+settings:
+  interactivity:
+    is_enabled: true
+    request_url: https://music-room-api-gp18.onrender.com/api/slack/interactions
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false

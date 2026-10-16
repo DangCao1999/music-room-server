@@ -21,6 +21,10 @@ import { ApiDataRetentionService } from './music/api-data-retention.service';
 import { PlaylistService } from './music/playlist.service';
 import { SearchService } from './music/search.service';
 import { SongListService } from './music/songlist.service';
+import { ChatNotifierService } from './chat/chat-notifier.service';
+import { ChatRoomService } from './chat/chat-room.service';
+import { SlackApi } from './chat/slack/slack-api.service';
+import { SlackController } from './chat/slack/slack.controller';
 import { TrackCacheService } from './music/track-cache.service';
 import { YouTubeProvider } from './music/youtube.provider';
 import { LeaseService } from './playback/lease.service';
@@ -41,7 +45,7 @@ export class AppModule {
   static forRoot(env: Env, timing: Timing = DEFAULT_TIMING): DynamicModule {
     return {
       module: AppModule,
-      controllers: [HealthController, RoomsController],
+      controllers: [HealthController, RoomsController, SlackController],
       providers: [
         { provide: ENV, useValue: env },
         { provide: TIMING, useValue: timing },
@@ -65,6 +69,9 @@ export class AppModule {
         LyricsService,
         SearchService,
         SongListService,
+        ChatRoomService,
+        ChatNotifierService,
+        SlackApi,
         ApiDataRetentionService,
         PlaylistService,
         PlaybackService,

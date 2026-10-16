@@ -157,6 +157,7 @@ Không cần tự tạo bảng: server tự chạy migration mỗi lần khởi 
 | `YOUTUBE_API_KEY` | key YouTube Data API | tùy chọn |
 | `LASTFM_API_KEY` | key Last.fm | tùy chọn |
 | `GEMINI_API_KEY` / `GROQ_API_KEY` | key AI miễn phí (Google AI Studio / Groq) | tùy chọn |
+| `SLACK_BOT_TOKEN` / `SLACK_SIGNING_SECRET` | bot Slack `/music` (§9) | tùy chọn |
 
 Cài đặt khác:
 - *Build:* `npm install --include=dev && npm run build`
@@ -261,6 +262,38 @@ Bản đang chạy dùng `https://musicroom.io.vn` cho web; API vẫn ở `https
    Lệnh cuối phải in `access-control-allow-origin: https://musicroom.io.vn`; thử với một `Origin` lạ thì không in gì.
 
 Lưu ý: dữ liệu lưu trên trình duyệt (phiên vào phòng, tên đã dùng, Yêu thích của khách) gắn với từng địa chỉ web. Sau khi chuyển tên miền, khách vào lại phòng bằng đúng tên cũ (§1); ai đăng nhập Google thì không mất gì.
+
+## 9. Bot Slack `/music` (không bắt buộc)
+
+Thêm bài, bỏ phiếu qua bài và thả reaction ngay trong Slack; bot tự đăng thẻ bỏ phiếu ✅ / ❌ (có
+đếm ngược) vào kênh khi có người muốn qua bài, dù người đó bấm trên web hay trên Slack.
+
+1. **Tạo app:** https://api.slack.com/apps → *Create New App* → *From an app manifest* → chọn
+   workspace → dán [`deploy/slack/manifest.yaml`](slack/manifest.yaml). Nếu API của bạn không ở
+   `music-room-api-gp18.onrender.com`, sửa hai URL trong file trước khi dán.
+2. **Cài vào workspace:** *Install App* → *Install to Workspace* → cho phép. (Workspace có duyệt app
+   thì admin Slack phải duyệt.)
+3. **Lấy 2 giá trị**, dán vào Render → *Environment* rồi lưu (Render khởi động lại):
+   - `SLACK_BOT_TOKEN`: *OAuth & Permissions* → *Bot User OAuth Token* (`xoxb-…`);
+   - `SLACK_SIGNING_SECRET`: *Basic Information* → *App Credentials* → *Signing Secret*.
+4. **Nối kênh với phòng:** trong kênh muốn dùng, quản trị viên phòng gõ
+   `/music connect <MÃ PHÒNG> <PIN quản trị>`. Kênh riêng tư thì mời bot vào trước (`/invite @Music Room`).
+
+| Lệnh | Tác dụng |
+|---|---|
+| `/music` | Thẻ "Đang phát" trong kênh: ❤️ 🔥 👏, ⏭ Qua bài, 🎧 Nghe cùng |
+| `/music add <tên bài hoặc link>` | Link thì thêm luôn; tên bài thì hiện 3 kết quả (chỉ mình thấy) để bấm **Thêm** |
+| `/music skip` | Bỏ phiếu qua bài (mở cuộc bỏ phiếu nếu chưa có) |
+| `/music queue` | 5 bài tiếp theo |
+| `/music disconnect <PIN>` | Bỏ nối kênh |
+
+Ghi chú:
+- Người dùng Slack trở thành thành viên của phòng: trùng email với tài khoản Google đã vào phòng thì
+  là chính người đó, nếu không thì một thành viên mang tên Slack. Giới hạn số bài chờ vẫn áp dụng.
+- Ai bỏ phiếu qua Slack được tính là người tham gia cuộc bỏ phiếu đó (cả vào tổng số người).
+- Slack cần phản hồi trong 3 giây: giữ API luôn thức (§8.7). Ngay sau khi Render ngủ dậy, lệnh đầu
+  tiên có thể báo hết giờ — gõ lại là được.
+- Tìm bài bằng tên tốn lượt tìm YouTube như trên web.
 
 ## Bản quyền
 

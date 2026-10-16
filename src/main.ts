@@ -19,6 +19,8 @@ async function bootstrap(): Promise<void> {
   }
   const app = await NestFactory.create(AppModule.forRoot(env), {
     logger: new ConsoleLogger({ json: env.NODE_ENV === 'production' }),
+    // Slack signs the exact bytes it sent (src/chat/slack/slack-verify.ts).
+    rawBody: true,
   });
   app.setGlobalPrefix('api');
   app.use(helmet());

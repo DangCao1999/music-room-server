@@ -11,6 +11,8 @@ export class PresenceService {
   >();
   /** N1: sockets playing the room on their own device ("Nghe cùng"). */
   private readonly listening = new Set<string>();
+  /** Đợt 3: members who voted from a chat app, counted as present until the vote ends. */
+  private readonly chatVoters = new Map<string, Map<string, number>>();
 
   /** Returns true when the member just came online. */
   add(memberId: string, roomId: string, socketId: string): boolean {
@@ -59,6 +61,21 @@ export class PresenceService {
     if (on) this.listening.add(socketId);
     else this.listening.delete(socketId);
     return before !== this.isListening(binding.memberId);
+  }
+
+  /** A chat-app voter takes part in the vote (both sides of the count) until `untilMs`. */
+  addChatVoter(roomId: string, memberId: string, untilMs: number): void {
+    const room = this.chatVoters.get(roomId) ?? new Map<string, number>();
+    room.set(memberId, untilMs);
+    this.chatVoters.set(roomId, room);
+  }
+
+  activeChatVoters(roomId: string, now = Date.now()): string[] {
+    const room = this.chatVoters.get(roomId);
+    if (!room) return [];
+    for (const [id, until] of room) if (until <= now) room.delete(id);
+    if (!room.size) this.chatVoters.delete(roomId);
+    return [...room.keys()];
   }
 
   isListening(memberId: string): boolean {

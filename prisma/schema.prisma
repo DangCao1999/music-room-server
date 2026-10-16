@@ -42,6 +42,7 @@ model Room {
   owner        User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   createdAt    DateTime       @default(now())
   members      Member[]
+  chatLinks    ChatLink[]
   queueItems   QueueItem[]
   playback     PlaybackState?
   chatMessages ChatMessage[]
@@ -60,6 +61,8 @@ model Member {
   isDevice       Boolean     @default(false)
   /// L1: the Google account behind this member (null = guest)
   userId         String?
+  /// Đợt 3: the Slack user acting as this member from a linked channel
+  slackUserId    String?
   user           User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   canPlay        Boolean     @default(false)
   canControl     Boolean     @default(false)
@@ -277,4 +280,20 @@ model PlaylistCache {
   playlistId String   @id
   videoIds   String[]
   fetchedAt  DateTime @default(now())
+}
+
+/// Đợt 3: a chat channel (Slack first) linked to a room with the admin PIN.
+model ChatLink {
+  id        String   @id @default(cuid())
+  /// "slack" (later "discord", "teams", …)
+  platform  String
+  /// Workspace / server / tenant id on that platform
+  teamId    String
+  channelId String
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([platform, teamId, channelId])
+  @@index([roomId])
 }
