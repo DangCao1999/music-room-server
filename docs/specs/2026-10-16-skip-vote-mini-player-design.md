@@ -14,7 +14,7 @@ Ngày: 2026-10-16 · Contracts: `2026-10-16.1` · Đợt 1 nhóm "cộng đồng
   ngưỡng theo số người online (vd. cần 4/8) gần như không đạt được; 3 ✅ · 0 ❌ từng bị "nghe tiếp".
 - **Nghe tiếp sớm** khi ✅ không còn cách thắng: kể cả mọi người chưa bỏ phiếu đều ✅, vẫn không đạt
   `required` và cũng không hơn ❌ (hoặc dưới 2 ✅); hoặc ✅ = 0 (người mở rời đi).
-- Thẻ (web, mini player, Slack) ghi luật: "Đủ N ✅ thì qua ngay. Hết giờ thì qua nếu ✅ nhiều hơn ❌ (ít nhất 2 ✅)."  Nghe tiếp = xoá phiếu, đóng cuộc bỏ phiếu, khoá bài đó 2 phút
+ Nghe tiếp = xoá phiếu, đóng cuộc bỏ phiếu, khoá bài đó 2 phút
   (`skipBlockedUntil`, `SKIP_BLOCKED { seconds }`), ghi nhật ký `skip_kept`.
 - Đánh giá lại sau mỗi phiếu, khi có người online/offline/rời/bị mời ra, khi đổi cài đặt và đúng hạn chót
   (hẹn giờ trong bộ nhớ, đặt lại khi khởi động; hạn đã qua thì xử lý ngay).
