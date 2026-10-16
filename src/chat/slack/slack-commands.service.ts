@@ -52,12 +52,13 @@ export class SlackCommands {
   ) {}
 
   private async user(ctx: SlackCtx): Promise<ChatUser> {
-    const p = await this.slack.profile(ctx.userId, ctx.userName);
+    const p = await this.slack.profile(ctx.userId);
     return {
       platform: 'slack',
       teamId: ctx.teamId,
       userId: ctx.userId,
-      name: p.name,
+      // Slash commands also carry the handle; mentions carry no name at all.
+      name: p.name || ctx.userName,
       email: p.email,
     };
   }

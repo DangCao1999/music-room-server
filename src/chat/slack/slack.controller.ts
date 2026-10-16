@@ -68,7 +68,7 @@ export class SlackController {
       teamId: body.team_id ?? '',
       channelId: body.channel_id ?? '',
       userId: body.user_id ?? '',
-      userName: body.user_name ?? 'Slack',
+      userName: body.user_name ?? '',
       mention: false,
       threadTs: null,
     };
@@ -123,7 +123,8 @@ export class SlackController {
       teamId,
       channelId: channel,
       userId: user,
-      userName: user,
+      // An app_mention event has no name: users.info provides it (or a placeholder).
+      userName: '',
       mention: true,
       threadTs,
     };
@@ -172,8 +173,14 @@ export class SlackController {
     userId: string,
     fallbackName: string,
   ): Promise<ChatUser> {
-    const p = await this.slack.profile(userId, fallbackName);
-    return { platform: 'slack', teamId, userId, name: p.name, email: p.email };
+    const p = await this.slack.profile(userId);
+    return {
+      platform: 'slack',
+      teamId,
+      userId,
+      name: p.name || fallbackName,
+      email: p.email,
+    };
   }
 
   private async handleAction(p: SlackAction): Promise<void> {
@@ -194,7 +201,7 @@ export class SlackController {
       const user = await this.user(
         teamId,
         p.user?.id ?? '',
-        p.user?.username ?? p.user?.name ?? 'Slack',
+        p.user?.username ?? p.user?.name ?? '',
       );
       // react_heart / react_fire / react_clap: the emoji is in the value.
       const action = a.action_id?.startsWith('react_') ? 'react' : a.action_id;
