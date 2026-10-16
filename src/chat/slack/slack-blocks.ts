@@ -80,9 +80,10 @@ export function nowMessage(v: NowView): { text: string; blocks: unknown[] } {
   blocks.push({
     type: 'actions',
     elements: [
-      button('❤️', 'react', '❤️'),
-      button('🔥', 'react', '🔥'),
-      button('👏', 'react', '👏'),
+      // Slack refuses a message whose block has two elements with the same action_id.
+      button('❤️', 'react_heart', '❤️'),
+      button('🔥', 'react_fire', '🔥'),
+      button('👏', 'react_clap', '👏'),
       button('⏭ Qua bài', 'vote_yes', p.itemId),
       {
         type: 'button',
