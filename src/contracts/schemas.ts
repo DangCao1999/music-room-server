@@ -10,6 +10,7 @@ import {
   PIN_PATTERN,
   PLAYER_ERROR_CODES,
   REACTIONS,
+  THEME_IDS,
   VOICE_PRESETS,
 } from './constants';
 import {
@@ -47,6 +48,8 @@ const TrackIdSchema = z.string().regex(/^youtube:[A-Za-z0-9_-]{11}$/);
 const AccessToken = z.string().min(20).max(4096);
 export const PinSchema = z.string().regex(PIN_PATTERN);
 
+export const ThemeIdSchema = z.enum(THEME_IDS);
+
 export const RoomSettingsSchema = z.strictObject({
   skipThreshold: z.number().min(0.1).max(1),
   /** V1: seconds a skip vote stays open. */
@@ -68,6 +71,8 @@ export const RoomSettingsSchema = z.strictObject({
   repeatGapMinutes: z.number().int().min(0).max(1440),
   /** AI3: the speaker reads a short radio-style intro before members' songs. */
   mcIntro: z.boolean(),
+  /** The room's theme: everyone's default, and always the speaker screen's. */
+  theme: ThemeIdSchema,
 });
 export type RoomSettings = z.infer<typeof RoomSettingsSchema>;
 
@@ -81,6 +86,7 @@ export const DEFAULT_SETTINGS: RoomSettings = {
   autoRadio: false,
   repeatGapMinutes: 60,
   mcIntro: false,
+  theme: 'default',
 };
 
 /** Client → server command payloads. Every schema is strict: unknown keys are rejected (R-09, R-42). */

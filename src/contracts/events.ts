@@ -1,3 +1,4 @@
+import type { ThemeId } from './constants';
 import type { ErrorCode } from './errors';
 import type {
   ActivityLogView,
@@ -37,7 +38,12 @@ export interface CommandResults {
     rejoined: boolean;
     rightsReset: boolean;
   };
-  'room:peek': { name: string; memberCount: number; onlineCount: number };
+  'room:peek': {
+    name: string;
+    memberCount: number;
+    onlineCount: number;
+    theme: ThemeId;
+  };
   'host:register': { token: string; code: string; memberId: string };
   'queue:add': { queueItemId: string; title: string };
   /**
