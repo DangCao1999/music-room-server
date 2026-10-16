@@ -67,14 +67,33 @@ export class SlackApi {
     channel: string,
     text: string,
     blocks: unknown[],
+    threadTs?: string | null,
   ): Promise<string | null> {
     const r = await this.call<{ ts: string }>('chat.postMessage', {
       channel,
       text,
       blocks,
       unfurl_links: false,
+      ...(threadTs ? { thread_ts: threadTs } : {}),
     });
     return r?.ts ?? null;
+  }
+
+  /** Only `user` sees it (in the thread when `threadTs` is given). */
+  async postEphemeral(
+    channel: string,
+    user: string,
+    text: string,
+    blocks: unknown[] = [],
+    threadTs?: string | null,
+  ): Promise<void> {
+    await this.call('chat.postEphemeral', {
+      channel,
+      user,
+      text,
+      ...(blocks.length ? { blocks } : {}),
+      ...(threadTs ? { thread_ts: threadTs } : {}),
+    });
   }
 
   async update(

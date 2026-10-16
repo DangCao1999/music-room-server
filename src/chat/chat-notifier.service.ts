@@ -110,7 +110,12 @@ export class ChatNotifierService implements OnModuleInit, OnModuleDestroy {
     if (!existing) {
       const messages: OpenVote['messages'] = [];
       for (const link of links) {
-        const ts = await this.slack.post(link.channelId, text, blocks);
+        const ts = await this.slack.post(
+          link.channelId,
+          text,
+          blocks,
+          link.threadTs,
+        );
         if (ts) messages.push({ link, ts });
       }
       const timer = setInterval(() => this.schedule(roomId), TICK_MS);

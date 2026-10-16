@@ -58,17 +58,23 @@ export const CHAT = {
     'Kênh này chưa nối với phòng nào. Quản trị viên gõ `/music connect <MÃ PHÒNG> <PIN>` để nối.',
   connected: (name: string, code: string) =>
     `🎶 Đã nối kênh này với phòng *${name}* (${code}). Gõ \`/music\` để xem bài đang phát, \`/music help\` để xem các lệnh.`,
+  hereThread:
+    '🎶 Từ giờ thẻ bỏ phiếu qua bài của phòng được đăng vào thread này. Gõ `/music here` ở kênh để đưa về kênh chính.',
+  hereChannel: '🎶 Từ giờ thẻ bỏ phiếu qua bài được đăng ở kênh chính.',
+  pinInMention:
+    '⚠️ Đừng gõ mã PIN khi tag bot: tin nhắn tag ai trong kênh cũng đọc được. Hãy dùng `/music connect <MÃ PHÒNG> <PIN>` (chỉ bạn thấy). Nếu vừa gõ PIN ở đây, hãy xoá tin nhắn đó và đổi PIN trong Cài đặt phòng trên web.',
   disconnected: 'Đã bỏ nối kênh này với phòng.',
   connectUsage: 'Cách dùng: `/music connect <MÃ PHÒNG> <PIN quản trị>`',
   disconnectUsage: 'Cách dùng: `/music disconnect <PIN quản trị>`',
   addUsage: 'Cách dùng: `/music add <tên bài hoặc link YouTube>`',
   help: [
-    '*Music Room trên Slack*',
-    '• `/music` — bài đang phát (đăng vào kênh, có nút ❤️ 🔥 ⏭ 🎧)',
+    '*Music Room trên Slack* — gõ `/music …` ở kênh, hoặc tag `@Music Room …` (dùng được cả trong thread)',
+    '• `/music` — bài đang phát (có nút ❤️ 🔥 ⏭ 🎧)',
     '• `/music add <tên bài hoặc link YouTube>` — thêm bài vào hàng chờ',
     '• `/music skip` — bỏ phiếu qua bài',
     '• `/music queue` — 5 bài tiếp theo',
-    '• `/music connect <MÃ PHÒNG> <PIN>` / `/music disconnect <PIN>` — quản trị viên nối / bỏ nối kênh',
+    '• `@Music Room here` trong một thread — thẻ bỏ phiếu đăng vào thread đó; `/music here` ở kênh — đưa về kênh',
+    '• `/music connect <MÃ PHÒNG> <PIN>` / `/music disconnect <PIN>` — quản trị viên nối / bỏ nối kênh (chỉ dùng `/music`, không tag bot kèm PIN)',
   ].join('\n'),
   searching: (q: string) => `🔎 Đang tìm "${q}"…`,
   noResults: (q: string) =>

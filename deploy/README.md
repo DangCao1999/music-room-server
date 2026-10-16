@@ -270,7 +270,9 @@ Thêm bài, bỏ phiếu qua bài và thả reaction ngay trong Slack; bot tự 
 
 1. **Tạo app:** https://api.slack.com/apps → *Create New App* → *From an app manifest* → chọn
    workspace → dán [`deploy/slack/manifest.yaml`](slack/manifest.yaml). Nếu API của bạn không ở
-   `music-room-api-gp18.onrender.com`, sửa hai URL trong file trước khi dán.
+   `music-room-api-gp18.onrender.com`, sửa ba URL trong file trước khi dán. Đã tạo app từ manifest
+   cũ (chưa có `@Music Room`)? Vào *App Manifest*, dán lại file này, *Save*, rồi *Reinstall to
+   Workspace* (Slack hỏi thêm quyền đọc tin nhắn tag bot).
 2. **Cài vào workspace:** *Install App* → *Install to Workspace* → cho phép. (Workspace có duyệt app
    thì admin Slack phải duyệt.)
 3. **Lấy 2 giá trị**, dán vào Render → *Environment* rồi lưu (Render khởi động lại):
@@ -278,6 +280,8 @@ Thêm bài, bỏ phiếu qua bài và thả reaction ngay trong Slack; bot tự 
    - `SLACK_SIGNING_SECRET`: *Basic Information* → *App Credentials* → *Signing Secret*.
 4. **Nối kênh với phòng:** trong kênh muốn dùng, quản trị viên phòng gõ
    `/music connect <MÃ PHÒNG> <PIN quản trị>`. Kênh riêng tư thì mời bot vào trước (`/invite @Music Room`).
+   **Chỉ gõ PIN bằng `/music`** (người khác không thấy); tin nhắn tag `@Music Room` ai cũng đọc được,
+   nên bot từ chối `connect` / `disconnect` qua tag.
 
 | Lệnh | Tác dụng |
 |---|---|
@@ -286,6 +290,8 @@ Thêm bài, bỏ phiếu qua bài và thả reaction ngay trong Slack; bot tự 
 | `/music skip` | Bỏ phiếu qua bài (mở cuộc bỏ phiếu nếu chưa có) |
 | `/music queue` | 5 bài tiếp theo |
 | `/music disconnect <PIN>` | Bỏ nối kênh |
+| `@Music Room <lệnh>` | Như `/music <lệnh>` nhưng gõ được cả **trong thread** (Slack không cho gõ `/music` trong thread); bot trả lời ngay trong thread đó |
+| `@Music Room here` trong một thread | Thẻ bỏ phiếu được đăng **vào thread đó** thay vì kênh chính (kênh phải đã nối). `/music here` ở kênh để đưa về kênh |
 
 Ghi chú:
 - Người dùng Slack trở thành thành viên của phòng: trùng email với tài khoản Google đã vào phòng thì

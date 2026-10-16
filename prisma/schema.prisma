@@ -290,6 +290,8 @@ model ChatLink {
   /// Workspace / server / tenant id on that platform
   teamId    String
   channelId String
+  /// Votes go into this thread of the channel (linked from a thread); null = the channel itself
+  threadTs  String?
   roomId    String
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())

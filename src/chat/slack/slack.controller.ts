@@ -10,36 +10,38 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { parseYouTubeVideo, type Reaction, REACTIONS } from '../../contracts';
-import { ChatNotifierService } from '../chat-notifier.service';
+import { type Reaction, REACTIONS } from '../../contracts';
 import { type ChatUser, ChatRoomService } from '../chat-room.service';
 import { CHAT, chatError } from '../chat-text';
 import { SlackApi } from './slack-api.service';
-import { nowMessage, queueMessage, searchMessage } from './slack-blocks';
+import {
+  SlackCommands,
+  type SlackCtx,
+  type SlackOut,
+} from './slack-commands.service';
 import { verifySlackSignature } from './slack-verify';
 
 type Form = Record<string, string | undefined>;
 type Reply = Record<string, unknown>;
 
-const ephemeral = (text: string, extra: Reply = {}): Reply => ({
-  response_type: 'ephemeral',
-  text,
-  ...extra,
-});
+/** Event ids already handled (Slack resends an event it thinks we missed). */
+const SEEN_MAX = 500;
 
 /**
- * Đợt 3: Slack's "/music" slash command and the buttons on its messages. Every request is
- * checked against the app's signing secret; slow work answers through `response_url` so
- * Slack always gets its reply within 3 seconds.
+ * Đợt 3: Slack's "/music" slash command, "@Music Room" mentions (they also work inside
+ * threads, where slash commands cannot be typed) and the buttons on the bot's messages.
+ * Every request is checked against the app's signing secret; Slack always gets its reply
+ * within 3 seconds and slow work follows separately.
  */
 @Controller('slack')
 export class SlackController {
   private readonly logger = new Logger(SlackController.name);
+  private readonly seen = new Set<string>();
 
   constructor(
     private readonly slack: SlackApi,
     private readonly chat: ChatRoomService,
-    private readonly notifier: ChatNotifierService,
+    private readonly commands: SlackCommands,
   ) {}
 
   private verify(req: RawBodyRequest<Request>): void {
@@ -53,15 +55,6 @@ export class SlackController {
     if (!ok) throw new UnauthorizedException();
   }
 
-  private async user(
-    teamId: string,
-    userId: string,
-    fallbackName: string,
-  ): Promise<ChatUser> {
-    const p = await this.slack.profile(userId, fallbackName);
-    return { platform: 'slack', teamId, userId, name: p.name, email: p.email };
-  }
-
   // ------------------------------------------------------------ /music
 
   @Post('commands')
@@ -71,99 +64,84 @@ export class SlackController {
     @Body() body: Form,
   ): Promise<Reply> {
     this.verify(req);
-    const teamId = body.team_id ?? '';
-    const channelId = body.channel_id ?? '';
-    const [sub = '', ...rest] = (body.text ?? '').trim().split(/\s+/);
-    const arg = rest.join(' ').trim();
-    try {
-      switch (sub.toLowerCase()) {
-        case 'help':
-          return ephemeral(CHAT.help);
-        case 'connect': {
-          const [code, pin] = rest;
-          if (!code || !pin) return ephemeral(CHAT.connectUsage);
-          const room = await this.chat.connect(
-            'slack',
-            teamId,
-            channelId,
-            code,
-            pin,
-          );
-          const link = await this.chat.link('slack', teamId, channelId);
-          if (link) this.notifier.forget(link.roomId);
-          return {
-            response_type: 'in_channel',
-            text: CHAT.connected(room.name, room.code),
-          };
-        }
-        case 'disconnect': {
-          if (!rest[0]) return ephemeral(CHAT.disconnectUsage);
-          const link = await this.chat.link('slack', teamId, channelId);
-          await this.chat.disconnect('slack', teamId, channelId, rest[0]);
-          if (link) this.notifier.forget(link.roomId);
-          return { response_type: 'in_channel', text: CHAT.disconnected };
-        }
-      }
+    const ctx: SlackCtx = {
+      teamId: body.team_id ?? '',
+      channelId: body.channel_id ?? '',
+      userId: body.user_id ?? '',
+      userName: body.user_name ?? 'Slack',
+      mention: false,
+      threadTs: null,
+    };
+    const answer = await this.commands.run(ctx, body.text ?? '');
+    const url = body.response_url;
+    if (answer.later && url)
+      void answer.later.then((out) =>
+        this.slack.respond(url, {
+          replace_original: true,
+          text: out.text,
+          ...(out.blocks ? { blocks: out.blocks } : {}),
+        }),
+      );
+    return asResponse(answer.now);
+  }
 
-      const link = await this.chat.link('slack', teamId, channelId);
-      if (!link) return ephemeral(CHAT.notLinked);
-      const roomId = link.roomId;
+  // ------------------------------------------------------------ @Music Room (Events API)
 
-      switch (sub.toLowerCase()) {
-        case '':
-        case 'now': {
-          const view = await this.chat.now(roomId);
-          if (!view) return ephemeral(CHAT.notLinked);
-          return { response_type: 'in_channel', ...nowMessage(view) };
-        }
-        case 'queue': {
-          const view = await this.chat.now(roomId);
-          return ephemeral(view ? queueMessage(view) : CHAT.queueEmpty);
-        }
-        case 'skip': {
-          const user = await this.user(
-            teamId,
-            body.user_id ?? '',
-            body.user_name ?? 'Slack',
-          );
-          await this.chat.vote(roomId, user, true);
-          return ephemeral(CHAT.voted(true));
-        }
-        case 'add': {
-          if (!arg) return ephemeral(CHAT.addUsage);
-          const user = await this.user(
-            teamId,
-            body.user_id ?? '',
-            body.user_name ?? 'Slack',
-          );
-          if (parseYouTubeVideo(arg)) {
-            const r = await this.chat.add(roomId, user, arg);
-            return ephemeral(CHAT.added(r.title));
-          }
-          // Searching can take a moment: answer now, results follow.
-          const url = body.response_url ?? '';
-          void this.chat
-            .find(roomId, user, arg)
-            .then((results) =>
-              this.slack.respond(url, {
-                replace_original: true,
-                ...searchMessage(arg, results),
-              }),
-            )
-            .catch((e: unknown) =>
-              this.slack.respond(url, {
-                replace_original: true,
-                text: chatError(e),
-              }),
-            );
-          return ephemeral(CHAT.searching(arg));
-        }
-        default:
-          return ephemeral(CHAT.help);
-      }
-    } catch (e) {
-      return ephemeral(chatError(e));
+  @Post('events')
+  @HttpCode(200)
+  events(
+    @Req() req: RawBodyRequest<Request>,
+    @Body() body: SlackEventBody,
+  ): Reply | string {
+    this.verify(req);
+    if (body.type === 'url_verification')
+      return { challenge: body.challenge ?? '' };
+    // A retry means Slack did not see our 200 in time; the first delivery is being handled.
+    if (req.header('x-slack-retry-num')) return '';
+    const e = body.event;
+    if (body.type !== 'event_callback' || e?.type !== 'app_mention' || e.bot_id)
+      return '';
+    if (body.event_id) {
+      if (this.seen.has(body.event_id)) return '';
+      this.seen.add(body.event_id);
+      if (this.seen.size > SEEN_MAX)
+        this.seen.delete(this.seen.values().next().value as string);
     }
+    void this.mention(body.team_id ?? e.team ?? '', e).catch((err: unknown) =>
+      this.logger.warn(`slack mention failed: ${String(err)}`),
+    );
+    return '';
+  }
+
+  private async mention(teamId: string, e: SlackMention): Promise<void> {
+    const channel = e.channel ?? '';
+    const user = e.user ?? '';
+    // Answer in the thread it was typed in, or start one under the mention.
+    const threadTs = e.thread_ts ?? e.ts ?? null;
+    const text = (e.text ?? '').replace(/<@[A-Z0-9]+(\|[^>]*)?>/g, ' ').trim();
+    const ctx: SlackCtx = {
+      teamId,
+      channelId: channel,
+      userId: user,
+      userName: user,
+      mention: true,
+      threadTs,
+    };
+    const deliver = (out: SlackOut) =>
+      out.visibility === 'public'
+        ? this.slack
+            .post(channel, out.text, out.blocks ?? [], threadTs)
+            .then(() => undefined)
+        : this.slack.postEphemeral(
+            channel,
+            user,
+            out.text,
+            out.blocks ?? [],
+            threadTs,
+          );
+    const answer = await this.commands.run(ctx, text);
+    await deliver(answer.now);
+    if (answer.later) await deliver(await answer.later);
   }
 
   // ------------------------------------------------------------ buttons
@@ -187,6 +165,15 @@ export class SlackController {
       this.logger.warn(`slack action failed: ${String(e)}`),
     );
     return '';
+  }
+
+  private async user(
+    teamId: string,
+    userId: string,
+    fallbackName: string,
+  ): Promise<ChatUser> {
+    const p = await this.slack.profile(userId, fallbackName);
+    return { platform: 'slack', teamId, userId, name: p.name, email: p.email };
   }
 
   private async handleAction(p: SlackAction): Promise<void> {
@@ -234,6 +221,33 @@ export class SlackController {
       await reply(chatError(e));
     }
   }
+}
+
+function asResponse(out: SlackOut): Reply {
+  return {
+    response_type: out.visibility === 'public' ? 'in_channel' : 'ephemeral',
+    text: out.text,
+    ...(out.blocks ? { blocks: out.blocks } : {}),
+  };
+}
+
+interface SlackMention {
+  type?: string;
+  user?: string;
+  text?: string;
+  channel?: string;
+  ts?: string;
+  thread_ts?: string;
+  team?: string;
+  bot_id?: string;
+}
+
+interface SlackEventBody {
+  type?: string;
+  challenge?: string;
+  team_id?: string;
+  event_id?: string;
+  event?: SlackMention;
 }
 
 interface SlackAction {

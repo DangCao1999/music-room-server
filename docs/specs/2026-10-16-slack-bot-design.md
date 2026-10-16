@@ -25,6 +25,20 @@ Ngày: 2026-10-16 · Contracts: không đổi · Migration `chat_links` · Hư�
   `add` (videoId), `open_room` (link). Nút trả lời ngay 200, kết quả báo riêng qua `response_url`.
 - Câu báo lỗi tiếng Việt giống web (`chat-text.ts`).
 
+## Gọi bằng tag tên và thread
+
+- Slack không cho gõ slash command tự tạo trong thread → thêm `@Music Room <lệnh>` qua Events API
+  (`POST /api/slack/events`, sự kiện `app_mention`, quyền `app_mentions:read`): cùng các lệnh như
+  `/music` (`SlackCommands` dùng chung). Bot trả lời trong thread của tin nhắn (hoặc mở thread dưới
+  tin nhắn ở kênh); câu trả lời riêng dùng `chat.postEphemeral` kèm `thread_ts`.
+- Trả lời `url_verification`; bỏ qua lần gửi lại (`X-Slack-Retry-Num`), sự kiện trùng `event_id`
+  (nhớ 500 id gần nhất) và tin nhắn của bot.
+- Tin nhắn tag là tin nhắn công khai → không nhận `connect` / `disconnect` (PIN) qua tag; bot nhắc
+  dùng `/music connect` và đổi PIN nếu lỡ gõ. Nối kênh chỉ bằng slash command (không ai khác thấy).
+- `@Music Room here` trong một thread của kênh đã nối → `ChatLink.threadTs`: thẻ bỏ phiếu đăng vào
+  thread đó; `/music here` ở kênh (hoặc `/music connect` lại) → về kênh. Không cần PIN: chỉ đổi chỗ
+  đăng thẻ. Migration `chat_link_thread`.
+
 ## Thành viên
 
 `Member.slackUserId`. Thứ tự: thành viên đã gắn Slack user → thành viên của tài khoản Google cùng email
