@@ -41,9 +41,31 @@ export class RoomStateService implements OnModuleDestroy {
 
   private readonly committedListeners = new Set<(roomId: string) => void>();
 
+  private readonly deletedListeners = new Set<(roomId: string) => void>();
+
   /** Called after every committed room change (e.g. the MC prepares intros). */
   onCommitted(listener: (roomId: string) => void): void {
     this.committedListeners.add(listener);
+  }
+
+  /** Called once a room is deleted: services drop whatever they keep for it in memory. */
+  onDeleted(listener: (roomId: string) => void): void {
+    this.deletedListeners.add(listener);
+  }
+
+  emitDeleted(roomId: string): void {
+    for (const l of this.deletedListeners) {
+      try {
+        l(roomId);
+      } catch (e) {
+        this.logger.warn(`room cleanup failed for ${roomId}: ${String(e)}`);
+      }
+    }
+  }
+
+  /** Runs `fn` alone for the room (same queue as mutate) without a state transaction. */
+  exclusive<T>(roomId: string, fn: () => Promise<T>): Promise<T> {
+    return this.mutex.run(roomId, fn);
   }
 
   mutate<T>(

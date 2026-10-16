@@ -39,9 +39,21 @@ import { BlockService } from '../queue/block.service';
 import { ActivityService } from '../social/activity.service';
 import { SocialService } from '../social/social.service';
 import { type Actor, RoomStateService } from '../state/room-state.service';
+import { RoomActivityService } from '../rooms/room-activity.service';
+import { RoomDeletionService } from '../rooms/room-deletion.service';
 import { SnapshotService } from '../state/snapshot.service';
 import { Broadcaster, roomChannel } from './broadcaster.service';
 import { PresenceService } from './presence.service';
+
+/**
+ * Commands that do not mark the room as used: the speaker page's automatic reports, and
+ * deleting the room (nothing left to mark).
+ */
+const AUTOMATIC_COMMANDS: ReadonlySet<string> = new Set([
+  'player:report',
+  'player:heartbeat',
+  'room:delete',
+]);
 
 interface Bound {
   memberId: string;
@@ -126,6 +138,8 @@ export class RealtimeGateway
     private readonly youtubeAccount: YouTubeAccountService,
     private readonly taste: TasteService,
     private readonly songlist: SongListService,
+    private readonly roomActivity: RoomActivityService,
+    private readonly roomDeletion: RoomDeletionService,
   ) {}
 
   // ------------------------------------------------------------ lifecycle
@@ -183,6 +197,8 @@ export class RealtimeGateway
 
   private async bind(socket: AppSocket, b: Bound): Promise<void> {
     socket.data.bound = b;
+    // Opening / reopening the room counts as using it (orphan room cleanup).
+    this.roomActivity.touch(b.roomId);
     await socket.join(roomChannel(b.roomId));
     const cameOnline = this.presence.add(b.memberId, b.roomId, socket.id);
     socket.emit('session:ready', { memberId: b.memberId, code: b.code });
@@ -261,6 +277,9 @@ export class RealtimeGateway
         parsed.data as CommandInput<K>,
         actor as Actor,
       );
+      // A person did something in the room (the speaker page's reports are automatic).
+      if (actor && !AUTOMATIC_COMMANDS.has(name))
+        this.roomActivity.touch(actor.roomId);
       return {
         ok: true,
         data: (data ?? {}) as R extends void ? Record<string, never> : R,
@@ -432,6 +451,20 @@ export class RealtimeGateway
       const user = s.data.userId ? await this.users.byId(s.data.userId) : null;
       return { user: user ? this.users.view(user) : null };
     });
+  }
+
+  @SubscribeMessage('room:delete')
+  deleteRoom(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('room:delete', s, body, (input, actor) =>
+      this.roomDeletion.deleteByOwner(actor, input.code),
+    );
+  }
+
+  @SubscribeMessage('me:room-delete')
+  deleteMyRoom(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('me:room-delete', s, body, (input) =>
+      this.roomDeletion.deleteByAccount(this.requireUser(s), input.code, s.id),
+    );
   }
 
   @SubscribeMessage('me:rooms')

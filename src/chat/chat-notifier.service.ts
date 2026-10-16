@@ -11,6 +11,7 @@ import { SnapshotService } from '../state/snapshot.service';
 import { ChatRoomService } from './chat-room.service';
 import { SlackApi } from './slack/slack-api.service';
 import {
+  roomDeletedMessage,
   type VoteCard,
   voteMessage,
   voteResultMessage,
@@ -54,6 +55,39 @@ export class ChatNotifierService implements OnModuleInit, OnModuleDestroy {
   onModuleInit(): void {
     if (!this.slack.enabled) return;
     this.state.onCommitted((roomId) => this.schedule(roomId));
+    this.state.onDeleted((roomId) => this.drop(roomId));
+  }
+
+  private drop(roomId: string): void {
+    const v = this.votes.get(roomId);
+    if (v) clearInterval(v.timer);
+    this.votes.delete(roomId);
+    this.chains.delete(roomId);
+    this.linkCache.delete(roomId);
+  }
+
+  /**
+   * The owner deleted the room (its links are already gone with it): say so in every channel
+   * that was linked and turn an open vote card into the same notice, so no button is left.
+   */
+  async announceDeleted(
+    roomId: string,
+    name: string,
+    links: ChatLink[],
+  ): Promise<void> {
+    if (!this.slack.enabled) return;
+    const vote = this.votes.get(roomId);
+    this.drop(roomId);
+    const { text, blocks } = roomDeletedMessage(name);
+    // A channel whose vote card now carries the notice gets no second message.
+    const told = new Set<string>();
+    for (const m of vote?.messages ?? []) {
+      await this.slack.update(m.link.channelId, m.ts, text, blocks);
+      told.add(m.link.channelId);
+    }
+    for (const l of links)
+      if (l.platform === 'slack' && !told.has(l.channelId))
+        await this.slack.post(l.channelId, text, blocks, l.threadTs);
   }
 
   onModuleDestroy(): void {

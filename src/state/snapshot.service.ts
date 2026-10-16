@@ -139,6 +139,7 @@ export class SnapshotService {
         settings,
         hasPin: room.adminPinHash !== null,
         blockedTrackIds: room.blockedTracks.map((b) => b.trackId),
+        ownerUserId: room.ownerId,
       },
       members,
       queue: ordered.map((o) => toItemView(o._row as ItemWithRelations)),

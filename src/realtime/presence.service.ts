@@ -86,6 +86,19 @@ export class PresenceService {
     return (this.socketsByMember.get(memberId)?.size ?? 0) > 0;
   }
 
+  /** Rooms with at least one member online right now. */
+  onlineRooms(): string[] {
+    return [...this.membersByRoom]
+      .filter(([, members]) => members.size > 0)
+      .map(([roomId]) => roomId);
+  }
+
+  /** The room was deleted (its sockets are already gone): drop what is left of it. */
+  forgetRoom(roomId: string): void {
+    this.membersByRoom.delete(roomId);
+    this.chatVoters.delete(roomId);
+  }
+
   onlineMembers(roomId: string): Set<string> {
     return new Set(this.membersByRoom.get(roomId) ?? []);
   }

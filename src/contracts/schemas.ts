@@ -102,6 +102,10 @@ export const C2S = {
     adminPin: PinSchema.optional(),
   }),
   'room:leave': z.strictObject({}),
+  /** The room's owner only (signed in); `code` must be this room's code (typed to confirm). */
+  'room:delete': z.strictObject({ code: RoomCodeSchema }),
+  /** Same from the home page ("Phòng của tôi"): the signed-in account must own the room. */
+  'me:room-delete': z.strictObject({ code: RoomCodeSchema }),
   /** Any member who knows the room's PIN becomes admin. */
   'admin:claim': z.strictObject({ pin: PinSchema }),
   /** Admin only: set or change the room's PIN. */
@@ -295,6 +299,7 @@ export const ANONYMOUS_COMMANDS: readonly CommandName[] = [
   'auth:google',
   'auth:me',
   'me:rooms',
+  'me:room-delete',
   'me:favorites-import',
   'playlist:mine',
   'playlist:create',

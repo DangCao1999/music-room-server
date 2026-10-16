@@ -5,6 +5,7 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { parseYouTubeVideo, type Reaction, REACTIONS } from '../../contracts';
+import { RoomActivityService } from '../../rooms/room-activity.service';
 import { RoomStateService } from '../../state/room-state.service';
 import {
   type ChatUser,
@@ -87,12 +88,23 @@ export class SlackHomeService implements OnModuleInit, OnModuleDestroy {
     private readonly slack: SlackApi,
     private readonly chat: ChatRoomService,
     private readonly state: RoomStateService,
+    private readonly roomActivity: RoomActivityService,
   ) {}
 
   onModuleInit(): void {
     if (!this.slack.enabled) return;
     this.state.onCommitted((roomId) => {
       if (this.viewers.has(roomId)) this.later(roomId);
+    });
+    // Viewers of a deleted room see another room (or setup) the next time Home is drawn.
+    this.state.onDeleted((roomId) => {
+      this.viewers.delete(roomId);
+      this.shown.delete(roomId);
+      const t = this.timers.get(roomId);
+      if (t) clearTimeout(t);
+      this.timers.delete(roomId);
+      for (const [k, id] of this.choice)
+        if (id === roomId) this.choice.delete(k);
     });
   }
 
@@ -131,7 +143,11 @@ export class SlackHomeService implements OnModuleInit, OnModuleDestroy {
         await this.slack.publishView(userId, setupView());
         return;
       }
-      if (!redraw) this.watch(roomId, teamId, userId);
+      if (!redraw) {
+        this.watch(roomId, teamId, userId);
+        // Opening Home (not our automatic redraw) counts as using the room.
+        this.roomActivity.touch(roomId);
+      }
       await this.slack.publishView(userId, homeView(v, rooms, this.flash(key)));
     } catch (e) {
       this.logger.warn(`slack home failed for ${userId}: ${String(e)}`);
