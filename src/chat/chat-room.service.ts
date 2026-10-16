@@ -6,6 +6,7 @@ import {
   cleanLine,
   nameKey,
   normalizeRoomCode,
+  type QueueItemView,
   type Reaction,
   type TrackSummary,
 } from '../contracts';
@@ -59,6 +60,51 @@ export interface NowView {
   next: { title: string; pickedBy: string | null }[];
 }
 
+/** A song as the Slack Home tab shows it. */
+export interface HomeTrack {
+  title: string;
+  /** Parsed from the title (AI1); null until known. */
+  artist: string | null;
+  song: string | null;
+  thumbnailUrl: string | null;
+  durationSec: number | null;
+  pickedBy: string | null;
+  /** The room picked it itself (radio / fallback playlist). */
+  auto: 'radio' | 'fallback' | null;
+  hearts: number;
+}
+
+/** Everything the Slack Home tab shows about one room, at `at` (epoch ms). */
+export interface HomeView {
+  at: number;
+  roomId: string;
+  roomName: string;
+  roomCode: string;
+  roomUrl: string;
+  /** Names of the people in the room right now (not the speaker device). */
+  present: string[];
+  listening: number;
+  playing:
+    | (HomeTrack & {
+        itemId: string;
+        paused: boolean;
+        positionSec: number;
+      })
+    | null;
+  /** The open skip vote (V1). */
+  vote: {
+    openedBy: string | null;
+    votes: number;
+    required: number;
+    against: number;
+    endsAt: number;
+  } | null;
+  /** After a vote kept the song: no new vote before this (epoch ms). */
+  blockedUntil: number | null;
+  next: HomeTrack[];
+  queueLength: number;
+}
+
 const MEMBER_COLORS = [
   '#f6a623',
   '#5fd39a',
@@ -100,6 +146,22 @@ export class ChatRoomService {
     });
   }
 
+  /** The rooms linked to any channel of a workspace, most recently linked first. */
+  async roomsOfTeam(
+    platform: ChatPlatformName,
+    teamId: string,
+  ): Promise<{ id: string; code: string; name: string }[]> {
+    const links = await this.prisma.chatLink.findMany({
+      where: { platform, teamId },
+      orderBy: { createdAt: 'desc' },
+      include: { room: { select: { id: true, code: true, name: true } } },
+    });
+    const rooms = new Map<string, { id: string; code: string; name: string }>();
+    for (const l of links)
+      if (!rooms.has(l.room.id)) rooms.set(l.room.id, l.room);
+    return [...rooms.values()];
+  }
+
   linksOfRoom(roomId: string): Promise<ChatLink[]> {
     return this.prisma.chatLink.findMany({ where: { roomId } });
   }
@@ -128,7 +190,8 @@ export class ChatRoomService {
     await this.prisma.chatLink.upsert({
       where: { platform_teamId_channelId: { platform, teamId, channelId } },
       create: { platform, teamId, channelId, roomId: room.id },
-      update: { roomId: room.id, threadTs: null },
+      // createdAt = when it was linked: Home opens the most recently linked room first.
+      update: { roomId: room.id, threadTs: null, createdAt: new Date() },
     });
     return { name: room.name, code: room.code };
   }
@@ -359,6 +422,64 @@ export class ChatRoomService {
         title: q.track.title,
         pickedBy: q.addedBy?.displayName ?? null,
       })),
+    };
+  }
+
+  async home(roomId: string): Promise<HomeView | null> {
+    const snap = await this.snapshots.build(roomId);
+    if (!snap) return null;
+    const at = Date.now();
+    const np = snap.nowPlaying;
+    const track = (q: QueueItemView): HomeTrack => ({
+      title: q.track.title,
+      artist: q.track.artist,
+      song: q.track.song,
+      thumbnailUrl: q.track.thumbnailUrl,
+      durationSec: q.track.durationSec,
+      pickedBy: q.addedBy?.displayName ?? null,
+      auto: q.auto,
+      hearts: q.hearts,
+    });
+    const people = snap.members.filter((m) => !m.isDevice && m.online);
+    // The snapshot's position is as of positionAt; carry it forward while playing.
+    const position = np
+      ? np.positionSec +
+        (np.status === 'PLAYING' ? Math.max(0, at - np.positionAt) / 1000 : 0)
+      : 0;
+    return {
+      at,
+      roomId,
+      roomName: snap.room.name,
+      roomCode: snap.room.code,
+      roomUrl: `${this.env.PUBLIC_URL.replace(/\/$/, '')}/r/${snap.room.code}`,
+      present: people.map((m) => m.displayName),
+      listening: snap.members.filter((m) => m.listening).length,
+      playing: np
+        ? {
+            ...track(np.item),
+            itemId: np.item.id,
+            paused: np.status === 'PAUSED',
+            positionSec: np.item.track.durationSec
+              ? Math.min(position, np.item.track.durationSec)
+              : position,
+          }
+        : null,
+      vote:
+        np && np.skip.endsAt !== null
+          ? {
+              openedBy: np.skip.openedBy?.displayName ?? null,
+              votes: np.skip.votes,
+              required: np.skip.required,
+              against: np.skip.against,
+              endsAt: np.skip.endsAt,
+            }
+          : null,
+      blockedUntil:
+        np?.skip.blockedUntil && np.skip.blockedUntil > at
+          ? np.skip.blockedUntil
+          : null,
+      next: snap.queue.slice(0, 5).map(track),
+      queueLength: snap.queue.length,
     };
   }
 }

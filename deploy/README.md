@@ -271,8 +271,8 @@ Thêm bài, bỏ phiếu qua bài và thả reaction ngay trong Slack; bot tự 
 1. **Tạo app:** https://api.slack.com/apps → *Create New App* → *From an app manifest* → chọn
    workspace → dán [`deploy/slack/manifest.yaml`](slack/manifest.yaml). Nếu API của bạn không ở
    `music-room-api-gp18.onrender.com`, sửa ba URL trong file trước khi dán. Đã tạo app từ manifest
-   cũ (chưa có `@Music Room`)? Vào *App Manifest*, dán lại file này, *Save*, rồi *Reinstall to
-   Workspace* (Slack hỏi thêm quyền đọc tin nhắn tag bot).
+   cũ (chưa có `@Music Room` hoặc tab Home)? Vào *App Manifest*, dán lại file này, *Save*, rồi
+   *Reinstall to Workspace* nếu Slack yêu cầu.
 2. **Cài vào workspace:** *Install App* → *Install to Workspace* → cho phép. (Workspace có duyệt app
    thì admin Slack phải duyệt.)
 3. **Lấy 2 giá trị**, dán vào Render → *Environment* rồi lưu (Render khởi động lại):
@@ -292,6 +292,7 @@ Thêm bài, bỏ phiếu qua bài và thả reaction ngay trong Slack; bot tự 
 | `/music disconnect <PIN>` | Bỏ nối kênh |
 | `@Music Room <lệnh>` | Như `/music <lệnh>` nhưng gõ được cả **trong thread** (Slack không cho gõ `/music` trong thread); bot trả lời ngay trong thread đó |
 | `@Music Room here` trong một thread | Thẻ bỏ phiếu được đăng **vào thread đó** thay vì kênh chính (kênh phải đã nối). `/music here` ở kênh để đưa về kênh |
+| Tab **Home** của app Music Room | Trang riêng của mỗi người: bài đang phát (thanh tiến độ, ❤️ 🔥 👏, ⏭ Qua bài, 🎧 Nghe cùng), bỏ phiếu ✅ / ❌, 5 bài tiếp theo, ai đang trong phòng, nút **➕ Thêm bài** (dán link hoặc tìm theo tên). Workspace nối nhiều phòng thì chọn phòng ở đầu trang |
 
 Ghi chú:
 - Người dùng Slack trở thành thành viên của phòng: trùng email với tài khoản Google đã vào phòng thì
@@ -300,6 +301,10 @@ Ghi chú:
 - Slack cần phản hồi trong 3 giây: giữ API luôn thức (§8.7). Ngay sau khi Render ngủ dậy, lệnh đầu
   tiên có thể báo hết giờ — gõ lại là được.
 - Tìm bài bằng tên tốn lượt tìm YouTube như trên web.
+- Tab Home được vẽ lại khi mở tab, khi bấm **Làm mới**, và tự động khi đổi bài / có bỏ phiếu / hàng
+  chờ đổi — cho ai đã mở tab trong 30 phút gần nhất (tối đa 40 người mỗi phòng). Thanh tiến độ là
+  vị trí lúc vẽ, không chạy theo giây. Mọi người trong workspace xem được các phòng đã nối với kênh
+  của workspace đó.
 
 ## Bản quyền
 

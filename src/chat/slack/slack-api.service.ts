@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ENV, type Env } from '../../config/env';
+import type { ChatUser } from '../chat-room.service';
 
 export interface SlackProfile {
   /** '' when Slack did not tell us (users.info failed or the user has no name). */
@@ -115,6 +116,50 @@ export class SlackApi {
     blocks: unknown[],
   ): Promise<void> {
     await this.call('chat.update', { channel, ts, text, blocks });
+  }
+
+  /** Home tab: what `user` sees when they open the app (replaces their previous Home). */
+  async publishView(
+    user: string,
+    view: Record<string, unknown>,
+  ): Promise<boolean> {
+    return Boolean(await this.call('views.publish', { user_id: user, view }));
+  }
+
+  /** Opens a modal; `triggerId` comes with the click and is valid for 3 seconds. */
+  async openView(
+    triggerId: string,
+    view: Record<string, unknown>,
+  ): Promise<string | null> {
+    const r = await this.call<{ view: { id: string } }>('views.open', {
+      trigger_id: triggerId,
+      view,
+    });
+    return r?.view.id ?? null;
+  }
+
+  async updateView(
+    viewId: string,
+    view: Record<string, unknown>,
+  ): Promise<void> {
+    await this.call('views.update', { view_id: viewId, view });
+  }
+
+  /** The person behind a Slack user id, as chat actions need them. */
+  async chatUser(
+    teamId: string,
+    userId: string,
+    fallbackName = '',
+  ): Promise<ChatUser> {
+    const p = await this.profile(userId);
+    return {
+      platform: 'slack',
+      teamId,
+      userId,
+      name: p.name || fallbackName,
+      profileName: p.name,
+      email: p.email,
+    };
   }
 
   /** Display name and email (needs users:read and users:read.email), cached for an hour. */

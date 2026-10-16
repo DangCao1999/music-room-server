@@ -51,17 +51,9 @@ export class SlackCommands {
     private readonly notifier: ChatNotifierService,
   ) {}
 
-  private async user(ctx: SlackCtx): Promise<ChatUser> {
-    const p = await this.slack.profile(ctx.userId);
-    return {
-      platform: 'slack',
-      teamId: ctx.teamId,
-      userId: ctx.userId,
-      // Slash commands also carry the handle; mentions carry no name at all.
-      name: p.name || ctx.userName,
-      profileName: p.name,
-      email: p.email,
-    };
+  private user(ctx: SlackCtx): Promise<ChatUser> {
+    // Slash commands also carry the handle; mentions carry no name at all.
+    return this.slack.chatUser(ctx.teamId, ctx.userId, ctx.userName);
   }
 
   async run(ctx: SlackCtx, text: string): Promise<SlackAnswer> {

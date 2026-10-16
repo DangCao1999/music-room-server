@@ -15,9 +15,9 @@ export interface VoteCard {
   secondsLeft: number;
 }
 
-const esc = (s: string) =>
+export const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const button = (
+export const button = (
   text: string,
   actionId: string,
   value: string,
@@ -29,7 +29,7 @@ const button = (
   value,
   ...(style ? { style } : {}),
 });
-const thumb = (url: string | null, alt: string) =>
+export const thumb = (url: string | null, alt: string) =>
   url
     ? { type: 'image', image_url: url, alt_text: alt.slice(0, 2000) }
     : undefined;
