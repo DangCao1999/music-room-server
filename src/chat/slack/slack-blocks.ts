@@ -143,6 +143,18 @@ export function voteResultMessage(
   };
 }
 
+/** The owner deleted the room: the channel is unlinked (also replaces an open vote card). */
+export function roomDeletedMessage(name: string): {
+  text: string;
+  blocks: unknown[];
+} {
+  const text = `🎶 Phòng *${esc(name)}* đã bị xoá nên kênh này đã tự bỏ nối.`;
+  return {
+    text: text.replace(/\*/g, ''),
+    blocks: [{ type: 'section', text: { type: 'mrkdwn', text } }],
+  };
+}
+
 export function searchMessage(
   q: string,
   results: TrackSummary[],

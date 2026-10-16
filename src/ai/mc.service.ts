@@ -35,6 +35,12 @@ export class McService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
+    this.state.onDeleted((roomId) => {
+      const t = this.timers.get(roomId);
+      if (t) clearTimeout(t);
+      this.timers.delete(roomId);
+      this.busy.delete(roomId);
+    });
     if (this.ai.enabled)
       this.state.onCommitted((roomId) => this.schedule(roomId));
   }

@@ -33,6 +33,8 @@ import { LeaseService } from './playback/lease.service';
 import { PlaybackService } from './playback/playback.service';
 import { PrismaService } from './prisma/prisma.service';
 import { BlockService } from './queue/block.service';
+import { RoomActivityService } from './rooms/room-activity.service';
+import { RoomDeletionService } from './rooms/room-deletion.service';
 import { QueueService } from './queue/queue.service';
 import { Broadcaster } from './realtime/broadcaster.service';
 import { PresenceService } from './realtime/presence.service';
@@ -82,6 +84,8 @@ export class AppModule {
         PlaybackService,
         QueueService,
         BlockService,
+        RoomActivityService,
+        RoomDeletionService,
         MembersService,
         SocialService,
         LibraryService,

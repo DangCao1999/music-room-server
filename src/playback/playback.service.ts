@@ -65,6 +65,12 @@ export class PlaybackService
 
   async onApplicationBootstrap(): Promise<void> {
     this.lease.onChange = (roomId) => void this.state.touch(roomId);
+    this.state.onDeleted((roomId) => {
+      const t = this.timers.get(roomId);
+      if (t) clearTimeout(t);
+      this.timers.delete(roomId);
+      this.clearVoteTimer(roomId);
+    });
     await this.restore();
   }
 
@@ -733,7 +739,10 @@ export class PlaybackService
         this.advance(tx, ctx, roomId, itemId, 'timer'),
       );
     } catch (e) {
-      const expected = e instanceof AppError && e.code === 'STALE_ITEM';
+      // STALE_ITEM: the song changed meanwhile; ROOM_NOT_FOUND: the room was just deleted.
+      const expected =
+        e instanceof AppError &&
+        (e.code === 'STALE_ITEM' || e.code === 'ROOM_NOT_FOUND');
       if (!expected && !this.state.isClosing) {
         this.logger.error(`advance timer failed for ${roomId}: ${String(e)}`);
       }
@@ -768,7 +777,8 @@ export class PlaybackService
           await this.reevaluateSkip(tx, ctx, roomId);
       });
     } catch (e) {
-      if (!this.state.isClosing)
+      const gone = e instanceof AppError && e.code === 'ROOM_NOT_FOUND';
+      if (!this.state.isClosing && !gone)
         this.logger.error(`skip vote timer failed for ${roomId}: ${String(e)}`);
     }
   }

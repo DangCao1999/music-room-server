@@ -200,6 +200,8 @@ export interface RoomSnapshot {
   /**
    * `hasPin`: an admin PIN is set, so members can reclaim admin with it.
    * `blockedTrackIds`: videos the admin blocked in this room (nobody can add them).
+   * `ownerUserId`: the account that owns the room (only it may delete the room); null = no
+   * owner yet, so the room is deleted after 30 days nobody uses it.
    */
   room: {
     code: string;
@@ -207,6 +209,7 @@ export interface RoomSnapshot {
     settings: RoomSettings;
     hasPin: boolean;
     blockedTrackIds: string[];
+    ownerUserId: string | null;
   };
   members: MemberView[];
   /** Upcoming items, already in play order (R-18). */
@@ -256,7 +259,8 @@ export interface PlayerCommand {
   intro: string | null;
 }
 
-export type RevokeReason = 'kicked' | 'left' | 'invalid';
+/** `room_deleted`: the room's owner deleted it (everyone is sent home). */
+export type RevokeReason = 'kicked' | 'left' | 'invalid' | 'room_deleted';
 export type PlayerRevokeReason = 'replaced' | 'permission' | 'kicked';
 
 export interface ReactionEvent {

@@ -41,6 +41,8 @@ model Room {
   ownerId       String?
   owner         User?          @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   createdAt     DateTime       @default(now())
+  /// Last time a person did something in the room (web or Slack); robots (radio, timers) do not count
+  lastUsedAt    DateTime       @default(now())
   members       Member[]
   chatLinks     ChatLink[]
   blockedTracks BlockedTrack[]
@@ -48,6 +50,8 @@ model Room {
   playback      PlaybackState?
   chatMessages  ChatMessage[]
   activityLogs  ActivityLog[]
+
+  @@index([ownerId, lastUsedAt])
 }
 
 model Member {

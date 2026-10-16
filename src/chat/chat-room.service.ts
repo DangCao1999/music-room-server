@@ -19,6 +19,7 @@ import { PresenceService } from '../realtime/presence.service';
 import { ActivityService } from '../social/activity.service';
 import { SocialService } from '../social/social.service';
 import type { Actor } from '../state/room-state.service';
+import { RoomActivityService } from '../rooms/room-activity.service';
 import { RoomStateService } from '../state/room-state.service';
 import { readSettings } from '../state/settings';
 import { SnapshotService } from '../state/snapshot.service';
@@ -135,6 +136,7 @@ export class ChatRoomService {
     private readonly social: SocialService,
     private readonly presence: PresenceService,
     private readonly activity: ActivityService,
+    private readonly roomActivity: RoomActivityService,
   ) {}
 
   // ------------------------------------------------------------ channel ↔ room
@@ -193,6 +195,7 @@ export class ChatRoomService {
       // createdAt = when it was linked: Home opens the most recently linked room first.
       update: { roomId: room.id, threadTs: null, createdAt: new Date() },
     });
+    this.roomActivity.touch(room.id);
     return { name: room.name, code: room.code };
   }
 
@@ -203,10 +206,11 @@ export class ChatRoomService {
     channelId: string,
     threadTs: string | null,
   ): Promise<void> {
-    await this.prisma.chatLink.update({
+    const link = await this.prisma.chatLink.update({
       where: { platform_teamId_channelId: { platform, teamId, channelId } },
       data: { threadTs },
     });
+    this.roomActivity.touch(link.roomId);
   }
 
   async disconnect(
@@ -235,6 +239,8 @@ export class ChatRoomService {
    * Google account with the same email, else a new member named after them.
    */
   async member(roomId: string, user: ChatUser): Promise<Member> {
+    // Anything a person does from a chat app counts as using the room.
+    this.roomActivity.touch(roomId);
     const tied = await this.prisma.member.findFirst({
       where: { roomId, slackUserId: user.userId },
       orderBy: { createdAt: 'desc' },
@@ -400,6 +406,7 @@ export class ChatRoomService {
   }
 
   async now(roomId: string): Promise<NowView | null> {
+    this.roomActivity.touch(roomId);
     const snap = await this.snapshots.build(roomId);
     if (!snap) return null;
     const np = snap.nowPlaying;

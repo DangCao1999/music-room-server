@@ -44,6 +44,31 @@ export class Broadcaster {
       this.toSocket(id, event, data);
   }
 
+  /**
+   * The room is gone: tell every socket bound to it (members and the speaker page) why, and
+   * drop it. `unbind` must see nothing left to clean, so the binding is cleared first.
+   * `quietSocketId`: the socket that asked; it is only detached, so its answer still arrives.
+   */
+  evictRoom(
+    roomId: string,
+    reason: RevokeReason,
+    quietSocketId?: string,
+  ): number {
+    let n = 0;
+    for (const socket of this.server?.sockets.sockets.values() ?? []) {
+      const bound = (socket.data as { bound?: { roomId: string } }).bound;
+      if (bound?.roomId !== roomId) continue;
+      (socket.data as { bound?: unknown }).bound = undefined;
+      this.presence.remove(socket.id);
+      void socket.leave(roomChannel(roomId));
+      if (socket.id === quietSocketId) continue;
+      socket.emit('session:revoked', { reason });
+      socket.disconnect(true);
+      n += 1;
+    }
+    return n;
+  }
+
   /** R-10 / R-11: tell every tab of the member why, then drop the sockets. */
   revokeMember(memberId: string, reason: RevokeReason): void {
     for (const id of this.presence.socketsOf(memberId)) {

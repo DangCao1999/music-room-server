@@ -40,6 +40,17 @@ const EnvSchema = z.object({
   DATA_DIR: z.string().default('/data'),
   /** R-43: room:create / room:join / host:register per IP per minute. */
   JOIN_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(20),
+  /** Orphan room cleanup: first run this long after boot, then every ORPHAN_SWEEP_EVERY_MS. */
+  ORPHAN_SWEEP_FIRST_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .default(5 * 60_000),
+  ORPHAN_SWEEP_EVERY_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .default(24 * 60 * 60_000),
   /**
    * Browser origins allowed besides PUBLIC_URL. Each entry is reduced to its origin, so
    * "https://app.vercel.app/" (trailing slash) still matches the browser's Origin header.

@@ -52,6 +52,13 @@ export class LeaseService implements OnModuleDestroy {
     return true;
   }
 
+  /** The room was deleted: forget its lease without announcing a change. */
+  drop(roomId: string): void {
+    const l = this.leases.get(roomId);
+    if (l) clearTimeout(l.timer);
+    this.leases.delete(roomId);
+  }
+
   /** Drops the lease (optionally only if held by `memberId`). Returns the dropped holder. */
   release(
     roomId: string,
