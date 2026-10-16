@@ -94,7 +94,11 @@ export class ChatRoomService {
     return this.prisma.chatLink.findMany({ where: { roomId } });
   }
 
-  /** Admin PIN required; the same lockout as the web (per workspace and room). */
+  /**
+   * Admin PIN required; the same lockout as the web (per workspace and room). Only from
+   * places where the PIN stays private (Slack: the slash command). Votes go to the channel
+   * until someone picks a thread (`setThread`).
+   */
   async connect(
     platform: ChatPlatformName,
     teamId: string,
@@ -114,9 +118,22 @@ export class ChatRoomService {
     await this.prisma.chatLink.upsert({
       where: { platform_teamId_channelId: { platform, teamId, channelId } },
       create: { platform, teamId, channelId, roomId: room.id },
-      update: { roomId: room.id },
+      update: { roomId: room.id, threadTs: null },
     });
     return { name: room.name, code: room.code };
+  }
+
+  /** Where an already linked channel's vote cards go: a thread of it, or the channel (null). */
+  async setThread(
+    platform: ChatPlatformName,
+    teamId: string,
+    channelId: string,
+    threadTs: string | null,
+  ): Promise<void> {
+    await this.prisma.chatLink.update({
+      where: { platform_teamId_channelId: { platform, teamId, channelId } },
+      data: { threadTs },
+    });
   }
 
   async disconnect(
