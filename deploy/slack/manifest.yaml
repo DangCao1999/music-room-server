@@ -15,7 +15,7 @@ features:
     always_online: true
   slash_commands:
     - command: /music
-      url: https://music-room-api-gp18.onrender.com/api/slack/commands
+      url: https://api.musicroom.io.vn/api/slack/commands
       description: Bài đang phát, thêm bài, bỏ phiếu qua bài
       usage_hint: "[add <tên bài | link> | skip | queue | help | connect <MÃ PHÒNG> <PIN>]"
       should_escape: false
@@ -30,13 +30,13 @@ oauth_config:
       - users:read.email
 settings:
   event_subscriptions:
-    request_url: https://music-room-api-gp18.onrender.com/api/slack/events
+    request_url: https://api.musicroom.io.vn/api/slack/events
     bot_events:
       - app_mention
       - app_home_opened
   interactivity:
     is_enabled: true
-    request_url: https://music-room-api-gp18.onrender.com/api/slack/interactions
+    request_url: https://api.musicroom.io.vn/api/slack/interactions
   org_deploy_enabled: false
   socket_mode_enabled: false
   token_rotation_enabled: false

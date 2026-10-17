@@ -175,7 +175,7 @@ Nếu đang dùng Render Postgres, sau khi Neon chạy ổn bạn có thể xóa
 
 | Biến | Giá trị |
 |---|---|
-| `NEXT_PUBLIC_SERVER_URL` | `https://<api>.onrender.com` (không có `/` ở cuối) |
+| `NEXT_PUBLIC_SERVER_URL` | `https://<api>.onrender.com` (không có `/` ở cuối); có tên miền riêng cho API thì dùng tên đó (bản đang chạy: `https://api.musicroom.io.vn`, §8.9) |
 | `PUBLIC_APP_URL` | Địa chỉ web chính thức, ví dụ `https://musicroom.io.vn` (hoặc `https://<app>.vercel.app` nếu chưa có tên miền riêng): dùng cho link và mã QR trong ảnh xem trước. Nên đặt, vì nếu thiếu thì app phải đoán domain từ header của request, và ảnh xem trước sẽ không được CDN cache |
 
 Biến này được nhúng vào lúc build, nên phải **Redeploy** sau khi đặt. Ảnh xem trước khi chia sẻ link phòng (tên bài, ảnh bìa, mã QR) cũng lấy dữ liệu qua địa chỉ này.
@@ -230,13 +230,13 @@ Kiểm tra: tab *Actions → keep-awake → Run workflow* chạy tay một lần
 
 ### 8.8 Tên miền riêng cho web (ví dụ `musicroom.io.vn`)
 
-Bản đang chạy dùng `https://musicroom.io.vn` cho web; API vẫn ở `https://<api>.onrender.com` (không cần tên miền riêng). Tên miền riêng cần khi gửi Google xét duyệt "Nhập từ YouTube", và dễ nhớ hơn `*.vercel.app`.
+Bản đang chạy dùng `https://musicroom.io.vn` cho web và `https://api.musicroom.io.vn` cho API (§8.9). Tên miền riêng cho web cần khi gửi Google xét duyệt "Nhập từ YouTube", và dễ nhớ hơn `*.vercel.app`.
 
 1. **Mua tên miền** ở một nhà đăng ký tên miền `.vn` (đuôi `.io.vn`, `.id.vn` có giá rẻ). Không cần bật DNSSEC.
 2. **Vercel → Project → Settings → Domains → Add**: thêm `musicroom.io.vn` và `www.musicroom.io.vn`.
    - Chọn `musicroom.io.vn` làm tên chính; `www.musicroom.io.vn` chọn **Redirect** về `musicroom.io.vn` (308).
    - Sửa domain `<app>.vercel.app` có sẵn thành **Redirect** về `musicroom.io.vn`, để chỉ còn một địa chỉ.
-3. **DNS ở nhà đăng ký**, đúng giá trị Vercel hiển thị trong trang Domains:
+3. **DNS** (ở nhà đăng ký, hoặc ở Cloudflare nếu đã chuyển nameserver như §8.9), đúng giá trị Vercel hiển thị trong trang Domains:
 
    | Loại | Tên | Giá trị (10/2026) |
    |---|---|---|
@@ -255,13 +255,37 @@ Bản đang chạy dùng `https://musicroom.io.vn` cho web; API vẫn ở `https
    ```bash
    curl -sI https://www.musicroom.io.vn | grep -i location          # → https://musicroom.io.vn/
    curl -sI https://<app>.vercel.app | grep -i location             # → https://musicroom.io.vn/
-   curl -s https://<api>.onrender.com/api/health                    # "db":"up", contractsVersion khớp web
+   curl -s https://api.musicroom.io.vn/api/health                   # "db":"up", contractsVersion khớp web
    curl -s -o /dev/null -D - -H "Origin: https://musicroom.io.vn" \
-     "https://<api>.onrender.com/socket.io/?EIO=4&transport=polling" | grep -i access-control-allow-origin
+     "https://api.musicroom.io.vn/socket.io/?EIO=4&transport=polling" | grep -i access-control-allow-origin
    ```
    Lệnh cuối phải in `access-control-allow-origin: https://musicroom.io.vn`; thử với một `Origin` lạ thì không in gì.
 
 Lưu ý: dữ liệu lưu trên trình duyệt (phiên vào phòng, tên đã dùng, Yêu thích của khách) gắn với từng địa chỉ web. Sau khi chuyển tên miền, khách vào lại phòng bằng đúng tên cũ (§1); ai đăng nhập Google thì không mất gì.
+
+### 8.9 Tên miền riêng cho API (`api.musicroom.io.vn`)
+
+Bản đang chạy (10/2026): tên miền đăng ký ở **Mắt Bão**, DNS quản lý ở **Cloudflare** (gói Free) để
+nhiều người cùng quản trị (*Cloudflare → Manage account → Members → Invite*, không chia sẻ mật khẩu).
+
+1. **Cloudflare → Add a site** `musicroom.io.vn`, gói Free, *Import DNS records: Automatic*. Đối chiếu
+   đủ bản ghi: `A @ 216.198.79.1`, `CNAME www → ….vercel-dns-017.com`, `TXT @ google-site-verification=…`.
+   **Proxy status = DNS only** (đám mây xám) cho mọi bản ghi trỏ tới Vercel / Render — bật proxy dễ
+   gây lỗi chứng chỉ và WebSocket.
+2. Thêm `CNAME api → <api>.onrender.com` (bản đang chạy: `music-room-api-gp18.onrender.com`), DNS only.
+3. **Mắt Bão → tên miền → tab Name Server** (không phải tab *Bản ghi DNS*) → *Name Server tùy chỉnh*:
+   hai nameserver Cloudflare cấp (bản đang chạy: `felipe.ns.cloudflare.com`, `maxine.ns.cloudflare.com`).
+   Tắt DNSSEC trước nếu đang bật. Cập nhật ở `.vn` mất vài phút tới 24 giờ; kiểm tra:
+   `dig +trace NS musicroom.io.vn` phải ra nameserver Cloudflare.
+4. **Render → service → Settings → Custom Domains → Add** `api.musicroom.io.vn` → *Verify*; HTTPS tự cấp.
+5. **Vercel**: `NEXT_PUBLIC_SERVER_URL=https://api.musicroom.io.vn` (và `INTERNAL_SERVER_URL` nếu có),
+   rồi **Redeploy** (biến `NEXT_PUBLIC_` nhúng lúc build). Render không cần đổi `PUBLIC_URL` /
+   `CORS_ORIGINS` (đó là địa chỉ web). Google đăng nhập không cần đổi gì.
+6. **Slack** (§9): URL trong *App Manifest* sang `https://api.musicroom.io.vn/api/slack/...`;
+   **GitHub** biến `KEEP_AWAKE_URL` (§8.7) có thể đổi sang `https://api.musicroom.io.vn`.
+
+Địa chỉ `<api>.onrender.com` cũ vẫn chạy song song, nên chuyển dần không làm gián đoạn ai. Kiểm tra
+như bước 6 của §8.8.
 
 ## 9. Bot Slack `/music` (không bắt buộc)
 
@@ -270,7 +294,7 @@ Thêm bài, bỏ phiếu qua bài và thả reaction ngay trong Slack; bot tự 
 
 1. **Tạo app:** https://api.slack.com/apps → *Create New App* → *From an app manifest* → chọn
    workspace → dán [`deploy/slack/manifest.yaml`](slack/manifest.yaml). Nếu API của bạn không ở
-   `music-room-api-gp18.onrender.com`, sửa ba URL trong file trước khi dán. Đã tạo app từ manifest
+   `api.musicroom.io.vn`, sửa ba URL trong file trước khi dán. Đã tạo app từ manifest
    cũ (chưa có `@Music Room` hoặc tab Home)? Vào *App Manifest*, dán lại file này, *Save*, rồi
    *Reinstall to Workspace* nếu Slack yêu cầu.
 2. **Cài vào workspace:** *Install App* → *Install to Workspace* → cho phép. (Workspace có duyệt app
