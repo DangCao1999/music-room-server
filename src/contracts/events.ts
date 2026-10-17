@@ -51,8 +51,11 @@ export interface CommandResults {
    * search for the same words; `youtube`: a fresh YouTube search.
    */
   'search:query': {
+    /** This page's results (YouTube's order); a later page continues the list. */
     results: TrackSummary[];
     source: 'library' | 'cache' | 'youtube';
+    /** YouTube has more results: "Xem thêm" asks for the next page. */
+    more?: boolean;
   };
   'library:room': { items: LibraryItemView[] };
   /** Admin only: the room's blocked videos, most recently blocked first. */
