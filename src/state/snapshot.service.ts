@@ -149,7 +149,10 @@ export class SnapshotService {
         memberId: ps.playerMemberId,
         online: this.lease.isOnline(roomId),
       },
-      searchEnabled: Boolean(this.env.YOUTUBE_API_KEY),
+      // InnerTube needs no key: searching works without one too.
+      searchEnabled:
+        Boolean(this.env.YOUTUBE_API_KEY) ||
+        this.env.YOUTUBE_SEARCH_PROVIDER === 'innertube',
       aiEnabled: Boolean(
         this.env.GEMINI_API_KEY ||
         this.env.GROQ_API_KEY ||

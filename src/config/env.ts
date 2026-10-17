@@ -18,6 +18,12 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().refine((v) => /^postgres(ql)?:\/\//.test(v)),
   PUBLIC_URL: httpUrl,
   YOUTUBE_API_KEY: optionalString,
+  /**
+   * Song search on YouTube: `innertube` asks YouTube's own web search (no API quota; the
+   * Data API then only checks the videos, 1 unit) and falls back to the API search;
+   * `api` uses the Data API search only (100 units a search).
+   */
+  YOUTUBE_SEARCH_PROVIDER: z.enum(['innertube', 'api']).default('innertube'),
   /** L1: Google sign-in (OAuth client id, public). Without it sign-in is hidden. */
   GOOGLE_CLIENT_ID: optionalString,
   /** A3 / A4 / AI1: Last.fm similar tracks and canonical names (free key). */

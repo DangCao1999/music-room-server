@@ -217,6 +217,26 @@ export class YouTubeProvider {
     return this.oembed(videoId);
   }
 
+  /**
+   * Check videos found elsewhere (InnerTube) through the Data API — 1 unit: keeps their
+   * order, drops what is not embeddable or live. null when the API cannot be used now
+   * (no key, invalid key, quota resting, outage): the caller shows them unchecked.
+   */
+  async checkVideos(ids: string[]): Promise<TrackInfo[] | null> {
+    if (!this.apiUsable || !ids.length) return this.apiUsable ? [] : null;
+    try {
+      const infos = await this.videos(ids);
+      return ids
+        .map((id) => infos.get(id))
+        .filter((t): t is TrackInfo => Boolean(t && t.embeddable && !t.live));
+    } catch (e) {
+      this.logger.warn(
+        `videos check failed, showing unchecked results: ${String(e)}`,
+      );
+      return null;
+    }
+  }
+
   /** Up to 10 embeddable, non-live videos (R-35). */
   async search(q: string): Promise<TrackInfo[]> {
     if (!this.searchEnabled) throw new AppError('SEARCH_UNAVAILABLE');
