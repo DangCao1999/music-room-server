@@ -20,6 +20,10 @@ const MAX_SEARCH = 3;
 const HISTORY_SCAN = 2000;
 /** Radio (A4) never repeats a song the room started within this window. */
 export const RADIO_NO_REPEAT_MS = 3 * 3600_000;
+
+/** The radio never repeats a song within 3 h — or within the room's repeat gap, if longer. */
+export const radioNoRepeatMs = (settings: RoomSettings): number =>
+  Math.max(RADIO_NO_REPEAT_MS, settings.repeatGapMinutes * 60_000);
 const WARM_MS = 6 * 3600_000;
 /** AI5: how long an AI-ordered radio plan stays usable, and how many it orders. */
 const PLAN_MS = 15 * 60_000;
@@ -308,7 +312,7 @@ export class SuggestService {
     const recent = await tx.queueItem.findMany({
       where: {
         roomId,
-        startedAt: { gte: new Date(now.getTime() - RADIO_NO_REPEAT_MS) },
+        startedAt: { gte: new Date(now.getTime() - radioNoRepeatMs(settings)) },
       },
       select: { trackId: true },
     });
@@ -362,7 +366,7 @@ export class SuggestService {
       const recent = await this.prisma.queueItem.findMany({
         where: {
           roomId,
-          startedAt: { gte: new Date(Date.now() - RADIO_NO_REPEAT_MS) },
+          startedAt: { gte: new Date(Date.now() - radioNoRepeatMs(settings)) },
         },
         orderBy: { startedAt: 'desc' },
         include: { track: true, _count: { select: { hearts: true } } },

@@ -207,7 +207,10 @@ export class PlaybackService
     return item.id;
   }
 
-  /** R-31: random fallback track not among the last 20 fallback picks. */
+  /**
+   * R-31: random fallback track, avoiding the last 20 automatic picks and anything played
+   * within the room's repeat gap (A6) — avoided, not refused: a short playlist still plays.
+   */
   private async createFallbackItem(
     tx: Tx,
     roomId: string,
@@ -245,10 +248,20 @@ export class PlaybackService
       take: FALLBACK_RECENT,
       select: { trackId: true },
     });
-    const pick = pickFallback(
-      eligible,
-      recent.map((r) => r.trackId),
-    );
+    const gap = settings.repeatGapMinutes;
+    const played = gap
+      ? await tx.queueItem.findMany({
+          where: {
+            roomId,
+            startedAt: { gte: new Date(Date.now() - gap * 60_000) },
+          },
+          select: { trackId: true },
+        })
+      : [];
+    const pick = pickFallback(eligible, [
+      ...recent.map((r) => r.trackId),
+      ...played.map((p) => p.trackId),
+    ]);
     if (!pick) return null;
     const item = await tx.queueItem.create({
       data: {
