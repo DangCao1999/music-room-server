@@ -4,6 +4,7 @@ import { AppError } from '../common/app-error';
 import {
   MAX_PLAYLIST_TRACKS,
   MAX_PLAYLISTS,
+  type PlaylistKind,
   type PlaylistSummaryView,
   type PlaylistView,
 } from '../contracts';
@@ -17,6 +18,16 @@ const newShareCode = () =>
   );
 
 /** L2: personal playlists of signed-in users. Every write checks ownership. */
+/**
+ * Playlists the app named itself ("Đã thích trên YouTube", "Dành cho bạn"): clients show the
+ * name in the reader's language. The stored name stays as it is.
+ */
+function playlistKind(source: string | null): PlaylistKind | null {
+  if (source === 'yt:liked') return 'liked';
+  if (source === 'mix:foryou') return 'mix';
+  return null;
+}
+
 @Injectable()
 export class PlaylistsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -70,6 +81,7 @@ export class PlaylistsService {
       coverUrl: p.items[0]?.track.thumbnailUrl ?? null,
       shared: p.shareCode !== null,
       updatedAt: p.updatedAt.toISOString(),
+      kind: playlistKind(p.source),
       ...(containing ? { hasTrack: containing.has(p.id) } : {}),
     }));
   }
@@ -217,6 +229,7 @@ export class PlaylistsService {
       tracks: p.items
         .filter((i) => i.track.title !== '')
         .map((i) => toTrackSummary(i.track)),
+      kind: playlistKind(p.source),
     };
   }
 

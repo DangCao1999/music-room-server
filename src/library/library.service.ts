@@ -3,6 +3,7 @@ import { AiService } from '../ai/ai.service';
 import { AppError } from '../common/app-error';
 import {
   type CommandResults,
+  type Lang,
   LIBRARY_LIMIT,
   type LibraryItemView,
   type LibrarySort,
@@ -28,6 +29,14 @@ const LOOKUP_WITHOUT_API = 10;
 
 /** The retention job blanks the title of videos it may no longer keep: never show those. */
 const shown = (t: Track) => t.title !== '';
+
+/** The recap's one-line AI comment, in the reader's language (same rules in both). */
+const RECAP_SYSTEM: Record<Lang, string> = {
+  vi: `Bạn viết MỘT câu nhận xét vui, thân thiện (tối đa 30 từ, tiếng Việt) về việc nghe nhạc của một văn phòng.
+Chỉ dùng đúng các con số trong "facts", không suy ra số khác, không bịa thêm. Người chọn bài được ghi là P1, P2…: nếu nhắc tới ai, viết đúng ký hiệu đó. Không emoji. Trả lời JSON {"summary":<string>}.`,
+  en: `Write ONE fun, friendly remark (at most 30 words, in English) about an office's music listening.
+Use only the numbers in "facts"; do not derive other numbers or invent anything. Song pickers are written as P1, P2…: if you mention someone, write exactly that label. No emoji. Reply as JSON {"summary":<string>}.`,
+};
 
 /** A1 (the room's played songs) and A2 (a member's saved songs, "Lưu"). */
 @Injectable()
@@ -245,6 +254,7 @@ export class LibraryService {
     actor: Actor,
     sinceIso: string,
     tzOffsetMinutes: number,
+    language: Lang = 'vi',
   ): Promise<RecapView> {
     const now = Date.now();
     const since = new Date(
@@ -337,8 +347,9 @@ export class LibraryService {
     };
     view.summary = await this.recapComment(
       // Blocking a song makes a new comment, so a cached one never names it.
-      `${actor.roomId}|${since.toISOString()}|${[...blocked].sort().join(',')}`,
+      `${actor.roomId}|${since.toISOString()}|${[...blocked].sort().join(',')}|${language}`,
       view,
+      language,
     );
     return view;
   }
@@ -346,14 +357,14 @@ export class LibraryService {
   private async recapComment(
     key: string,
     v: RecapView,
+    language: Lang,
   ): Promise<string | null> {
     if (!this.ai.enabled || v.plays === 0) return null;
     const hit = this.recapComments.get(key);
     if (hit && Date.now() - hit.at < 10 * 60_000) return hit.text;
     const answer = await this.ai.json<{ summary?: string }>(
       'recap',
-      `Bạn viết MỘT câu nhận xét vui, thân thiện (tối đa 30 từ, tiếng Việt) về việc nghe nhạc của một văn phòng.
-Chỉ dùng đúng các con số trong "facts", không suy ra số khác, không bịa thêm. Người chọn bài được ghi là P1, P2…: nếu nhắc tới ai, viết đúng ký hiệu đó. Không emoji. Trả lời JSON {"summary":<string>}.`,
+      RECAP_SYSTEM[language],
       JSON.stringify({
         facts: {
           songsPlayed: v.plays,

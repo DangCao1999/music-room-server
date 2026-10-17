@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '../generated/prisma/client';
+import type { ActivityParams } from '../contracts';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
 import { Broadcaster } from '../realtime/broadcaster.service';
 import type { MutateCtx } from '../state/room-state.service';
@@ -20,11 +20,18 @@ export class ActivityService {
     tx: Tx,
     ctx: MutateCtx,
     roomId: string,
-    actor: { id: string; displayName: string } | null,
+    actor: { id: string; displayName: string; isDevice?: boolean } | null,
     type: string,
+    /** The Vietnamese sentence (kept for older clients and Slack). */
     message: string,
-    metadata?: Prisma.InputJsonValue,
+    /** What the line is about, so each reader can word it in their language. */
+    params: ActivityParams = {},
   ): Promise<void> {
+    const metadata = {
+      v: 1,
+      ...params,
+      ...(actor?.isDevice ? { actorDevice: true } : {}),
+    };
     const row = await tx.activityLog.create({
       data: {
         roomId,

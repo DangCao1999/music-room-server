@@ -332,6 +332,7 @@ export class PlaybackService
         null,
         'track_skip',
         `"${item.track.title}" đã bị bỏ qua sau ${yes} phiếu`,
+        { variant: 'votes', title: item.track.title, yes },
       );
       return;
     }
@@ -348,6 +349,7 @@ export class PlaybackService
         null,
         'track_skip',
         `"${item.track.title}" đã bị bỏ qua khi hết giờ (✅ ${yes} · ❌ ${no})`,
+        { variant: 'timeout', title: item.track.title, yes, no },
       );
       return;
     }
@@ -371,6 +373,7 @@ export class PlaybackService
       null,
       'skip_kept',
       `Cả phòng chọn nghe tiếp "${item.track.title}" (✅ ${yes} · ❌ ${no})`,
+      { title: item.track.title, yes, no },
     );
     ctx.afterCommit(() => this.clearVoteTimer(roomId));
   }
@@ -507,6 +510,7 @@ export class PlaybackService
             me,
             'track_skip',
             `đã bỏ qua "${item.track.title}"`,
+            { variant: 'by', title: item.track.title },
           );
           return;
       }
@@ -625,6 +629,7 @@ export class PlaybackService
             null,
             'track_error',
             `Bỏ qua "${item.track.title}" vì video không phát được (mã ${input.errorCode ?? '?'})`,
+            { title: item.track.title, code: input.errorCode },
           );
         }
       });

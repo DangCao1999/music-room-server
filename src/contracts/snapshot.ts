@@ -44,7 +44,11 @@ export interface PlaylistSummaryView {
   shared: boolean;
   updatedAt: string;
   hasTrack?: boolean;
+  /** Made by the app (YouTube likes, "for you" mix): clients show its name in the reader's language. */
+  kind?: PlaylistKind | null;
 }
+
+export type PlaylistKind = 'liked' | 'mix';
 
 /** L3: one of the user's YouTube playlists. `importedId`: our playlist made from it. */
 export interface YouTubePlaylistView {
@@ -80,6 +84,7 @@ export interface PlaylistView {
   isOwner: boolean;
   shareCode: string | null;
   tracks: TrackSummary[];
+  kind?: PlaylistKind | null;
 }
 
 /** A7: `synced` lines carry their start time in seconds; `plain` is the text alone. */
@@ -239,12 +244,30 @@ export interface ChatMessageView {
   createdAt: string;
 }
 
+/**
+ * What a log line is about, so each reader can word it in their own language. `variant` tells
+ * apart the sentences of one `type` (the table lives in the server's ActivityService callers).
+ */
+export interface ActivityParams {
+  variant?: string;
+  title?: string;
+  target?: string;
+  targetDevice?: boolean;
+  count?: number;
+  yes?: number;
+  no?: number;
+  code?: number;
+  actorDevice?: boolean;
+}
+
 export interface ActivityLogView {
   id: string;
   type: string;
   memberId: string | null;
   displayName: string | null;
+  /** The Vietnamese sentence as stored; the fallback when `params` is missing (older lines). */
   message: string;
+  params?: ActivityParams | null;
   createdAt: string;
 }
 

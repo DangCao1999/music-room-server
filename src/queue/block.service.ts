@@ -79,6 +79,7 @@ export class BlockService {
         me,
         'track_block',
         `đã chặn "${track.title}"`,
+        { title: track.title },
       );
     });
   }
@@ -102,6 +103,7 @@ export class BlockService {
         me,
         'track_unblock',
         `đã bỏ chặn "${track?.title ?? trackId}"`,
+        { title: track?.title ?? trackId },
       );
     });
   }

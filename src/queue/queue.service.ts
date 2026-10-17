@@ -185,6 +185,7 @@ export class QueueService {
         me,
         'track_add',
         `đã thêm "${track.title}"`,
+        { variant: 'one', title: track.title },
       );
       await this.playback.startIfIdle(tx, ctx, actor.roomId);
       return { queueItemId: item.id, title: track.title };
@@ -271,6 +272,9 @@ export class QueueService {
           titles.length === 1
             ? `đã thêm "${titles[0]}"`
             : `đã thêm ${titles.length} bài từ playlist`,
+          titles.length === 1
+            ? { variant: 'one', title: titles[0] }
+            : { variant: 'playlist', count: titles.length },
         );
         await this.playback.startIfIdle(tx, ctx, actor.roomId);
       }
@@ -296,6 +300,7 @@ export class QueueService {
         me,
         'track_remove',
         `đã xóa "${item.track.title}"`,
+        { title: item.track.title },
       );
     });
   }
@@ -322,6 +327,7 @@ export class QueueService {
         pin
           ? `đã ghim "${item.track.title}" phát tiếp theo`
           : `đã bỏ ghim "${item.track.title}"`,
+        { variant: pin ? 'pin' : 'unpin', title: item.track.title },
       );
     });
   }
@@ -351,6 +357,7 @@ export class QueueService {
           me,
           'track_heart',
           `đã thả tim "${item.track.title}"`,
+          { title: item.track.title },
         );
       }
     });

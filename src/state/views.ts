@@ -1,5 +1,6 @@
 import type {
   ActivityLogView,
+  ActivityParams,
   ChatMessageView,
   QueueItemView,
   TrackSummary,
@@ -72,6 +73,28 @@ export function toChatView(m: ChatMessage): ChatMessageView {
   };
 }
 
+const PARAM_KEYS = [
+  'variant',
+  'title',
+  'target',
+  'targetDevice',
+  'count',
+  'yes',
+  'no',
+  'code',
+  'actorDevice',
+] as const satisfies readonly (keyof ActivityParams)[];
+
+/** Lines written since params exist carry `{ v: 1, ... }`; older ones have none (null). */
+function logParams(metadata: unknown): ActivityParams | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const m = metadata as Record<string, unknown>;
+  if (m.v !== 1) return null;
+  const out: Record<string, unknown> = {};
+  for (const k of PARAM_KEYS) if (m[k] !== undefined) out[k] = m[k];
+  return out as ActivityParams;
+}
+
 export function toLogView(l: ActivityLog): ActivityLogView {
   return {
     id: l.id,
@@ -79,6 +102,7 @@ export function toLogView(l: ActivityLog): ActivityLogView {
     memberId: l.memberId,
     displayName: l.displayName,
     message: l.message,
+    params: logParams(l.metadata),
     createdAt: l.createdAt.toISOString(),
   };
 }
