@@ -1,0 +1,17 @@
+# Python edge-tts (Edge "Read Aloud" voices) and its dependencies, all pinned so a Render
+# build never picks up a new release by surprise. Bump edge-tts here when Microsoft changes
+# its handshake (Edge TTS starts failing with HTTP 403), then refresh the rest with
+# `TTS_PYTHON=… npm run tts:install && python3 -m pip freeze --path .python`.
+edge-tts==7.3.1
+aiohappyeyeballs==2.7.1
+aiohttp==3.14.5
+aiosignal==1.4.0
+attrs==26.1.0
+certifi==2026.7.22
+frozenlist==1.8.0
+idna==3.20
+multidict==7.1.0
+propcache==0.5.4
+tabulate==0.10.0
+typing_extensions==4.16.0
+yarl==1.25.1

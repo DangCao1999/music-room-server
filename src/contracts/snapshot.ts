@@ -1,5 +1,5 @@
-import type { DjSound, Reaction, VoicePreset } from './constants';
-import type { RoomSettings } from './schemas';
+import type { DjSound, Reaction, Voice, VoicePreset } from './constants';
+import type { Lang, RoomSettings } from './schemas';
 
 export type Role = 'ADMIN' | 'USER';
 export type PlaybackStatus = 'IDLE' | 'PLAYING' | 'PAUSED';
@@ -172,7 +172,10 @@ export interface QueueItemView {
   heartedBy: string[];
   pinned: boolean;
   wishMessage: string | null;
-  voicePreset: VoicePreset | null;
+  /** The wish voice the sender picked; null = none picked yet (no wish, or a wish from before voices). */
+  voice?: Voice | null;
+  /** What the speaker reads for this item's wish; only set on the song now playing. */
+  wishSpeech?: SpeechView | null;
   addedAt: string;
 }
 
@@ -277,9 +280,19 @@ export interface PlayerCommand {
   status: PlaybackStatus;
   positionSec: number;
   positionAt: number;
+  /** Older clients read `wish` / `intro`; `voicePreset` is always null now. */
   wish: { message: string; voicePreset: VoicePreset | null } | null;
   /** AI3: the MC's line for this song, read when there is no wish. */
   intro: string | null;
+  /** What to read before this song: the wish, else the MC line. */
+  speech?: SpeechView | null;
+}
+
+/** A line for the speaker. `audio`: key of the Edge mp3 at /api/tts/<key>.mp3, null = not ready (read with the browser voice). */
+export interface SpeechView {
+  text: string;
+  audio: string | null;
+  lang: Lang;
 }
 
 /** `room_deleted`: the room's owner deleted it (everyone is sent home). */

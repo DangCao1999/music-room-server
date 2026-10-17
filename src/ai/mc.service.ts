@@ -2,6 +2,7 @@ import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoomStateService } from '../state/room-state.service';
 import { readSettings } from '../state/settings';
+import { TtsService } from '../tts/tts.service';
 import { AiService } from './ai.service';
 
 /** Wait for the queue to settle before writing intros (people add songs in bursts). */
@@ -32,6 +33,7 @@ export class McService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly state: RoomStateService,
     private readonly ai: AiService,
+    private readonly tts: TtsService,
   ) {}
 
   onModuleInit(): void {
@@ -106,10 +108,10 @@ export class McService implements OnModuleInit {
             : '';
         if (!q || !line) continue;
         const name = q.addedBy?.displayName ?? '';
-        this.lines.set(
-          q.id,
-          line.replaceAll('{P}', name).replace(/\s+/g, ' ').trim(),
-        );
+        const spoken = line.replaceAll('{P}', name).replace(/\s+/g, ' ').trim();
+        this.lines.set(q.id, spoken);
+        // The MC always speaks with the male voice; made now, never awaited.
+        void this.tts.prepare(spoken, 'male');
         n += 1;
       }
       while (this.lines.size > KEEP)

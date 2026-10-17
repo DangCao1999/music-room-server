@@ -3,8 +3,9 @@ import type {
   ActivityParams,
   ChatMessageView,
   QueueItemView,
+  SpeechView,
   TrackSummary,
-  VoicePreset,
+  Voice,
 } from '../contracts';
 import type {
   ActivityLog,
@@ -13,6 +14,7 @@ import type {
   QueueItem,
   Track,
 } from '../generated/prisma/client';
+import { voiceOf } from '../tts/tts-lang';
 
 export type ItemWithRelations = QueueItem & {
   track: Track;
@@ -40,7 +42,11 @@ export function toTrackSummary(t: Track): TrackSummary {
   };
 }
 
-export function toItemView(i: ItemWithRelations): QueueItemView {
+/** `speechFor`: only for the song now playing, so listeners hear its wish with the Edge voice. */
+export function toItemView(
+  i: ItemWithRelations,
+  speechFor?: (text: string, voice: Voice) => SpeechView,
+): QueueItemView {
   return {
     id: i.id,
     track: toTrackSummary(i.track),
@@ -51,7 +57,14 @@ export function toItemView(i: ItemWithRelations): QueueItemView {
     heartedBy: i.hearts.map((h) => h.memberId),
     pinned: i.pinnedAt !== null,
     wishMessage: i.wishMessage,
-    voicePreset: (i.voicePreset as VoicePreset | null) ?? null,
+    voice:
+      i.voicePreset === 'male' || i.voicePreset === 'female'
+        ? i.voicePreset
+        : null,
+    wishSpeech:
+      speechFor && i.wishMessage
+        ? speechFor(i.wishMessage, voiceOf(i.voicePreset))
+        : undefined,
     addedAt: i.addedAt.toISOString(),
     // Older automatic items predate the column: no member means the fallback playlist.
     auto:

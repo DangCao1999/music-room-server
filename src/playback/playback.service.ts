@@ -13,7 +13,6 @@ import {
   parseYouTubePlaylist,
   type PlayerRevokeReason,
   SKIP_MIN_YES,
-  type VoicePreset,
 } from '../contracts';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
 import { orderQueue } from '../queue/fair-queue';
@@ -28,6 +27,8 @@ import { readSettings } from '../state/settings';
 import { SnapshotService } from '../state/snapshot.service';
 import { estimatePosition } from '../state/views';
 import { McService } from '../ai/mc.service';
+import { TtsService } from '../tts/tts.service';
+import { voiceOf } from '../tts/tts-lang';
 import { SuggestService } from '../music/suggest.service';
 import { pickFallback } from './fallback';
 import { LeaseService } from './lease.service';
@@ -38,6 +39,9 @@ export type AdvanceReason = 'ended' | 'timer' | 'skip' | 'error' | 'start';
 /** Drift (s) between the player's report and our estimate that triggers a re-broadcast. */
 const DRIFT_SEC = 2;
 const FALLBACK_RECENT = 20;
+/** Re-making waiting wishes' Edge audio (lost on restart): how often per room, how many. */
+const WARM_EVERY_MS = 60_000;
+const WARM_MAX = 6;
 
 /** V1: after a vote keeps a song, no new vote on it for this long. */
 export const SKIP_BLOCK_MS = 2 * 60_000;
@@ -48,6 +52,7 @@ export class PlaybackService
 {
   private readonly logger = new Logger(PlaybackService.name);
   private readonly timers = new Map<string, NodeJS.Timeout>();
+  private readonly warmedAt = new Map<string, number>();
   /** V1: one open skip vote per room at most; fires at its deadline. */
   private readonly voteTimers = new Map<string, NodeJS.Timeout>();
 
@@ -61,6 +66,7 @@ export class PlaybackService
     @Inject(TIMING) private readonly timing: Timing,
     private readonly suggest: SuggestService,
     private readonly mc: McService,
+    private readonly tts: TtsService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -679,6 +685,7 @@ export class PlaybackService
   }
 
   async buildPlayerCommand(roomId: string): Promise<PlayerCommand> {
+    void this.warmWishes(roomId);
     const ps = await this.prisma.playbackState.findUniqueOrThrow({
       where: { roomId },
     });
@@ -689,6 +696,11 @@ export class PlaybackService
           include: { track: true },
         })
       : null;
+    // AI3: a wish is read instead of the MC line, never both.
+    const intro =
+      item && !item.wishMessage && item.addedById && (await this.mcOn(roomId))
+        ? this.mc.lineFor(item.id)
+        : null;
     return {
       queueItemId: item?.id ?? null,
       videoId: item?.track.externalId ?? null,
@@ -698,15 +710,41 @@ export class PlaybackService
       wish: item?.wishMessage
         ? {
             message: item.wishMessage,
-            voicePreset: (item.voicePreset as VoicePreset) ?? null,
+            voicePreset: null,
           }
         : null,
-      // AI3: a wish is read instead of the MC line, never both.
-      intro:
-        item && !item.wishMessage && item.addedById && (await this.mcOn(roomId))
-          ? this.mc.lineFor(item.id)
+      intro,
+      speech: item?.wishMessage
+        ? this.tts.speech(item.wishMessage, voiceOf(item.voicePreset))
+        : intro
+          ? this.tts.speech(intro, 'male')
           : null,
     };
+  }
+
+  /**
+   * Edge audio lives in memory: after a restart (deploy, Render waking up) the waiting wishes
+   * have none. Remake it ahead of their turn, at most once a minute per room.
+   */
+  private async warmWishes(roomId: string): Promise<void> {
+    const now = Date.now();
+    if (now - (this.warmedAt.get(roomId) ?? 0) < WARM_EVERY_MS) return;
+    this.warmedAt.set(roomId, now);
+    try {
+      const items = await this.prisma.queueItem.findMany({
+        where: { roomId, status: 'QUEUED', wishMessage: { not: null } },
+        select: { wishMessage: true, voicePreset: true },
+        orderBy: { addedAt: 'asc' },
+        take: WARM_MAX,
+      });
+      for (const i of items)
+        if (i.wishMessage)
+          void this.tts.prepare(i.wishMessage, voiceOf(i.voicePreset));
+    } catch (e) {
+      this.logger.warn(
+        `Warming wishes for room ${roomId} failed: ${String(e)}`,
+      );
+    }
   }
 
   private async mcOn(roomId: string): Promise<boolean> {

@@ -44,6 +44,10 @@ const EnvSchema = z.object({
   ROOM_TIMEZONE: z.string().default('Asia/Ho_Chi_Minh'),
   JWT_SECRET: optionalString.refine((v) => v === undefined || v.length >= 32),
   DATA_DIR: z.string().default('/data'),
+  /** Edge TTS voices for wishes and MC lines; 'false' = the speaker reads with the browser voice (Edge blocked). */
+  TTS_ENABLED: z.enum(['true', 'false']).default('true'),
+  /** Python 3.10+ that runs edge-tts; `npm run tts:install` must use the same one. */
+  TTS_PYTHON: z.string().default('python3'),
   /** R-43: room:create / room:join / host:register per IP per minute. */
   JOIN_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(20),
   /** Orphan room cleanup: first run this long after boot, then every ORPHAN_SWEEP_EVERY_MS. */

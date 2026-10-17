@@ -10,6 +10,7 @@ import {
 } from '../contracts';
 import type { Member, QueueItem, Track } from '../generated/prisma/client';
 import { ModerationService } from '../ai/moderation.service';
+import { TtsService } from '../tts/tts.service';
 import { TrackCacheService } from '../music/track-cache.service';
 import { PlaybackService } from '../playback/playback.service';
 import { isBlocked } from './block.service';
@@ -46,6 +47,7 @@ export class QueueService {
     private readonly playback: PlaybackService,
     private readonly activity: ActivityService,
     private readonly moderation: ModerationService,
+    private readonly tts: TtsService,
   ) {}
 
   /** Loads a queue item of the actor's room or throws STALE_ITEM. */
@@ -149,6 +151,9 @@ export class QueueService {
       throw new AppError('TRACK_BLOCKED');
     // Network work (track lookup, AI4 wish check) happens outside the room lock.
     await this.moderation.checkWish(input.wishMessage);
+    // Started now, not after the write: an idle room plays this song at once. Never awaited.
+    if (input.wishMessage)
+      void this.tts.prepare(input.wishMessage, input.voice ?? 'male');
     const track = await this.tracks.resolve(videoId);
 
     return this.state.mutate(actor.roomId, async (tx, ctx) => {
@@ -175,7 +180,7 @@ export class QueueService {
           addedById: me.id,
           status: 'QUEUED',
           wishMessage: wish,
-          voicePreset: wish ? (input.voicePreset ?? 'radio') : null,
+          voicePreset: wish ? (input.voice ?? 'male') : null,
         },
       });
       await this.activity.log(
@@ -378,10 +383,13 @@ export class QueueService {
         where: { id: item.id },
         data: {
           wishMessage: wish,
-          voicePreset: wish ? (input.voicePreset ?? 'radio') : null,
+          voicePreset: wish ? (input.voice ?? 'male') : null,
         },
       });
     });
+    // Made ahead so the speaker has it when the song starts; never awaited.
+    if (input.wishMessage)
+      void this.tts.prepare(input.wishMessage, input.voice ?? 'male');
   }
 
   /** R-10: kicked members' waiting tracks are removed. */

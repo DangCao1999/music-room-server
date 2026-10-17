@@ -25,6 +25,10 @@ export const VOICE_PRESETS = [
 ] as const;
 export type VoicePreset = (typeof VOICE_PRESETS)[number];
 
+/** The wish voice the sender picks (Edge TTS). `VOICE_PRESETS` stay only so older clients' commands still pass. */
+export const VOICES = ['male', 'female'] as const;
+export type Voice = (typeof VOICES)[number];
+
 export const REACTIONS = [
   '❤️',
   '🔥',

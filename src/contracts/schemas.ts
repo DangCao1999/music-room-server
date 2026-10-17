@@ -12,6 +12,7 @@ import {
   REACTIONS,
   THEME_IDS,
   VOICE_PRESETS,
+  VOICES,
 } from './constants';
 import {
   cleanLine,
@@ -129,6 +130,8 @@ export const C2S = {
   'queue:add': z.strictObject({
     input: z.string().trim().min(1).max(LIMITS.input),
     wishMessage: multiline(LIMITS.wish, 0).optional(),
+    voice: z.enum(VOICES).optional(),
+    /** Older clients still send it; the value is ignored. */
     voicePreset: z.enum(VOICE_PRESETS).optional(),
   }),
   'queue:remove': z.strictObject({ queueItemId: Id }),
@@ -137,6 +140,8 @@ export const C2S = {
   'queue:set-message': z.strictObject({
     queueItemId: Id,
     wishMessage: multiline(LIMITS.wish, 0),
+    voice: z.enum(VOICES).optional(),
+    /** Older clients still send it; the value is ignored. */
     voicePreset: z.enum(VOICE_PRESETS).optional(),
   }),
   /** V1: `approve` true (default) = ✅ skip, false = ❌ keep listening (only while a vote is open). */
