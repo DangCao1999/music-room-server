@@ -315,6 +315,7 @@ export class ChatRoomService {
           m,
           'user_join',
           'đã vào phòng từ Slack',
+          { variant: 'slack' },
         );
         return m;
       });

@@ -2,6 +2,7 @@ import { refusedTrackIds } from '../music/room-refusals';
 import { Injectable } from '@nestjs/common';
 import { AppError } from '../common/app-error';
 import {
+  type Lang,
   normalizeQuery,
   type RoomSettings,
   type SuggestionView,
@@ -15,9 +16,12 @@ const WANT = 10;
 /** Songs the room knows, offered to the AI so it can pick them (no YouTube quota). */
 const KNOWN_HINT = 40;
 
-const SYSTEM = `Bạn là DJ cho một văn phòng ở Việt Nam. Người dùng mô tả loại nhạc họ muốn nghe.
+/** Vietnamese music is favoured only for a Vietnamese asker; others get popular international picks. */
+const system = (
+  language: Lang,
+) => `Bạn là DJ cho một văn phòng ở Việt Nam. Người dùng mô tả loại nhạc họ muốn nghe.
 Đề xuất ${WANT} bài hát CÓ THẬT, đúng yêu cầu, phù hợp nghe chung ở văn phòng.
-- Nếu yêu cầu không nói rõ, ưu tiên nhạc Việt và nhạc quốc tế phổ biến.
+- Nếu yêu cầu không nói rõ, ${language === 'vi' ? 'ưu tiên nhạc Việt và nhạc quốc tế phổ biến' : 'ưu tiên nhạc quốc tế phổ biến'}.
 - Nếu có bài phù hợp trong danh sách "known", hãy ưu tiên chọn chúng (ghi đúng tên như trong danh sách).
 - Mỗi bài phải ghi ĐÚNG nghệ sĩ gốc đã trình bày bài đó. Không chắc thì bỏ bài đó, chọn bài khác.
 - Không bịa bài. Không lặp bài, không lặp tên bài với nghệ sĩ khác.
@@ -38,6 +42,7 @@ export class DjService {
     roomId: string,
     prompt: string,
     settings: RoomSettings,
+    language: Lang = 'vi',
   ): Promise<SuggestionView[]> {
     if (!this.ai.enabled) throw new AppError('AI_UNAVAILABLE');
     const known = await this.prisma.track.findMany({
@@ -55,7 +60,7 @@ export class DjService {
       items?: { artist?: string; song?: string }[];
     }>(
       'dj',
-      SYSTEM,
+      system(language),
       JSON.stringify({
         request: prompt,
         known: known.map((k) => `${k.artist} - ${k.song}`),

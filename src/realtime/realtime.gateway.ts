@@ -663,6 +663,7 @@ export class RealtimeGateway
           actor.roomId,
           input.prompt,
           readSettings(room.settings),
+          input.language ?? 'vi',
         ),
       };
     });
@@ -672,7 +673,12 @@ export class RealtimeGateway
   recap(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('room:recap', s, body, (input, actor) => {
       this.limit(`recap:${actor.memberId}`, RECAP_LIMIT);
-      return this.library.recap(actor, input.since, input.tzOffsetMinutes);
+      return this.library.recap(
+        actor,
+        input.since,
+        input.tzOffsetMinutes,
+        input.language ?? 'vi',
+      );
     });
   }
 

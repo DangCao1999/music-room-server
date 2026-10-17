@@ -36,6 +36,11 @@ const multiline = (max: number, min = 1) =>
     .transform(cleanMultiline)
     .pipe(z.string().min(min).max(max));
 
+/** Interface languages; each device picks its own (stored on the client only). */
+export const LANGS = ['vi', 'en'] as const;
+export type Lang = (typeof LANGS)[number];
+export const LangSchema = z.enum(LANGS);
+
 export const RoomNameSchema = line(LIMITS.roomName);
 export const DisplayNameSchema = line(LIMITS.displayName);
 export const RoomCodeSchema = z
@@ -237,11 +242,17 @@ export const C2S = {
     musicOnly: z.boolean(),
   }),
   /** AI2: songs for a request in plain words ("nhạc chill chiều thứ 6"). */
-  'dj:ask': z.strictObject({ prompt: line(LIMITS.djPrompt) }),
+  'dj:ask': z.strictObject({
+    prompt: line(LIMITS.djPrompt),
+    /** The asker's language: only a Vietnamese asker gets Vietnamese music favoured. */
+    language: LangSchema.optional(),
+  }),
   /** A8: what the room played since `since` (at most 31 days back). */
   'room:recap': z.strictObject({
     since: z.iso.datetime(),
     tzOffsetMinutes: z.number().int().min(-840).max(840),
+    /** The reader's language for the AI summary (default 'vi'). */
+    language: LangSchema.optional(),
   }),
   /** A5: the playable songs of a YouTube playlist link. */
   'playlist:open': z.strictObject({
