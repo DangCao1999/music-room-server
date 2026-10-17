@@ -1,3 +1,4 @@
+import { refusedTrackIds } from './room-refusals';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { AiService } from '../ai/ai.service';
 import { ENV, type Env } from '../config/env';
@@ -262,12 +263,14 @@ export class SuggestService {
       ...lf.known.map((k) => ({ id: k, reason: 'similar' as const })),
       ...(await this.dbPart(this.prisma, roomId, seed)),
     ];
+    // Nothing the room would refuse (blocked, played within the repeat gap).
+    const refused = await refusedTrackIds(this.prisma, roomId, settings);
     const picks = await this.eligible(
       this.prisma,
       roomId,
       candidates,
       settings,
-      new Set(seed ? [seed.id] : []),
+      new Set([...(seed ? [seed.id] : []), ...refused]),
     );
     const items: SuggestionView[] = picks
       .slice(0, MAX_TRACKS)

@@ -1,3 +1,4 @@
+import { refusedTrackIds } from '../music/room-refusals';
 import { Injectable } from '@nestjs/common';
 import {
   normalizeQuery,
@@ -218,7 +219,11 @@ export class TasteService {
           })
         ).map((w) => w.trackId)
       : [];
-    const skip = new Set([...p.exclude, ...waiting]);
+    // In a room: nothing it would refuse (blocked, played within the repeat gap).
+    const refused = room
+      ? await refusedTrackIds(this.prisma, room.roomId, room.settings)
+      : [];
+    const skip = new Set([...p.exclude, ...waiting, ...refused]);
     const max = room?.settings.maxTrackDurationSec ?? 0;
     const ok = (t: Track | undefined): t is Track =>
       Boolean(t) &&
