@@ -448,11 +448,15 @@ export class PlaybackService
   ): Promise<void> {
     await this.state.mutate(actor.roomId, async (tx, ctx) => {
       const me = await this.state.activeMember(tx, actor);
-      if (me.role !== 'ADMIN' && !me.canControl)
-        throw new AppError('FORBIDDEN');
       const ps = await tx.playbackState.findUniqueOrThrow({
         where: { roomId: actor.roomId },
       });
+      // The speaker itself may pause / resume: someone at it paused the YouTube video.
+      const atSpeaker =
+        ps.playerMemberId === me.id &&
+        (input.action === 'pause' || input.action === 'play');
+      if (me.role !== 'ADMIN' && !me.canControl && !atSpeaker)
+        throw new AppError('FORBIDDEN');
       if (ps.currentItemId !== input.queueItemId || ps.status === 'IDLE') {
         throw new AppError('STALE_ITEM');
       }
