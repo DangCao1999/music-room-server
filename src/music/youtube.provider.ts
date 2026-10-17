@@ -17,6 +17,8 @@ const API = 'https://www.googleapis.com/youtube/v3';
 const OEMBED = 'https://www.youtube.com/oembed';
 export const HTTP_TIMEOUT_MS = 5000;
 const QUOTA_BACKOFF_MS = 60 * 60_000;
+/** YouTube's "Music" video category. */
+const MUSIC_CATEGORY_ID = '10';
 
 type Fetch = typeof fetch;
 type Result = { status: number; body: unknown };
@@ -261,6 +263,30 @@ export class YouTubeProvider {
       if (e instanceof QuotaError) throw new AppError('QUOTA_EXCEEDED');
       if (e instanceof KeyError) throw new AppError('SEARCH_UNAVAILABLE');
       throw e;
+    }
+  }
+
+  /**
+   * YouTube's "most popular" music videos in a country (1 unit): what is trending there
+   * now — views gained fast, recent uploads — embeddable and not live, in chart order.
+   * Empty when the API cannot be used.
+   */
+  async trendingMusic(regionCode: string): Promise<TrackInfo[]> {
+    if (!this.apiUsable) return [];
+    try {
+      const body = (await this.api('videos', {
+        part: 'snippet,contentDetails,status',
+        chart: 'mostPopular',
+        regionCode,
+        videoCategoryId: MUSIC_CATEGORY_ID,
+        maxResults: '50',
+      })) as { items?: VideoItem[] };
+      return (body.items ?? [])
+        .map((v) => this.toInfo(v))
+        .filter((t) => t.embeddable && !t.live);
+    } catch (e) {
+      this.logger.warn(`Trending music could not be read: ${String(e)}`);
+      return [];
     }
   }
 

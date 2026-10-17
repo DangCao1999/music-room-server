@@ -18,6 +18,7 @@ export const INNERTUBE_COOLDOWN_MS = 30 * 60_000;
 const MAX_PAGES = 4;
 /** Shorts and clips this short are not songs. */
 const MIN_DURATION_SEC = 60;
+const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 /** Nodes YouTube shows when a search has no results ("Không tìm thấy kết quả"…). */
 const EMPTY_NOTICES = new Set([
   'BackgroundPromo',
@@ -127,6 +128,56 @@ export class InnerTubeProvider {
       if (!res.has_continuation) return { videos: out, more: false };
       if (page >= MAX_PAGES) return { videos: out, more: true };
       res = await withTimeout(res.getContinuation(), HTTP_TIMEOUT_MS);
+    }
+  }
+
+  /**
+   * What YouTube itself would play after this video: YouTube Music's radio ("Phát tiếp",
+   * up to ~50 songs by the same and related artists), else youtube.com's "Up next" feed.
+   * Video ids in YouTube's order, without the video itself; [] when neither answers.
+   */
+  async upNext(videoId: string): Promise<string[]> {
+    if (!this.available) return [];
+    const yt = await this.session();
+    const own = (ids: (string | undefined)[]) => [
+      ...new Set(
+        ids.filter(
+          (id): id is string =>
+            typeof id === 'string' && VIDEO_ID.test(id) && id !== videoId,
+        ),
+      ),
+    ];
+    try {
+      const radio = await withTimeout(
+        yt.music.getUpNext(videoId, true),
+        HTTP_TIMEOUT_MS,
+      );
+      const ids = own(
+        (radio.contents ?? []).map(
+          (x) => (x as { video_id?: string }).video_id,
+        ),
+      );
+      if (ids.length) return ids;
+    } catch (e) {
+      this.logger.warn(
+        `YouTube Music up next for ${videoId} failed: ${String(e)}`,
+      );
+    }
+    try {
+      const info = await withTimeout(yt.getInfo(videoId), HTTP_TIMEOUT_MS);
+      return own(
+        (info.watch_next_feed ?? []).map((x) => {
+          const n = x as {
+            video_id?: string;
+            id?: string;
+            content_id?: string;
+          };
+          return n.video_id ?? n.content_id ?? n.id;
+        }),
+      );
+    } catch (e) {
+      this.logger.warn(`YouTube up next for ${videoId} failed: ${String(e)}`);
+      return [];
     }
   }
 
