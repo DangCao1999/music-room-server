@@ -30,6 +30,16 @@ export const LIBRARY_MAX_AGE_MS = 28 * DAY_MS;
 /** A query that found nothing is retried after 6 h, not on every keystroke-and-enter. */
 export const EMPTY_SEARCH_TTL_MS = 6 * 3600_000;
 /**
+ * InnerTube searches cost 1 unit: keep them only a few hours so new uploads show up
+ * soon; "nothing found" is more often temporary (a fresh upload, a hiccup) → 1 h.
+ */
+export const INNERTUBE_SEARCH_TTL_MS = 3 * 3600_000;
+export const INNERTUBE_EMPTY_TTL_MS = 3600_000;
+
+/** Search cache keys: Data API searches (100 units) and InnerTube searches. */
+const apiKey = (words: string) => `youtube:${words}`;
+const innertubeKey = (words: string) => `it:${words}`;
+/**
  * Only while InnerTube cannot be used (each YouTube search then costs 100 units): this
  * many loosely matching known songs are still answered from the library, as before.
  */
@@ -80,14 +90,21 @@ export class SearchService implements OnModuleInit {
     remote = false,
   ): Promise<SearchResult> {
     const words = normalizeQuery(q);
-    const key = `youtube:${words}`;
+    const key = apiKey(words);
 
     if (!matchWords(words).length) return { results: [], source: 'library' };
 
-    const cached = await this.fromCache(key);
+    const innertube = this.innertube.available;
+    // With InnerTube a fresh search is cheap: only its own recent results are reused,
+    // and "Tìm trên YouTube" (remote) always asks again. Without it, any earlier result.
+    const cached = innertube
+      ? remote
+        ? null
+        : await this.fromInnerTubeCache(words)
+      : ((await this.fromApiCache(words)) ??
+        (await this.fromInnerTubeCache(words)));
     if (cached) return { results: cached, source: 'cache' };
 
-    const innertube = this.innertube.available;
     const hasApi = this.youtube.searchEnabled;
     let lib: Awaited<ReturnType<SearchService['rankLibrary']>> | null = null;
     // The old stop-at-library rule (substring hits): applied whenever a YouTube search
@@ -129,14 +146,33 @@ export class SearchService implements OnModuleInit {
   }
 
   /** An earlier YouTube search for the same words, in YouTube's order. Free. */
-  cached(q: string): Promise<TrackSummary[] | null> {
-    return this.fromCache(`youtube:${normalizeQuery(q)}`);
+  async cached(q: string): Promise<TrackSummary[] | null> {
+    const words = normalizeQuery(q);
+    return (
+      (await this.fromInnerTubeCache(words)) ?? (await this.fromApiCache(words))
+    );
   }
 
-  private async fromCache(key: string): Promise<TrackSummary[] | null> {
+  private fromApiCache(words: string): Promise<TrackSummary[] | null> {
+    return this.fromCache(apiKey(words), SEARCH_TTL_MS, EMPTY_SEARCH_TTL_MS);
+  }
+
+  private fromInnerTubeCache(words: string): Promise<TrackSummary[] | null> {
+    return this.fromCache(
+      innertubeKey(words),
+      INNERTUBE_SEARCH_TTL_MS,
+      INNERTUBE_EMPTY_TTL_MS,
+    );
+  }
+
+  private async fromCache(
+    key: string,
+    ttlMs: number,
+    emptyTtlMs: number,
+  ): Promise<TrackSummary[] | null> {
     const cached = await this.prisma.searchCache.findUnique({ where: { key } });
     if (!cached) return null;
-    const ttl = cached.trackIds.length ? SEARCH_TTL_MS : EMPTY_SEARCH_TTL_MS;
+    const ttl = cached.trackIds.length ? ttlMs : emptyTtlMs;
     if (Date.now() - cached.createdAt.getTime() >= ttl) return null;
     const rows = await this.prisma.track.findMany({
       where: { id: { in: cached.trackIds } },
@@ -222,15 +258,20 @@ export class SearchService implements OnModuleInit {
           `InnerTube search failed, using the Data API: ${String(e)}`,
         );
       }
-      // Nothing found there: let the Data API search have a go (if any).
-      if (found?.length === 0 && !this.youtube.searchEnabled) return [];
+      const itKey = key.replace(/^youtube:/, 'it:');
+      // YouTube's own search found nothing: the Data API search (same index, 100
+      // units) would not either. Remembered for INNERTUBE_EMPTY_TTL_MS.
+      if (found?.length === 0) {
+        this.logger.log(`search "${q}" via innertube (nothing found)`);
+        return this.store(itKey, []);
+      }
       if (found?.length) {
         const checked = await this.youtube.checkVideos(
           found.map((f) => f.externalId),
         );
         if (checked) {
           this.logger.log(`search "${q}" via innertube+videos (1 unit)`);
-          return this.store(key, checked);
+          return this.store(itKey, checked);
         }
         // Not checked (no key / quota resting): shown for this search only, never stored.
         this.logger.log(`search "${q}" via innertube (unchecked)`);
@@ -262,7 +303,7 @@ export class SearchService implements OnModuleInit {
   ): Promise<TrackSummary[]> {
     const rows = await Promise.all(infos.map((i) => this.tracks.upsert(i)));
     const ids = infos.map((i) => trackId(i.externalId));
-    // Empty results are cached too, for a shorter time (EMPTY_SEARCH_TTL_MS).
+    // Empty results are cached too, for a shorter time (…EMPTY…_TTL_MS).
     await this.prisma.searchCache.upsert({
       where: { key },
       create: { key, trackIds: ids },

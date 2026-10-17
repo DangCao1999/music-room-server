@@ -17,6 +17,13 @@ export const INNERTUBE_COOLDOWN_MS = 30 * 60_000;
 const MAX_RESULTS = 10;
 /** Shorts and clips this short are not songs. */
 const MIN_DURATION_SEC = 60;
+/** Nodes YouTube shows when a search has no results ("Không tìm thấy kết quả"…). */
+const EMPTY_NOTICES = new Set([
+  'BackgroundPromo',
+  'Message',
+  'ShowingResultsFor',
+  'DidYouMean',
+]);
 
 type YouTubeJs = typeof import('youtubei.js');
 type VideoNode = InstanceType<YouTubeJs['YTNodes']['Video']>;
@@ -90,9 +97,16 @@ export class InnerTubeProvider {
       });
       if (out.length >= MAX_RESULTS) break;
     }
-    // Results we could not use at all (a new layout, all Shorts…): a failure, not "nothing".
-    if (res.results.length > 0 && out.length === 0)
-      throw new Error('InnerTube: no usable videos in the results');
+    // Only YouTube's own "no results" notices: truly nothing found.
+    if (
+      !res.videos.length &&
+      res.results.every((n) => EMPTY_NOTICES.has(n.type))
+    )
+      return [];
+    // Items we do not know at all (a new page layout): a failure, not "nothing".
+    if (!res.videos.some((n) => n.type === 'Video'))
+      throw new Error('InnerTube: unexpected search results');
+    // Videos found but all Shorts / live: nothing usable, and that is a real answer.
     return out;
   }
 
