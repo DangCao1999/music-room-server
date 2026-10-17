@@ -123,3 +123,52 @@ export function parseTitle(title: string, channel: string | null): ParsedTitle {
     confident: false,
   };
 }
+
+/** Words that name a version or a format, not the song ("(rumba Ver)", "Remix", "COVER"…). */
+const VERSION_WORDS = new Set([
+  'remix',
+  'cover',
+  'ver',
+  'version',
+  'official',
+  'mv',
+  'lyric',
+  'lyrics',
+  'audio',
+  'live',
+  'acoustic',
+  'lofi',
+  'karaoke',
+  'beat',
+  'performance',
+  'visualizer',
+]);
+
+/**
+ * The song a video is a version of, for telling "the same hit again" apart (a chart lists
+ * its original, remix, cover and rumba versions): the title without brackets and version
+ * words, split at | – - / :, minus the part that is the channel's name, and the first part
+ * of two words or more (else the first part). Accent-free, lower case.
+ */
+export function songKey(title: string, channel: string | null): string {
+  const clean = (s: string) =>
+    normalizeQuery(s)
+      .replace(/[^a-z0-9 ]+/g, ' ')
+      .split(' ')
+      .filter((w) => w && !VERSION_WORDS.has(w))
+      .join(' ');
+  const own = clean(
+    (channel ?? '').replace(
+      /\b(official|topic|channel|music|singer|vevo)\b/gi,
+      '',
+    ),
+  );
+  const parts = title
+    .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
+    .replace(/\bmusic video\b/gi, ' ')
+    .split(/\s[-–—]\s|[|/:]/)
+    .map(clean)
+    // The channel's own name is the artist, not the song ("Maroon5" for "Maroon 5" too).
+    .filter((p) => p && p.replace(/ /g, '') !== own.replace(/ /g, ''));
+  return parts.find((p) => p.includes(' ')) ?? parts[0] ?? clean(title);
+}

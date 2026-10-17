@@ -95,6 +95,10 @@ export interface LyricsView {
 
 /** Why a song is suggested (A3). */
 export type SuggestionReason =
+  /** YouTube's own "up next" for the song on air (or the songs just played). */
+  | 'youtube'
+  /** Nothing played lately: YouTube's trending music in Vietnam. */
+  | 'trending'
   | 'similar'
   | 'room'
   | 'artist'
