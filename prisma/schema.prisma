@@ -279,6 +279,8 @@ model ActivityLog {
 model SearchCache {
   key       String   @id
   trackIds  String[]
+  /// YouTube had more songs after these ("Xem thêm" can fetch them).
+  more      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
 

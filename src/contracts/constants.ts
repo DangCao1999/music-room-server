@@ -15,6 +15,10 @@ export const LIMITS = {
   rawText: 4000,
 } as const;
 
+/** Song search: results per page ("Xem thêm" adds one) and at most this many in all. */
+export const SEARCH_PAGE_SIZE = 12;
+export const SEARCH_MAX_RESULTS = 36;
+
 export const VOICE_PRESETS = [
   'radio',
   'drama',

@@ -11,6 +11,8 @@ import {
   PLAYER_ERROR_CODES,
   REACTIONS,
   THEME_IDS,
+  SEARCH_MAX_RESULTS,
+  SEARCH_PAGE_SIZE,
   VOICE_PRESETS,
   VOICES,
 } from './constants';
@@ -153,6 +155,13 @@ export const C2S = {
   'search:query': z.strictObject({
     q: line(LIMITS.query),
     remote: z.boolean().optional(),
+    /** "Xem thêm": 0 = the first SEARCH_PAGE_SIZE results, 1 = the next ones, … */
+    page: z
+      .number()
+      .int()
+      .min(0)
+      .max(SEARCH_MAX_RESULTS / SEARCH_PAGE_SIZE - 1)
+      .optional(),
   }),
   'playback:control': z.strictObject({
     action: z.enum(['play', 'pause', 'skip', 'seek']),
