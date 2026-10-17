@@ -11,15 +11,18 @@ FROM deps AS build
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 COPY . .
 RUN npx prisma generate && npx nest build && npm prune --omit=dev
+# Edge TTS voices (Python edge-tts, pinned in tts-requirements.txt) into /app/.python.
+RUN apk add --no-cache python3 py3-pip && npm run tts:install
 
 FROM node:22-alpine
 ENV NODE_ENV=production PORT=3001 DATA_DIR=/data
 WORKDIR /app
-RUN mkdir -p /data && chown node:node /data
+RUN apk add --no-cache python3 && mkdir -p /data && chown node:node /data
 COPY --from=build --chown=node:node /app/package.json /app/prisma.config.ts ./
 COPY --from=build --chown=node:node /app/prisma ./prisma
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/.python ./.python
 USER node
 VOLUME ["/data"]
 EXPOSE 3001

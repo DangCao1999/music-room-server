@@ -81,6 +81,8 @@ const IP_WINDOW_MS = 60_000;
 /** Extra throttles (review): PIN guesses per member, room-code lookups per IP. */
 export const CLAIM_LIMIT = { count: 10, windowMs: 60_000 };
 export const PEEK_LIMIT = { count: 60, windowMs: 60_000 };
+/** Each saved wish makes an Edge voice (a Python process): keep it to normal use. */
+export const WISH_LIMIT = { count: 10, windowMs: 60_000 };
 /** tracks:lookup may call YouTube for unknown ids: a few per minute is plenty. */
 export const LOOKUP_LIMIT = { count: 10, windowMs: 60_000 };
 /** Lyrics are asked once per song per device (cached on the server). */
@@ -827,9 +829,10 @@ export class RealtimeGateway
 
   @SubscribeMessage('queue:set-message')
   setMessage(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
-    return this.run('queue:set-message', s, body, (input, actor) =>
-      this.queue.setMessage(actor, input),
-    );
+    return this.run('queue:set-message', s, body, (input, actor) => {
+      this.limit(`wish:${actor.memberId}`, WISH_LIMIT);
+      return this.queue.setMessage(actor, input);
+    });
   }
 
   @SubscribeMessage('queue:vote-skip')

@@ -9,7 +9,8 @@ services:
     # Same region as Neon (AWS ap-southeast-1) and close to Vietnam. Render cannot move
     # an existing service: a different region means a new service (deploy/README.md §8.6).
     region: singapore
-    buildCommand: npm install --include=dev && npm run build
+    # tts:install adds Python edge-tts (wish / MC voices); without it the speaker uses the browser voice.
+    buildCommand: npm install --include=dev && npm run build && npm run tts:install --if-present
     # Runs `prisma migrate deploy` before the server listens.
     startCommand: npm run start:prod
     healthCheckPath: /api/health

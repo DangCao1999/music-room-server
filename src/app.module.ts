@@ -46,12 +46,20 @@ import { SocialService } from './social/social.service';
 import { RoomStateService } from './state/room-state.service';
 import { SnapshotService } from './state/snapshot.service';
 
+import { TtsController } from './tts/tts.controller';
+import { TtsService } from './tts/tts.service';
+
 @Module({})
 export class AppModule {
   static forRoot(env: Env, timing: Timing = DEFAULT_TIMING): DynamicModule {
     return {
       module: AppModule,
-      controllers: [HealthController, RoomsController, SlackController],
+      controllers: [
+        HealthController,
+        RoomsController,
+        SlackController,
+        TtsController,
+      ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: TIMING, useValue: timing },
@@ -69,6 +77,7 @@ export class AppModule {
         AiService,
         ModerationService,
         McService,
+        TtsService,
         DjService,
         LastFmService,
         TrackMetaService,
