@@ -7,13 +7,15 @@ import {
   type TrackSummary,
 } from '../contracts';
 import { PrismaService } from '../prisma/prisma.service';
+import { type FoundVideo, InnerTubeProvider } from './innertube.provider';
+import { isConfident, matchWords, scoreTrack } from './library-match';
 import { toTrackSummary } from '../state/views';
 import {
   TrackCacheService,
   trackId,
   trackSearchKey,
 } from './track-cache.service';
-import { YouTubeProvider } from './youtube.provider';
+import { type TrackInfo, YouTubeProvider } from './youtube.provider';
 
 type SearchResult = CommandResults['search:query'];
 
@@ -27,15 +29,20 @@ export const SEARCH_TTL_MS = 28 * DAY_MS;
 export const LIBRARY_MAX_AGE_MS = 28 * DAY_MS;
 /** A query that found nothing is retried after 6 h, not on every keystroke-and-enter. */
 export const EMPTY_SEARCH_TTL_MS = 6 * 3600_000;
-/** Enough known songs to skip YouTube; fewer and YouTube is asked as well. */
+/**
+ * Only while InnerTube cannot be used (each YouTube search then costs 100 units): this
+ * many loosely matching known songs are still answered from the library, as before.
+ */
 export const LIBRARY_MIN_HITS = 3;
 export const SEARCH_LIMIT = { count: 10, windowMs: 3600_000 };
 
 /**
- * Search, cheapest first (R-35):
+ * Search, cheapest first (R-35, spec 2026-10-17-search):
  * 1. an earlier YouTube search for the same normalized words (free),
- * 2. songs this server already knows — added or found in the last 28 days (free),
- * 3. YouTube, at most once at a time per query (one search call).
+ * 2. songs this server already knows, ranked by how well they match — answered only
+ *    when the match is sure (free),
+ * 3. YouTube, at most once at a time per query: InnerTube (no quota) checked through
+ *    the Data API (1 unit), else the Data API search (100 units).
  * `remote` skips step 2 when the user asks for "Tìm trên YouTube".
  */
 @Injectable()
@@ -48,6 +55,7 @@ export class SearchService implements OnModuleInit {
     private readonly prisma: PrismaService,
     private readonly youtube: YouTubeProvider,
     private readonly tracks: TrackCacheService,
+    private readonly innertube: InnerTubeProvider,
   ) {}
 
   /** Fill searchKey for tracks stored before the column existed. */
@@ -74,39 +82,50 @@ export class SearchService implements OnModuleInit {
     const words = normalizeQuery(q);
     const key = `youtube:${words}`;
 
+    if (!matchWords(words).length) return { results: [], source: 'library' };
+
     const cached = await this.fromCache(key);
     if (cached) return { results: cached, source: 'cache' };
 
+    const innertube = this.innertube.available;
+    const hasApi = this.youtube.searchEnabled;
+    let lib: Awaited<ReturnType<SearchService['rankLibrary']>> | null = null;
+    // The old stop-at-library rule (substring hits): applied whenever a YouTube search
+    // would cost 100 units, so quota never goes up — showing the better ranking.
+    const oldRule = async (): Promise<TrackSummary[] | null> => {
+      if (remote || !lib) return null;
+      const old = await this.fromLibrary(words);
+      if (old.length >= LIBRARY_MIN_HITS || (old.length > 0 && !hasApi))
+        return lib.results.length ? lib.results : old;
+      return null;
+    };
     if (!remote) {
-      const known = await this.fromLibrary(words);
-      if (
-        known.length >= LIBRARY_MIN_HITS ||
-        (known.length > 0 && !this.youtube.searchEnabled)
-      ) {
-        return { results: known, source: 'library' };
+      lib = await this.rankLibrary(q);
+      if (lib.strong) return { results: lib.results, source: 'library' };
+      if (!innertube) {
+        const known = await oldRule();
+        if (known) return { results: known, source: 'library' };
       }
     }
 
-    if (!this.youtube.searchEnabled) throw new AppError('SEARCH_UNAVAILABLE');
-    // Only real YouTube calls count against the per-member limit.
-    const rl = this.limiter.hit(
-      `search:${memberId}`,
-      SEARCH_LIMIT.count,
-      SEARCH_LIMIT.windowMs,
-      Date.now(),
-    );
-    if (!rl.ok)
-      throw new AppError('RATE_LIMITED', { seconds: rl.retryAfterSec });
+    if (!innertube && !hasApi) throw new AppError('SEARCH_UNAVAILABLE');
 
-    // Several people searching the same words at once share one call.
+    // Several people searching the same words at once share one search.
     let pending = this.inFlight.get(key);
     if (!pending) {
-      pending = this.fromYouTube(key, q).finally(() =>
+      pending = this.fromYouTube(key, q, memberId, oldRule).finally(() =>
         this.inFlight.delete(key),
       );
       this.inFlight.set(key, pending);
     }
-    return { results: await pending, source: 'youtube' };
+    try {
+      return { results: await pending, source: 'youtube' };
+    } catch (e) {
+      // YouTube unreachable right now: what the library has beats an error.
+      if (lib?.results.length)
+        return { results: lib.results, source: 'library' };
+      throw e;
+    }
   }
 
   /** An earlier YouTube search for the same words, in YouTube's order. Free. */
@@ -134,7 +153,7 @@ export class SearchService implements OnModuleInit {
 
   /** Every word must appear in title or channel (accents and case ignored). Free. */
   async fromLibrary(words: string): Promise<TrackSummary[]> {
-    const tokens = words.split(' ').filter(Boolean).slice(0, 8);
+    const tokens = matchWords(words).slice(0, 8);
     if (!tokens.length) return [];
     const rows = await this.prisma.track.findMany({
       where: {
@@ -148,8 +167,99 @@ export class SearchService implements OnModuleInit {
     return rows.map(toTrackSummary);
   }
 
-  private async fromYouTube(key: string, q: string): Promise<TrackSummary[]> {
-    const infos = await this.youtube.search(q);
+  /**
+   * The library ranked by how well each song matches what was typed (whole words, the
+   * accented phrase first). `strong`: sure enough to skip YouTube. Free.
+   */
+  async rankLibrary(
+    q: string,
+  ): Promise<{ results: TrackSummary[]; strong: boolean; total: number }> {
+    const words = normalizeQuery(q);
+    // Same word split as the scoring (punctuation, % and _ never reach LIKE).
+    const tokens = matchWords(words).slice(0, 8);
+    if (!tokens.length) return { results: [], strong: false, total: 0 };
+    // Broad candidates (substring on the accent-free key), then whole-word scoring here.
+    const rows = await this.prisma.track.findMany({
+      where: {
+        embeddable: true,
+        fetchedAt: { gte: new Date(Date.now() - LIBRARY_MAX_AGE_MS) },
+        AND: tokens.map((t) => ({ searchKey: { contains: t } })),
+      },
+      orderBy: { fetchedAt: 'desc' },
+      take: 300,
+    });
+    const scored = rows
+      .map((r) => ({ r, score: scoreTrack(r.title, r.channel, q) }))
+      .filter((x) => x.score > 0)
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          a.r.title.length - b.r.title.length ||
+          b.r.fetchedAt.getTime() - a.r.fetchedAt.getTime(),
+      );
+    return {
+      results: scored.slice(0, 10).map((x) => toTrackSummary(x.r)),
+      strong: isConfident(
+        scored.map((x) => x.score),
+        matchWords(words).length,
+      ),
+      total: scored.length,
+    };
+  }
+
+  private async fromYouTube(
+    key: string,
+    q: string,
+    memberId: string,
+    beforeApi: () => Promise<TrackSummary[] | null>,
+  ): Promise<TrackSummary[]> {
+    if (this.innertube.available) {
+      let found: FoundVideo[] | null = null;
+      try {
+        found = await this.innertube.search(q);
+      } catch (e) {
+        this.logger.warn(
+          `InnerTube search failed, using the Data API: ${String(e)}`,
+        );
+      }
+      // Nothing found there: let the Data API search have a go (if any).
+      if (found?.length === 0 && !this.youtube.searchEnabled) return [];
+      if (found?.length) {
+        const checked = await this.youtube.checkVideos(
+          found.map((f) => f.externalId),
+        );
+        if (checked) {
+          this.logger.log(`search "${q}" via innertube+videos (1 unit)`);
+          return this.store(key, checked);
+        }
+        // Not checked (no key / quota resting): shown for this search only, never stored.
+        this.logger.log(`search "${q}" via innertube (unchecked)`);
+        return found.map(foundToSummary);
+      }
+    }
+
+    if (!this.youtube.searchEnabled) throw new AppError('SEARCH_UNAVAILABLE');
+    // About to spend 100 units: the old rule may still answer from the library.
+    const known = await beforeApi();
+    if (known) return known;
+    // Only Data API searches (100 units) count against the per-member limit.
+    const rl = this.limiter.hit(
+      `search:${memberId}`,
+      SEARCH_LIMIT.count,
+      SEARCH_LIMIT.windowMs,
+      Date.now(),
+    );
+    if (!rl.ok)
+      throw new AppError('RATE_LIMITED', { seconds: rl.retryAfterSec });
+    this.logger.log(`search "${q}" via api (100 units)`);
+    return this.store(key, await this.youtube.search(q));
+  }
+
+  /** Remember checked results: the tracks in the library, the order in the search cache. */
+  private async store(
+    key: string,
+    infos: TrackInfo[],
+  ): Promise<TrackSummary[]> {
     const rows = await Promise.all(infos.map((i) => this.tracks.upsert(i)));
     const ids = infos.map((i) => trackId(i.externalId));
     // Empty results are cached too, for a shorter time (EMPTY_SEARCH_TTL_MS).
@@ -160,4 +270,19 @@ export class SearchService implements OnModuleInit {
     });
     return rows.map(toTrackSummary);
   }
+}
+
+/** An unchecked InnerTube result shown as a search row. */
+function foundToSummary(f: FoundVideo): TrackSummary {
+  return {
+    id: trackId(f.externalId),
+    provider: 'youtube',
+    externalId: f.externalId,
+    title: f.title,
+    channel: f.channel,
+    durationSec: f.durationSec,
+    thumbnailUrl: f.thumbnailUrl,
+    artist: null,
+    song: null,
+  };
 }

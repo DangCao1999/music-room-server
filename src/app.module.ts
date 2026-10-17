@@ -28,6 +28,7 @@ import { SlackCommands } from './chat/slack/slack-commands.service';
 import { SlackHomeService } from './chat/slack/slack-home.service';
 import { SlackController } from './chat/slack/slack.controller';
 import { TrackCacheService } from './music/track-cache.service';
+import { InnerTubeProvider } from './music/innertube.provider';
 import { YouTubeProvider } from './music/youtube.provider';
 import { LeaseService } from './playback/lease.service';
 import { PlaybackService } from './playback/playback.service';
@@ -63,6 +64,7 @@ export class AppModule {
         RoomStateService,
         ActivityService,
         YouTubeProvider,
+        InnerTubeProvider,
         TrackCacheService,
         AiService,
         ModerationService,
