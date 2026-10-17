@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Máy phát theo chủ đề 1</title>
+<style>body{background:#1b1b1d;color:#eee;font-family:system-ui,sans-serif;max-width:1100px;margin:0 auto;padding:24px 16px}.card{background:#26262a;border-radius:10px}</style></head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Bungee&family=Patrick+Hand&family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,600&family=Exo+2:ital,wght@1,800;1,900&family=Be+Vietnam+Pro:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  .hx h2{margin:0 0 .3rem}
+  .hx .lead{margin:0 0 1.2rem;opacity:.8}
+  .hx .shot{margin:0 0 2.2rem}
+  .hx .shot h3{margin:0 0 .25rem}
+  .hx .shot p.cap{margin:.5rem 0 0;opacity:.8;font-size:.92rem;line-height:1.45}
+  .tv{container-type:inline-size;width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;border-radius:10px;box-shadow:0 0 0 6px #111,0 10px 30px #0006;font-family:'Be Vietnam Pro',sans-serif}
+  .tv *{box-sizing:border-box}
+  .in{position:absolute;inset:0;font-size:1cqw;line-height:1.25}
+  .vid{width:100%;aspect-ratio:16/9;background:radial-gradient(circle at 30% 30%,#5a4a6a,#1b1620 70%);display:grid;place-items:center;color:#fff9;font-size:1.1cqw;position:relative}
+  .vid::before{content:'';width:0;height:0;border-left:3cqw solid #fff8;border-top:1.8cqw solid transparent;border-bottom:1.8cqw solid transparent;margin-bottom:1.5cqw}
+  .vid span{position:absolute;bottom:.8cqw;left:1cqw;opacity:.8}
+  .qr{aspect-ratio:1;background:
+      linear-gradient(#111 0 0) 0 0/28% 28% no-repeat,
+      linear-gradient(#111 0 0) 100% 0/28% 28% no-repeat,
+      linear-gradient(#111 0 0) 0 100%/28% 28% no-repeat,
+      repeating-conic-gradient(#111 0 25%,#fff 0 50%) 0 0/13% 13%,
+      repeating-linear-gradient(90deg,#fff 0 7%,transparent 0 11%);
+    background-color:#fff;outline:.6cqw solid #fff;position:relative}
+  .qr::after{content:'';position:absolute;inset:0;background:
+      linear-gradient(#fff 0 0) 4% 4%/20% 20% no-repeat,linear-gradient(#fff 0 0) 96% 4%/20% 20% no-repeat,linear-gradient(#fff 0 0) 4% 96%/20% 20% no-repeat}
+  .av{display:flex}
+  .av i{width:2.1cqw;height:2.1cqw;border-radius:50%;margin-right:-.5cqw;border:.2cqw solid currentColor;background:var(--c,#888)}
+  .lbl{font-size:.85cqw;opacity:.75}
+
+  /* ===== STATION ===== */
+  .st .in{background:#0f1d17;color:#f2efe6;font-family:'Barlow Condensed',sans-serif;display:grid;grid-template-rows:7% 1fr 7%}
+  .st-head{display:flex;align-items:center;gap:1.4cqw;padding:0 2cqw;background:#0a1410;border-bottom:.25cqw solid #ffb23f}
+  .flaps{display:flex;gap:.25cqw}
+  .flaps b{background:#1c1c1c;color:#ffb23f;font-size:1.9cqw;width:1.9cqw;text-align:center;border-radius:.2cqw;position:relative;line-height:1.3}
+  .flaps b::after{content:'';position:absolute;left:0;right:0;top:50%;height:.1cqw;background:#000}
+  .st-head .grow{flex:1;font-size:1.2cqw;letter-spacing:.1em;opacity:.8}
+  .st-clock{font-size:2.6cqw;font-weight:700;color:#ffb23f}
+  .st-main{display:grid;grid-template-columns:61% 1fr;gap:2cqw;padding:1.6cqw 2cqw}
+  .st-left{display:flex;flex-direction:column;gap:.6cqw;min-width:0}
+  .st-left .vid{width:88%}
+  .st-row{display:flex;align-items:center;gap:1cqw;font-size:1.2cqw;letter-spacing:.08em}
+  .st-row .lamp{background:#e04434;color:#fff;padding:.1cqw .7cqw;border-radius:.2cqw;font-weight:700}
+  .st-title{font-size:3.4cqw;font-weight:700;letter-spacing:.03em;line-height:1}
+  .st-meta{font-size:1.35cqw;opacity:.85}
+  .st-track{height:.6cqw;background:#2c3b33;position:relative;border-radius:1cqw;margin-top:.3cqw}
+  .st-track i{position:absolute;inset:0 auto 0 0;width:42%;background:#ffb23f;border-radius:1cqw}
+  .st-track em{position:absolute;left:42%;top:50%;width:1.2cqw;height:1.2cqw;background:#fff;border-radius:50%;transform:translate(-50%,-50%)}
+  .st-lyric{font-size:1.4cqw;color:#ffb23f;font-family:'Be Vietnam Pro'}
+  .st-right{display:flex;flex-direction:column;gap:1.2cqw;min-width:0}
+  .ticket{background:#f2efe6;color:#0f1d17;border-radius:.6cqw;display:grid;grid-template-columns:42% 1fr;gap:1.2cqw;padding:1.2cqw;position:relative}
+  .ticket::before,.ticket::after{content:'';position:absolute;top:50%;width:1.6cqw;height:1.6cqw;border-radius:50%;background:#0f1d17;transform:translateY(-50%)}
+  .ticket::before{left:-.8cqw}.ticket::after{right:-.8cqw}
+  .ticket h4{margin:0;font-size:1.1cqw;letter-spacing:.12em}
+  .ticket .code{font-size:3cqw;font-weight:700;letter-spacing:.06em;line-height:1.1}
+  .board{background:#0a1410;border:.15cqw solid #2c3b33;border-radius:.4cqw;padding:.8cqw 1cqw}
+  .board h4{margin:0 0 .5cqw;color:#ffb23f;font-size:1.2cqw;letter-spacing:.14em}
+  .board div{display:grid;grid-template-columns:4.2cqw 1fr 5cqw;gap:.6cqw;font-size:1.3cqw;padding:.35cqw 0;border-top:.1cqw solid #2c3b33}
+  .board div b{color:#ffb23f}
+  .st-ticker{background:#ffb23f;color:#0f1d17;display:flex;align-items:center;gap:1.5cqw;padding:0 2cqw;font-size:1.4cqw;font-weight:600;white-space:nowrap;overflow:hidden}
+  .st-ticker .msgs{flex:1;overflow:hidden}
+  .st-ticker .ctl{font-size:1.1cqw;border-left:.15cqw solid #0f1d1755;padding-left:1.2cqw}
+
+  /* ===== CASSETTE ===== */
+  .cs .in{background:#2e1d13;color:#f1ead9;display:grid;grid-template-columns:60% 1fr;gap:2cqw;padding:2.6cqw 2.2cqw 1.6cqw}
+  .cs .in::before{content:'';position:absolute;left:0;right:0;top:0;height:1.2cqw;background:linear-gradient(90deg,#e3a62b 0 33%,#c8401f 0 66%,#7a3a1c 0)}
+  .cs-left{display:flex;flex-direction:column;gap:1cqw;min-width:0}
+  .cs-left .vid{width:90%;border:.4cqw solid #1c1612}
+  .shell{background:#3a2f27;border-radius:1cqw;padding:1cqw;display:grid;grid-template-columns:1fr 34%;gap:1cqw;width:90%;box-shadow:inset 0 0 0 .2cqw #5a4433}
+  .label{text-transform:none;letter-spacing:0;background:#f1ead9;color:#2b1c12;border-radius:.4cqw;padding:.6cqw 1cqw;background-image:repeating-linear-gradient(#f1ead9 0 1.9cqw,#c9b99b 0 2cqw)}
+  .label .side{font-family:'Bungee';font-size:.95cqw;color:#c8401f}
+  .label .t{font-family:'Patrick Hand';font-size:2.4cqw;line-height:1.05}
+  .label .p{font-family:'Patrick Hand';font-size:1.35cqw}
+  .window{background:#1c1612;border-radius:.6cqw;display:flex;justify-content:space-around;align-items:center;position:relative}
+  .reel{width:4cqw;height:4cqw;border-radius:50%;border:.5cqw dotted #e3a62b;background:radial-gradient(#1c1612 30%,#6b4a32 31% 70%,transparent 71%)}
+  .reel.r{background:radial-gradient(#1c1612 30%,#6b4a32 31% 45%,transparent 46%)}
+  .window small{position:absolute;bottom:.3cqw;font-size:.95cqw;color:#e3a62b}
+  .cs-lyric{font-family:'Patrick Hand';font-size:1.7cqw;color:#e3a62b}
+  .cs-right{position:relative;display:flex;flex-direction:column;gap:1.1cqw;min-width:0}
+  .sticker{background:#fff;color:#111;padding:1cqw;width:62%;transform:rotate(-2deg);box-shadow:.4cqw .5cqw 0 #0005;align-self:center}
+  .sticker p{margin:.5cqw 0 0;font-family:'Patrick Hand';font-size:1.35cqw;text-align:center}
+  .dymo{background:#111;color:#eee;font-family:'Bungee';font-size:2.2cqw;letter-spacing:.18em;padding:.3cqw 1cqw;transform:rotate(1.5deg);align-self:center;box-shadow:0 .2cqw 0 #000}
+  .jcard{background:#f1ead9;color:#2b1c12;padding:.8cqw 1.2cqw;border-left:1.6cqw solid #c8401f}
+  .jcard h4{margin:0;font-family:'Bungee';font-size:1cqw;color:#c8401f}
+  .jcard div{font-family:'Patrick Hand';font-size:1.45cqw;border-bottom:.1cqw dashed #c9b99b;padding:.15cqw 0}
+  .notes{display:flex;gap:.8cqw}
+  .note{background:#f6d860;color:#2b1c12;font-family:'Patrick Hand';font-size:1.15cqw;padding:.6cqw .7cqw;width:33%;box-shadow:.2cqw .3cqw 0 #0004}
+  .note:nth-child(2){transform:rotate(2deg);background:#f4b0a0}.note:nth-child(1){transform:rotate(-2deg)}
+  .wishnote{position:absolute;left:47%;top:44%;background:#f6d860;color:#2b1c12;font-family:'Patrick Hand';font-size:1.45cqw;padding:.7cqw 1cqw;width:15cqw;transform:rotate(4deg);box-shadow:.3cqw .4cqw 0 #0005}
+  .cs-foot{display:flex;align-items:center;gap:1cqw;font-size:1cqw}
+
+  /* ===== WALNUT ===== */
+  .wal .in{background:repeating-linear-gradient(92deg,#3a2414 0 .6cqw,#2f1d12 0 1.1cqw,#43291a 0 1.5cqw);color:#ece3cf;display:grid;grid-template-columns:62% 1fr;gap:1.8cqw;padding:2cqw}
+  .wal-left{display:flex;flex-direction:column;gap:1.2cqw;min-width:0}
+  .bezel{background:#120b06;padding:1cqw;border-radius:1.2cqw;box-shadow:inset 0 0 0 .3cqw #b8954f,0 .5cqw 1cqw #0008;width:92%}
+  .deck{display:grid;grid-template-columns:auto 1fr auto;gap:1.4cqw;align-items:center;background:#1a110a;border-radius:1cqw;padding:1cqw 1.4cqw;width:92%;box-shadow:inset 0 0 0 .15cqw #4a3322}
+  .platter{width:7cqw;height:7cqw;border-radius:50%;background:repeating-radial-gradient(#111 0 .25cqw,#222 0 .4cqw);display:grid;place-items:center;position:relative}
+  .platter::after{content:'';width:2.6cqw;height:2.6cqw;border-radius:50%;background:radial-gradient(#111 12%,#d0453f 14%)}
+  .wal .t{font-family:'Fraunces';font-style:italic;font-weight:600;font-size:2.6cqw;line-height:1.05}
+  .wal .p{font-size:1.2cqw;color:#cdbf9f}
+  .wal .ly{font-family:'Fraunces';font-size:1.3cqw;color:#e8c674;margin-top:.4cqw}
+  .vu{width:9cqw;height:5.4cqw;background:#f3e3b5;border-radius:.5cqw .5cqw .3cqw .3cqw;position:relative;overflow:hidden;box-shadow:inset 0 0 0 .3cqw #b8954f}
+  .vu::before{content:'';position:absolute;left:50%;bottom:-3.6cqw;width:12cqw;height:12cqw;transform:translateX(-50%);border-radius:50%;border:.15cqw solid #2a1a0a;border-right-color:#d0453f;border-top-color:#2a1a0a}
+  .vu::after{content:'';position:absolute;left:50%;bottom:.3cqw;width:.25cqw;height:4.4cqw;background:#2a1a0a;transform-origin:bottom;transform:rotate(-12deg)}
+  .vu small{position:absolute;bottom:.25cqw;right:.6cqw;font-size:.8cqw;color:#2a1a0a}
+  .wish-wal{font-family:'Fraunces';font-style:italic;font-size:1.35cqw;border-left:.3cqw solid #e8c674;padding-left:1cqw;width:92%}
+  .wal-right{display:flex;flex-direction:column;gap:1.2cqw;min-width:0}
+  .plate{background:linear-gradient(135deg,#e8c674,#b8954f 60%,#e8c674);color:#2a1a0a;border-radius:.8cqw;padding:1.2cqw;display:grid;grid-template-columns:44% 1fr;gap:1.2cqw;align-items:center;box-shadow:0 .4cqw .8cqw #0007}
+  .plate .code{font-family:'Fraunces';font-weight:600;font-size:2.8cqw;letter-spacing:.06em}
+  .crate{background:#1a110a;border-radius:.8cqw;padding:1cqw 1.2cqw;box-shadow:inset 0 0 0 .15cqw #4a3322}
+  .crate h4{margin:0 0 .6cqw;font-family:'Fraunces';font-style:italic;font-size:1.4cqw;color:#e8c674}
+  .sleeve{display:grid;grid-template-columns:3.4cqw 1fr;gap:.9cqw;align-items:center;margin-bottom:.6cqw;font-size:1.25cqw}
+  .sleeve i{width:3.4cqw;height:3.4cqw;background:var(--c);box-shadow:.25cqw -.25cqw 0 #0006, .5cqw -.5cqw 0 #111;border-radius:.15cqw}
+  .sleeve small{display:block;color:#cdbf9f;font-size:1cqw}
+  .card-c{background:#ece3cf;color:#2a1a0a;border-radius:.6cqw;padding:.8cqw 1cqw;font-size:1.1cqw;flex:1}
+  .card-c div{padding:.2cqw 0}
+
+  /* ===== SYNTHWAVE ===== */
+  .sw .in{background:linear-gradient(#0e021e 0%,#2b0f52 52%,#140428 52.2%);color:#fbe9ff;display:grid;grid-template-columns:60% 1fr;gap:2cqw;padding:2cqw 2.4cqw}
+  .sw .sun{position:absolute;left:66%;top:22%;width:24cqw;height:24cqw;border-radius:50%;transform:translateX(-50%);background:linear-gradient(#ffd34e,#ff3ea5 70%);-webkit-mask:repeating-linear-gradient(#000 0 2.2cqw,transparent 0 2.8cqw);mask:repeating-linear-gradient(to bottom,#000 0 55%,#000 55% 58%,transparent 58% 61%,#000 61% 66%,transparent 66% 70%,#000 70% 76%,transparent 76% 81%,#000 81%);opacity:.75}
+  .sw .grid{position:absolute;left:-20%;right:-20%;bottom:-10%;height:58%;background:linear-gradient(#ff3ea5 .12cqw,transparent .12cqw) 0 0/100% 3cqw,linear-gradient(90deg,#ff3ea5 .12cqw,transparent .12cqw) 0 0/5cqw 100%;transform:perspective(30cqw) rotateX(58deg);transform-origin:top;opacity:.45}
+  .sw-left,.sw-right{position:relative;z-index:1;display:flex;flex-direction:column;gap:1cqw;min-width:0}
+  .sw-left .vid{width:92%;box-shadow:0 0 0 .3cqw #ff3ea5,0 0 2.4cqw #ff3ea5}
+  .sw .t{font-family:'Exo 2';font-style:italic;font-weight:900;font-size:3.4cqw;line-height:1;background:linear-gradient(#fff 0 45%,#29e7ff 46%,#ff3ea5);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 .5cqw #ff3ea588)}
+  .sw .p{font-size:1.3cqw;color:#c4a3e3}
+  .neon{height:.35cqw;background:#43207a;position:relative;width:92%;margin-top:.3cqw}
+  .neon i{position:absolute;inset:0 58% 0 0;background:#ff3ea5;box-shadow:0 0 1cqw #ff3ea5}
+  .neon em{position:absolute;left:42%;top:50%;width:1cqw;height:1cqw;border-radius:50%;background:#29e7ff;box-shadow:0 0 1cqw #29e7ff;transform:translate(-50%,-50%)}
+  .sw .ly{font-size:1.4cqw;color:#29e7ff;text-shadow:0 0 .6cqw #29e7ff}
+  .sw .wish{font-style:italic;font-size:1.3cqw;border-left:.3cqw solid #ff3ea5;padding-left:1cqw}
+  .nframe{border:.25cqw solid #29e7ff;box-shadow:0 0 1.2cqw #29e7ff88,inset 0 0 1cqw #29e7ff44;border-radius:.6cqw;padding:1cqw;background:#140428aa}
+  .sw-qr{display:grid;grid-template-columns:44% 1fr;gap:1.2cqw;align-items:center}
+  .sw-qr .code{font-family:'Exo 2';font-style:italic;font-weight:900;font-size:3cqw;color:#ff3ea5;text-shadow:0 0 .8cqw #ff3ea5}
+  .sw-list div{display:flex;gap:1cqw;font-size:1.3cqw;padding:.3cqw 0}
+  .sw-list b{font-family:'Exo 2';font-style:italic;color:#29e7ff;width:2cqw}
+  .sw h4{margin:0 0 .4cqw;font-family:'Exo 2';font-style:italic;font-size:1.2cqw;color:#ff3ea5;letter-spacing:.1em}
+
+  /* others */
+  .mini{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .mini .card{padding:12px 14px}
+  .mini .sw8{display:flex;gap:4px;margin-bottom:6px}
+  .mini .sw8 i{flex:1;height:10px;border-radius:3px;background:var(--c)}
+  .mini h4{margin:0 0 4px}
+  .mini p{margin:0;font-size:.88rem;line-height:1.4;opacity:.85}
+</style>
+
+<div class="hx">
+<h2>Trang /host theo chủ đề: phác thảo đầu</h2>
+<p class="lead">Giữ đủ nội dung như /host hiện tại (video, ON AIR + tên bài, người chọn, lời bài hát, lời chúc, đồng hồ thời gian, âm lượng + ngôn ngữ, QR + mã phòng, người đang nghe, 3 bài tiếp theo, chat), nhưng sắp xếp và "khoác áo" theo đồ vật của từng chủ đề. Khung 16:9 như màn TV. Đây là phác thảo thô, chưa phải thiết kế cuối.</p>
+
+<div class="shot">
+<h3>1. Ga tàu (station): bảng giờ khởi hành</h3>
+<div class="tv st"><div class="in">
+  <div class="st-head">
+    <span class="flaps"><b>M</b><b>U</b><b>S</b><b>I</b><b>C</b></span>
+    <span class="grow">PHÒNG NHẠC VĂN PHÒNG</span>
+    <span class="flaps"><b>4</b><b>G</b><b>8</b><b>K</b><b>W</b><b>Y</b></span>
+    <span class="st-clock">15:42</span>
+  </div>
+  <div class="st-main">
+    <div class="st-left">
+      <div class="vid"><span>Video YouTube</span></div>
+      <div class="st-row"><span class="lamp">● ĐANG CHẠY</span><span>SÂN GA 1</span></div>
+      <div class="st-title">CÓ CHẮC YÊU LÀ ĐÂY</div>
+      <div class="st-meta">Sơn Tùng M-TP · Người chọn: <b>Minh Anh</b> · “Chúc cả team chiều thứ Sáu thật chill!”</div>
+      <div class="st-track"><i></i><em></em></div>
+      <div class="st-row" style="justify-content:space-between"><span class="st-lyric">♪ dòng lời bài hát đang hát</span><span>1:52 / 4:30</span></div>
+    </div>
+    <div class="st-right">
+      <div class="ticket">
+        <div class="qr"></div>
+        <div><h4>VÉ LÊN TÀU</h4><div style="font-size:1.25cqw;margin:.4cqw 0">Quét để chọn bài</div><div class="code">4G8KWY</div><div style="font-size:1.05cqw">musicroom.io.vn/r/4G8KWY</div></div>
+      </div>
+      <div class="board">
+        <h4>GIỜ KHỞI HÀNH</h4>
+        <div><b>15:46</b><span>Nàng Thơ</span><span>Lan</span></div>
+        <div><b>15:51</b><span>See Tình</span><span>Tuấn</span></div>
+        <div><b>15:54</b><span>Ngày Mai Em Đi</span><span>Hà</span></div>
+      </div>
+      <div class="st-row"><span>HÀNH KHÁCH</span><span class="av"><i style="--c:#ffb23f"></i><i style="--c:#8fd9a8"></i><i style="--c:#e04434"></i><i style="--c:#b9c4bd"></i><i style="--c:#f2efe6"></i></span><span>7 người</span></div>
+    </div>
+  </div>
+  <div class="st-ticker"><span class="msgs">Lan: bài này hay quá ▸ Tuấn: 🔥🔥 ▸ Hà: lát mở See Tình nha ▸ Minh Anh: chill thôi mọi người</span><span class="ctl">🔊 ▬▬▬▭ &nbsp; VI</span></div>
+</div></div>
+<p class="cap">Mã phòng hiện bằng chữ lật trên đầu. QR thành "vé lên tàu". 3 bài tiếp theo là bảng giờ khởi hành, có giờ dự kiến phát. Chat chạy thành dải tin dưới đáy, giống bảng tin ở ga. Thanh tiến độ là đường ray có chấm trắng.</p>
+</div>
+
+<div class="shot">
+<h3>2. Băng cassette (cassette): mixtape tự làm</h3>
+<div class="tv cs"><div class="in">
+  <div class="cs-left">
+    <div class="vid"><span>Video YouTube</span></div>
+    <div class="shell">
+      <div class="label"><div class="side">MẶT A · ● ĐANG PHÁT</div><div class="t">Có Chắc Yêu Là Đây</div><div class="p">Sơn Tùng M-TP · Minh Anh chọn</div></div>
+      <div class="window"><span class="reel"></span><span class="reel r"></span><small>1:52 / 4:30</small></div>
+    </div>
+    <div class="cs-lyric">♪ dòng lời bài hát đang hát</div>
+  </div>
+  <div class="cs-right">
+    <div class="sticker"><div class="qr"></div><p>Quét để chọn bài</p></div>
+    <div class="dymo">4G8KWY</div>
+    <div class="jcard"><h4>MẶT B · TIẾP THEO</h4><div>1. Nàng Thơ (Lan)</div><div>2. See Tình (Tuấn)</div><div>3. Ngày Mai Em Đi (Hà)</div></div>
+    <div class="notes"><div class="note">Lan: bài này hay quá</div><div class="note">Tuấn: 🔥🔥</div><div class="note">Hà: lát mở See Tình nha</div></div>
+    <div class="cs-foot"><span class="av"><i style="--c:#e3a62b"></i><i style="--c:#c8401f"></i><i style="--c:#9fd4b5"></i><i style="--c:#d9cbb4"></i></span><span>7 người nghe</span><span style="margin-left:auto">🔊 ▬▬▬▭ · VI</span></div>
+  </div>
+  <div class="wishnote">“Chúc cả team chiều thứ Sáu thật chill!” (Minh Anh)</div>
+</div></div>
+<p class="cap">Tên bài viết tay trên nhãn "Mặt A", hai cuộn băng chạy theo thời gian. QR là tấm sticker, mã phòng in trên băng dán Dymo. Bài tiếp theo là bìa "Mặt B". Lời chúc và chat là giấy note dán.</p>
+</div>
+
+<div class="shot">
+<h3>3. Tủ gỗ hi-fi (walnut): kệ máy nghe nhạc</h3>
+<div class="tv wal"><div class="in">
+  <div class="wal-left">
+    <div class="bezel"><div class="vid"><span>Video YouTube</span></div></div>
+    <div class="deck">
+      <div class="platter"></div>
+      <div><div class="p">● ĐANG PHÁT · Minh Anh chọn</div><div class="t">Có Chắc Yêu Là Đây</div><div class="p">Sơn Tùng M-TP</div><div class="ly">♪ dòng lời bài hát đang hát</div></div>
+      <div class="vu"><small>1:52/4:30</small></div>
+    </div>
+    <div class="wish-wal">“Chúc cả team chiều thứ Sáu thật chill!”</div>
+  </div>
+  <div class="wal-right">
+    <div class="plate"><div class="qr"></div><div><div style="font-family:Fraunces;font-style:italic;font-size:1.4cqw">Mời quét chọn bài</div><div class="code">4G8KWY</div><div style="font-size:1cqw">musicroom.io.vn/r/4G8KWY</div></div></div>
+    <div class="crate">
+      <h4>Chồng đĩa tiếp theo</h4>
+      <div class="sleeve"><i style="--c:#d0453f"></i><div>Nàng Thơ<small>Lan</small></div></div>
+      <div class="sleeve"><i style="--c:#e8c674"></i><div>See Tình<small>Tuấn</small></div></div>
+      <div class="sleeve"><i style="--c:#6b8f71"></i><div>Ngày Mai Em Đi<small>Hà</small></div></div>
+    </div>
+    <div class="card-c"><div style="display:flex;gap:1cqw;align-items:center;margin-bottom:.4cqw"><span class="av" style="color:#ece3cf"><i style="--c:#d0453f"></i><i style="--c:#e8c674"></i><i style="--c:#6b8f71"></i></span>7 người nghe</div><div><b>Lan</b> bài này hay quá</div><div><b>Tuấn</b> 🔥🔥</div><div style="font-size:.95cqw;opacity:.7;margin-top:.4cqw">🔊 ▬▬▬▭ · VI</div></div>
+  </div>
+</div></div>
+<p class="cap">Video nằm trong khung TV viền đồng. Dưới là mâm đĩa đang quay, tên bài chữ nghiêng, đồng hồ VU làm thời gian. QR khắc trên bảng đồng. Bài tiếp theo là chồng bìa đĩa.</p>
+</div>
+
+<div class="shot">
+<h3>4. Synthwave: mặt trời neon thập niên 80</h3>
+<div class="tv sw"><div class="in">
+  <div class="sun"></div><div class="grid"></div>
+  <div class="sw-left">
+    <div class="vid"><span>Video YouTube</span></div>
+    <div class="p" style="color:#29e7ff">● ON AIR · Minh Anh chọn</div>
+    <div class="t">CÓ CHẮC YÊU LÀ ĐÂY</div>
+    <div class="p">Sơn Tùng M-TP · 1:52 / 4:30</div>
+    <div class="neon"><i></i><em></em></div>
+    <div class="ly">♪ dòng lời bài hát đang hát</div>
+    <div class="wish">“Chúc cả team chiều thứ Sáu thật chill!”</div>
+  </div>
+  <div class="sw-right">
+    <div class="nframe sw-qr"><div class="qr"></div><div><h4>QUÉT ĐỂ CHỌN BÀI</h4><div class="code">4G8KWY</div><div style="font-size:1cqw">musicroom.io.vn/r/4G8KWY</div></div></div>
+    <div class="nframe sw-list"><h4>TIẾP THEO</h4><div><b>01</b>Nàng Thơ · Lan</div><div><b>02</b>See Tình · Tuấn</div><div><b>03</b>Ngày Mai Em Đi · Hà</div></div>
+    <div class="nframe" style="font-size:1.15cqw"><div style="display:flex;gap:1cqw;align-items:center;margin-bottom:.4cqw"><span class="av" style="color:#29e7ff"><i style="--c:#ff3ea5"></i><i style="--c:#29e7ff"></i><i style="--c:#c4a3e3"></i></span>7 người nghe</div><div><b style="color:#ff3ea5">Lan</b> bài này hay quá</div><div><b style="color:#ff3ea5">Tuấn</b> 🔥🔥</div><div style="opacity:.7;margin-top:.3cqw">🔊 ▬▬▬▭ · VI</div></div>
+  </div>
+</div></div>
+<p class="cap">Mặt trời sọc và lưới phối cảnh làm nền, video trong khung neon hồng. Tên bài chữ nghiêng ánh chrome. Bên phải là ba khung neon xanh: QR, tiếp theo, chat.</p>
+</div>
+
+<h3>9 chủ đề còn lại (ý tưởng, sẽ vẽ ở bước sau)</h3>
+<div class="mini">
+  <div class="card"><div class="sw8"><i style="--c:#0f2a26"></i><i style="--c:#f3ecdd"></i><i style="--c:#f6a623"></i><i style="--c:#e8483a"></i></div><h4>Mặc định</h4><p>Giữ như hiện tại: mặt số dò đài lớn, phông nền đổi màu theo không khí phòng.</p></div>
+  <div class="card"><div class="sw8"><i style="--c:#1a1714"></i><i style="--c:#ece5d8"></i><i style="--c:#d8a24a"></i><i style="--c:#e2553d"></i></div><h4>Quán nghe nhạc (listening)</h4><p>Đĩa than nhô khỏi bìa cạnh tên bài; "Tiếp theo" như thực đơn quán viết serif; QR in trên lót ly.</p></div>
+  <div class="card"><div class="sw8"><i style="--c:#e7e4dd"></i><i style="--c:#1d1c1a"></i><i style="--c:#c8441b"></i><i style="--c:#dcd8cf"></i></div><h4>Hi-fi 1982</h4><p>Cả màn là một dàn máy nhôm xước: video ở trên, dải LCD hổ phách chạy ngang (tên bài, giờ, vạch đo), bài tiếp theo là các phím đánh số.</p></div>
+  <div class="card"><div class="sw8"><i style="--c:#14303a"></i><i style="--c:#f0ead9"></i><i style="--c:#e5b53e"></i><i style="--c:#cf6a35"></i></div><h4>Áp phích giữa thế kỷ (midcentury)</h4><p>Bố cục áp phích: mặt trời vàng lớn sau video, vòng cam cắt ngang, tên bài chữ đậm kiểu poster, tiếp theo là các vòng tròn.</p></div>
+  <div class="card"><div class="sw8"><i style="--c:#8f1f22"></i><i style="--c:#f6efe3"></i><i style="--c:#f0b23a"></i><i style="--c:#171513"></i></div><h4>Radio bán dẫn (transistor)</h4><p>Thân radio đỏ: video ở ô loa, mặt kính dò đài kéo hết chiều ngang dưới đáy, kim đỏ là thời gian; tiếp theo là các phím nhớ đài.</p></div>
+  <div class="card"><div class="sw8"><i style="--c:#12142f"></i><i style="--c:#ece6d6"></i><i style="--c:#d6b25e"></i><i style="--c:#a6a8cf"></i></div><h4>Chiêm tinh (astro)</h4><p>Trời sao chàm, bánh xe 12 cung bao quanh mã phòng; tiếp theo là "các sao sắp mọc"; bỏ phiếu là trăng khuyết.</p></div>
+  <div class="card"><div class="sw8"><i style="--c:#070b1a"></i><i style="--c:#e6ecff"></i><i style="--c:#7fd4ff"></i><i style="--c:#ffb86b"></i></div><h4>Vũ trụ (cosmos)</h4><p>Video là cửa sổ tàu vũ trụ; hành tinh quay quanh quỹ đạo là thời gian; bài tiếp theo nhỏ dần như các hành tinh xa; người nghe là các ngôi sao.</p></div>
+  <div class="card"><div class="sw8"><i style="--c:#f3ead6"></i><i style="--c:#1f2a28"></i><i style="--c:#1d6b66"></i><i style="--c:#b8442f"></i></div><h4>Sài Gòn xưa (saigon)</h4><p>Bảng hiệu tiệm treo tên phòng, viền gạch bông; tiếp theo viết phấn trên bảng đen; lời chúc trên thiệp viết tay.</p></div>
+  <div class="card"><div class="sw8"><i style="--c:#1d1b33"></i><i style="--c:#fcfcfc"></i><i style="--c:#f8b800"></i><i style="--c:#00d000"></i></div><h4>Pixel 8-bit</h4><p>Màn hình game: thanh máu là thời gian, "x7 người chơi", tiếp theo là "Màn 2, 3, 4", QR là "Người chơi 2 nhấn để vào".</p></div>
+</div>
+</div>
+
+</body></html>
