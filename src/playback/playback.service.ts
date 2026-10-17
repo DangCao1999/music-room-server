@@ -13,6 +13,7 @@ import {
   parseYouTubePlaylist,
   type PlayerRevokeReason,
   SKIP_MIN_YES,
+  type Voice,
 } from '../contracts';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
 import { orderQueue } from '../queue/fair-queue';
@@ -53,6 +54,8 @@ export class PlaybackService
   private readonly logger = new Logger(PlaybackService.name);
   private readonly timers = new Map<string, NodeJS.Timeout>();
   private readonly warmedAt = new Map<string, number>();
+  /** `roomId item` whose line is being made right now: re-sent once, when the audio is ready. */
+  private readonly awaitingSpeech = new Set<string>();
   /** V1: one open skip vote per room at most; fires at its deadline. */
   private readonly voteTimers = new Map<string, NodeJS.Timeout>();
 
@@ -701,6 +704,14 @@ export class PlaybackService
       item && !item.wishMessage && item.addedById && (await this.mcOn(roomId))
         ? this.mc.lineFor(item.id)
         : null;
+    const line = item?.wishMessage
+      ? { text: item.wishMessage, voice: voiceOf(item.voicePreset) }
+      : intro
+        ? { text: intro, voice: 'male' as const }
+        : null;
+    const speech = line ? this.tts.speech(line.text, line.voice) : null;
+    if (item && line && speech?.pending)
+      this.resendWhenReady(roomId, item.id, line.text, line.voice);
     return {
       queueItemId: item?.id ?? null,
       videoId: item?.track.externalId ?? null,
@@ -714,12 +725,39 @@ export class PlaybackService
           }
         : null,
       intro,
-      speech: item?.wishMessage
-        ? this.tts.speech(item.wishMessage, voiceOf(item.voicePreset))
-        : intro
-          ? this.tts.speech(intro, 'male')
-          : null,
+      speech,
     };
+  }
+
+  /**
+   * The song started before its line's Edge audio was ready (the speaker holds the line a few
+   * seconds): once it is, send the command again (speaker) and the snapshot (listen-along).
+   */
+  private resendWhenReady(
+    roomId: string,
+    itemId: string,
+    text: string,
+    voice: Voice,
+  ): void {
+    const id = `${roomId} ${itemId}`;
+    if (this.awaitingSpeech.has(id)) return;
+    this.awaitingSpeech.add(id);
+    void this.tts
+      .whenReady(text, voice)
+      .then(async (key) => {
+        if (!key) return;
+        const ps = await this.prisma.playbackState.findUnique({
+          where: { roomId },
+          select: { currentItemId: true },
+        });
+        if (ps?.currentItemId !== itemId) return;
+        await this.sendPlayerCommand(roomId);
+        await this.state.touch(roomId);
+      })
+      .catch((e: unknown) =>
+        this.logger.warn(`Re-sending the wish audio failed: ${String(e)}`),
+      )
+      .finally(() => this.awaitingSpeech.delete(id));
   }
 
   /**

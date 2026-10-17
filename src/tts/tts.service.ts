@@ -34,6 +34,8 @@ export class TtsService implements OnModuleInit {
   private readonly provider: TtsProvider;
   /** False when edge-tts cannot run here (no Python 3.10+, package not installed): the browser voice is used. */
   private usable: Promise<boolean> = Promise.resolve(false);
+  /** Same answer, readable without waiting (false until the boot check passed). */
+  private ready = false;
   private readonly audio = new Map<string, Buffer>();
   private readonly langs = new Map<string, Lang>();
   private readonly running = new Map<string, Promise<string | null>>();
@@ -56,18 +58,28 @@ export class TtsService implements OnModuleInit {
           `Edge TTS off: ${why}. Run \`npm run tts:install\` with TTS_PYTHON set to Python 3.10+; the speaker uses the browser voice meanwhile.`,
         );
       else this.logger.log('Edge TTS ready');
+      this.ready = !why;
       return !why;
     });
   }
 
-  /** What the speaker reads now: audio if it is ready, else null (and it is made in the background). */
+  /**
+   * What the speaker reads now: audio if it is ready; else null, made in the background, with
+   * `pending` while that runs (the caller re-sends once `whenReady` resolves with a key).
+   */
   speech(text: string, voice: Voice): SpeechView {
     const lang = this.langs.get(text) ?? 'vi';
     const key = this.keyFor(text, VOICE_NAMES[lang][voice]);
     if (this.langs.has(text) && this.audio.has(key))
       return { text, audio: key, lang };
     void this.prepare(text, voice);
-    return { text, audio: null, lang };
+    const pending = this.ready && this.running.has(`${voice}\n${text}`);
+    return { text, audio: null, lang, ...(pending ? { pending } : {}) };
+  }
+
+  /** The key once a running job for this line finishes (null: none running, or it failed). */
+  whenReady(text: string, voice: Voice): Promise<string | null> {
+    return this.running.get(`${voice}\n${text}`) ?? Promise.resolve(null);
   }
 
   /** Makes (or finds) the mp3 for a line; its key, or null when TTS is off or Edge failed. */

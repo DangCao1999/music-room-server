@@ -20,6 +20,7 @@ import {
   type CommandName,
 } from '../contracts';
 import { DjService } from '../ai/dj.service';
+import { WishWriterService } from '../ai/wish-writer.service';
 import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
 import { YouTubeAccountService } from '../music/youtube-account.service';
@@ -89,6 +90,8 @@ export const LOOKUP_LIMIT = { count: 10, windowMs: 60_000 };
 export const LYRICS_LIMIT = { count: 20, windowMs: 60_000 };
 /** AI2: free AI quota is shared by the whole server. */
 export const DJ_LIMIT = { count: 3, windowMs: 3600_000 };
+/** "Nhờ MC viết": one short AI call each, same shared free quota. */
+export const WISH_AI_LIMIT = { count: 10, windowMs: 3600_000 };
 export const RECAP_LIMIT = { count: 20, windowMs: 60_000 };
 /** L2: adding songs / creating playlists, per account. */
 export const PLAYLIST_WRITE_LIMIT = { count: 60, windowMs: 60_000 };
@@ -135,6 +138,7 @@ export class RealtimeGateway
     private readonly playlists: PlaylistService,
     private readonly lyrics: LyricsService,
     private readonly djAi: DjService,
+    private readonly wishWriter: WishWriterService,
     private readonly users: UsersService,
     private readonly personal: PlaylistsService,
     private readonly youtubeAccount: YouTubeAccountService,
@@ -648,6 +652,43 @@ export class RealtimeGateway
         input.source,
         input.musicOnly,
       );
+    });
+  }
+
+  @SubscribeMessage('wish:suggest')
+  suggestWish(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('wish:suggest', s, body, async (input, actor) => {
+      await this.requireMember(actor);
+      this.limit(`wish-ai:${actor.memberId}`, WISH_AI_LIMIT);
+      let track: { title: string; artist: string | null; song: string | null };
+      if (input.queueItemId) {
+        // Only for my own waiting song, like editing its wish.
+        const item = await this.prisma.queueItem.findFirst({
+          where: { id: input.queueItemId, roomId: actor.roomId },
+          select: {
+            status: true,
+            addedById: true,
+            track: { select: { title: true, artist: true, song: true } },
+          },
+        });
+        if (!item || item.status !== 'QUEUED') throw new AppError('STALE_ITEM');
+        if (item.addedById !== actor.memberId) throw new AppError('FORBIDDEN');
+        track = item.track;
+      } else {
+        // A song about to be added with a wish: its public title is all the AI gets.
+        track = {
+          title: input.title ?? '',
+          artist: input.artist ?? null,
+          song: null,
+        };
+      }
+      return {
+        text: await this.wishWriter.write(
+          track,
+          input.hint,
+          input.language ?? 'vi',
+        ),
+      };
     });
   }
 

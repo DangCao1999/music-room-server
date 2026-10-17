@@ -46,6 +46,7 @@ import { SocialService } from './social/social.service';
 import { RoomStateService } from './state/room-state.service';
 import { SnapshotService } from './state/snapshot.service';
 
+import { WishWriterService } from './ai/wish-writer.service';
 import { TtsController } from './tts/tts.controller';
 import { TtsService } from './tts/tts.service';
 
@@ -79,6 +80,7 @@ export class AppModule {
         McService,
         TtsService,
         DjService,
+        WishWriterService,
         LastFmService,
         TrackMetaService,
         SuggestService,

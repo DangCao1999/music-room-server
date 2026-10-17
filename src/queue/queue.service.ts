@@ -36,6 +36,9 @@ type ItemWithTrack = QueueItem & { track: Track };
 /** Each add may cost YouTube quota; 20 per minute per member is plenty for humans. */
 export const ADD_LIMIT = { count: 20, windowMs: 60_000 };
 
+/** First song of an idle room added with a wish: how long the add waits for its Edge voice. */
+const IDLE_WISH_WAIT_MS = 4000;
+
 @Injectable()
 export class QueueService {
   readonly limiter = new RateLimiter();
@@ -151,10 +154,16 @@ export class QueueService {
       throw new AppError('TRACK_BLOCKED');
     // Network work (track lookup, AI4 wish check) happens outside the room lock.
     await this.moderation.checkWish(input.wishMessage);
-    // Started now, not after the write: an idle room plays this song at once. Never awaited.
-    if (input.wishMessage)
-      void this.tts.prepare(input.wishMessage, input.voice ?? 'male');
+    // The wish's Edge voice is started now, before the write.
+    const voiceReady = input.wishMessage
+      ? this.tts.prepare(input.wishMessage, input.voice ?? 'male')
+      : null;
     const track = await this.tracks.resolve(videoId);
+    // An idle room plays this song at once: only there, the add waits (at most
+    // IDLE_WISH_WAIT_MS) for the voice, so the first song's wish is read in the Edge voice.
+    // Everywhere else nothing waits; a late voice is still read over the song's start.
+    if (voiceReady && (await this.idle(actor.roomId)))
+      await this.within(voiceReady, IDLE_WISH_WAIT_MS);
 
     return this.state.mutate(actor.roomId, async (tx, ctx) => {
       const me = await this.state.activeMember(tx, actor);
@@ -390,6 +399,27 @@ export class QueueService {
     // Made ahead so the speaker has it when the song starts; never awaited.
     if (input.wishMessage)
       void this.tts.prepare(input.wishMessage, input.voice ?? 'male');
+  }
+
+  /** Nothing is playing (or about to): an added song would start at once. */
+  private async idle(roomId: string): Promise<boolean> {
+    const ps = await this.prisma.playbackState.findUnique({
+      where: { roomId },
+      select: { currentItemId: true },
+    });
+    return !ps?.currentItemId;
+  }
+
+  /** Waits for `p`, but never longer than `ms`. */
+  private async within(p: Promise<unknown>, ms: number): Promise<void> {
+    let timer: NodeJS.Timeout | undefined;
+    await Promise.race([
+      p,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, ms);
+      }),
+    ]);
+    clearTimeout(timer);
   }
 
   /** R-10: kicked members' waiting tracks are removed. */

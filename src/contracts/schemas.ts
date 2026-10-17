@@ -246,6 +246,22 @@ export const C2S = {
     ]),
     musicOnly: z.boolean(),
   }),
+  /**
+   * "Nhờ MC viết": a wish written by the AI for the sender to edit — for one of my waiting
+   * songs (`queueItemId`) or a song not added yet (`title` / `artist`, adding with a wish).
+   * `hint`: what the sender already typed (kept, names included); `language`: the sender's.
+   */
+  'wish:suggest': z
+    .strictObject({
+      queueItemId: Id.optional(),
+      title: line(LIMITS.input).optional(),
+      artist: line(LIMITS.input).optional(),
+      hint: multiline(LIMITS.wish, 0).optional(),
+      language: LangSchema.optional(),
+    })
+    .refine((v) => v.queueItemId !== undefined || v.title !== undefined, {
+      message: 'queueItemId or title',
+    }),
   /** AI2: songs for a request in plain words ("nhạc chill chiều thứ 6"). */
   'dj:ask': z.strictObject({
     prompt: line(LIMITS.djPrompt),
