@@ -1,3 +1,4 @@
+import { refusedTrackIds } from '../music/room-refusals';
 import { Injectable } from '@nestjs/common';
 import { AppError } from '../common/app-error';
 import {
@@ -85,6 +86,8 @@ export class DjService {
       ).map((w) => w.trackId),
     );
     const max = settings.maxTrackDurationSec;
+    // Known songs the room would refuse (blocked, played within the repeat gap) are left out.
+    const refused = await refusedTrackIds(this.prisma, roomId, settings);
     const items: SuggestionView[] = [];
     const seen = new Set<string>();
     const songsSeen = new Set<string>();
@@ -98,6 +101,7 @@ export class DjService {
         t &&
         !seen.has(t.id) &&
         !waiting.has(t.id) &&
+        !refused.has(t.id) &&
         (max === 0 || t.durationSec === null || t.durationSec <= max)
       ) {
         seen.add(t.id);
