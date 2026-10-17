@@ -21,7 +21,7 @@ jobs:
           URL: ${{ vars.KEEP_AWAKE_URL }}
         run: |
           if [ -z "$URL" ]; then
-            echo "::notice::Set the repository variable KEEP_AWAKE_URL (https://<api>.onrender.com) to enable this."
+            echo "::notice::Set the repository variable KEEP_AWAKE_URL (e.g. https://api.musicroom.io.vn) to enable this."
             exit 0
           fi
           # A sleeping instance needs ~1 min to boot: allow it, and retry once more.
