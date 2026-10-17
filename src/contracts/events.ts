@@ -59,6 +59,7 @@ export interface CommandResults {
   'track:blocked': { items: BlockedTrackView[] };
   'suggest:next': { items: SuggestionView[] };
   'dj:ask': { items: SuggestionView[] };
+  'wish:suggest': { text: string };
   'auth:google': { token: string; user: UserView };
   'auth:me': { user: UserView | null };
   'me:rooms': { rooms: MyRoomView[] };

@@ -293,6 +293,8 @@ export interface SpeechView {
   text: string;
   audio: string | null;
   lang: Lang;
+  /** The mp3 is being made: hold the line a few seconds, it arrives in an updated command / snapshot. */
+  pending?: boolean;
 }
 
 /** `room_deleted`: the room's owner deleted it (everyone is sent home). */
