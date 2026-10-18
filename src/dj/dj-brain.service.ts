@@ -12,7 +12,6 @@ import {
   type GuideTarget,
   INFO_KINDS,
   type InfoKind,
-  type RoomSnapshot,
 } from '../contracts';
 import type { Member } from '../generated/prisma/client';
 import { InnerTubeProvider } from '../music/innertube.provider';
@@ -22,7 +21,10 @@ import { QueueService } from '../queue/queue.service';
 import { SocialService } from '../social/social.service';
 import type { Actor } from '../state/room-state.service';
 import { SnapshotService } from '../state/snapshot.service';
+import { DjComboService } from './dj-combo.service';
+import { etaSec } from './dj-eta';
 import { findFresh } from './dj-fresh';
+import { type Plan, planCombo } from './dj-plan';
 import { extractDjRequest, matchRules, type RuleMatch } from './dj-rules';
 
 const AI_TIMEOUT_MS = 12_000;
@@ -82,6 +84,7 @@ export class DjBrainService {
     private readonly search: SearchService,
     private readonly innertube: InnerTubeProvider,
     private readonly social: SocialService,
+    private readonly combos: DjComboService,
   ) {}
 
   /** After a room chat message is saved: answer it when it is addressed to "@DJ". */
@@ -130,6 +133,9 @@ export class DjBrainService {
     if (!me || me.roomId !== actor.roomId || me.leftAt || me.kickedAt)
       return { ...base, kind: 'error', errorCode: 'UNAUTHENTICATED' };
     try {
+      // Several tasks at once: the DJ does them itself (a single one stays a guide).
+      const plan = planCombo(request);
+      if (plan) return await this.combo(plan, me, actor, base);
       const rule = matchRules(request);
       if (rule) return await this.fromRule(rule, me, actor, base);
       if (!this.ai.enabled) return { ...base, kind: 'other' };
@@ -142,22 +148,7 @@ export class DjBrainService {
       );
       if (!r.ok)
         return { ...base, kind: 'busy', retryAfterSec: r.retryAfterSec };
-      const snap = await this.snapshots.build(actor.roomId);
-      const np = snap?.nowPlaying?.item.track;
-      const answer = await this.ai.json<AiAnswer>(
-        'dj',
-        SYSTEM,
-        JSON.stringify({
-          request,
-          nowPlaying: np
-            ? np.artist && np.song
-              ? `${np.artist} - ${np.song}`
-              : np.title
-            : null,
-          known: await this.dj.knownTitles(actor.roomId),
-        }),
-        { temperature: 0.2, timeoutMs: AI_TIMEOUT_MS },
-      );
+      const answer = await this.callAi(request, actor.roomId);
       if (!answer) {
         // Every provider resting: the asker's free quota is not spent.
         this.limiter.undo(`dj-ai:${me.id}`);
@@ -177,6 +168,86 @@ export class DjBrainService {
       );
       return { ...base, kind: 'error', errorCode: 'INTERNAL' };
     }
+  }
+
+  /** The one AI call of a request (not counted here: callers hit the quota). */
+  private async callAi(
+    request: string,
+    roomId: string,
+  ): Promise<AiAnswer | null> {
+    const snap = await this.snapshots.build(roomId);
+    const np = snap?.nowPlaying?.item.track;
+    return this.ai.json<AiAnswer>(
+      'dj',
+      SYSTEM,
+      JSON.stringify({
+        request,
+        nowPlaying: np
+          ? np.artist && np.song
+            ? `${np.artist} - ${np.song}`
+            : np.title
+          : null,
+        known: await this.dj.knownTitles(roomId),
+      }),
+      { temperature: 0.2, timeoutMs: AI_TIMEOUT_MS },
+    );
+  }
+
+  /** Several tasks: carried out in order; one add alone keeps the "added" answer. */
+  private async combo(
+    plan: Plan,
+    me: Member,
+    actor: Actor,
+    base: Pick<DjReply, 'forMemberId' | 'forName'>,
+  ): Promise<DjReply> {
+    const steps = await this.combos.run(plan, me, actor, (text, count) =>
+      this.aiPicks(text, count, me, actor),
+    );
+    const only = steps.length === 1 ? steps[0] : null;
+    if (only?.action === 'add' && !only.wish) {
+      if (only.ok)
+        return {
+          ...base,
+          kind: 'added',
+          queueItemId: only.queueItemId,
+          ...(only.track ? { track: only.track } : {}),
+          position: only.position,
+          etaSec: only.etaSec ?? null,
+          fresh: only.fresh ?? null,
+        };
+      if (only.reason === 'busy') return { ...base, kind: 'busy' };
+      if (only.reason === 'notFound')
+        return { ...base, kind: 'error', errorCode: 'TRACK_NOT_FOUND' };
+      return {
+        ...base,
+        kind:
+          only.errorCode === 'QUEUE_LIMIT' || only.errorCode === 'FORBIDDEN'
+            ? 'denied'
+            : 'error',
+        ...(only.errorCode ? { errorCode: only.errorCode } : {}),
+        ...(only.errorParams ? { errorParams: only.errorParams } : {}),
+      };
+    }
+    return { ...base, kind: 'done', steps };
+  }
+
+  /** Songs for a vague part of a combo ("2 bài chill"): one AI call, on the asker's quota. */
+  private async aiPicks(
+    text: string,
+    count: number,
+    me: Member,
+    actor: Actor,
+  ): Promise<{ artist: string; song: string }[] | null> {
+    if (!this.ai.enabled) return null;
+    const key = `dj-ai:${me.id}`;
+    if (!this.limiter.hit(key, this.env.DJ_AI_PER_HOUR, HOUR_MS, Date.now()).ok)
+      return null;
+    const answer = await this.callAi(`${text} (${count} bài)`, actor.roomId);
+    if (!answer) {
+      this.limiter.undo(key);
+      return null;
+    }
+    return picksOf(answer);
   }
 
   private async fromRule(
@@ -223,20 +294,7 @@ export class DjBrainService {
           actor,
           base,
         );
-      const picks = (a.items ?? [])
-        .filter(
-          (p): p is { artist: string; song: string } =>
-            typeof p.artist === 'string' &&
-            typeof p.song === 'string' &&
-            p.artist.trim() !== '' &&
-            p.song.trim() !== '',
-        )
-        .slice(0, MAX_PICKS)
-        // As the old "Hỏi DJ": names go into a search, so keep them short.
-        .map((p) => ({
-          artist: p.artist.trim().slice(0, 100),
-          song: p.song.trim().slice(0, 150),
-        }));
+      const picks = picksOf(a);
       if (picks.length) return this.addPicks(picks, me, actor, base);
     }
     return { ...base, kind: 'other' };
@@ -416,25 +474,19 @@ export class DjBrainService {
   }
 }
 
-/**
- * When the queue item at `index` should start, in seconds from now: what is left of the song
- * on air plus the songs before it (like the station theme's board); null from the first song
- * of unknown length on.
- */
-function etaSec(snap: RoomSnapshot, index: number): number | null {
-  const np = snap.nowPlaying;
-  let at = 0;
-  if (np) {
-    const dur = np.item.track.durationSec;
-    if (!dur) return null;
-    const played =
-      np.positionSec +
-      (np.status === 'PLAYING' ? (Date.now() - np.positionAt) / 1000 : 0);
-    at += Math.max(0, dur - played);
-  }
-  for (const q of snap.queue.slice(0, index)) {
-    if (!q.track.durationSec) return null;
-    at += q.track.durationSec;
-  }
-  return Math.round(at);
+/** The AI's song picks, checked and kept short (names go into a search). */
+function picksOf(a: AiAnswer): { artist: string; song: string }[] {
+  return (a.items ?? [])
+    .filter(
+      (p): p is { artist: string; song: string } =>
+        typeof p.artist === 'string' &&
+        typeof p.song === 'string' &&
+        p.artist.trim() !== '' &&
+        p.song.trim() !== '',
+    )
+    .slice(0, MAX_PICKS)
+    .map((p) => ({
+      artist: p.artist.trim().slice(0, 100),
+      song: p.song.trim().slice(0, 150),
+    }));
 }

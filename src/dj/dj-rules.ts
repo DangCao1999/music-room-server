@@ -64,11 +64,58 @@ const VAGUE = [
   'nhac',
 ];
 
+/** VAGUE as written: "giống" (like) is not "Giông" (Ngày Chưa Giông Bão), "mời" is not "mới". */
+const VAGUE_ACCENTED = [
+  'mới',
+  'mới nhất',
+  'vừa ra',
+  'trending',
+  'hot',
+  'thịnh hành',
+  'giống',
+  'chill',
+  'vui',
+  'buồn',
+  'vài bài',
+  'mấy bài',
+  'gì đó',
+  'nào đó',
+  'bất kỳ',
+  'ngẫu nhiên',
+  'random',
+  'latest',
+  'new',
+  'popular',
+  'something',
+  'some',
+  'nhẹ nhàng',
+  'sôi động',
+  'tâm trạng',
+  'hợp',
+  'phù hợp',
+  'nhạc',
+];
+
+/**
+ * Vague, judged on the original words: with accents when the asker typed them, otherwise
+ * (no accents at all) on the plain form like `vague`.
+ */
+export function vagueIn(original: string): boolean {
+  const lower = original
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const p = plain(original);
+  if (lower === p) return vague(p);
+  return VAGUE_ACCENTED.some((w) => has(lower, w));
+}
+
 /** Accent-free, lower case, punctuation as spaces. Word positions match `words()`. */
-function plain(text: string): string {
+export function plain(text: string): string {
   return normalizeQuery(text.replace(/[^\p{L}\p{N}\s'-]/gu, ' '));
 }
-function words(text: string): string[] {
+export function words(text: string): string[] {
   return text
     .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
     .split(/\s+/)
@@ -77,19 +124,37 @@ function words(text: string): string[] {
 function has(text: string, phrase: string): boolean {
   return new RegExp(`(^| )${phrase}( |$)`).test(text);
 }
-function vague(text: string): boolean {
+export function vague(text: string): boolean {
   return VAGUE.some((w) => has(text, w));
 }
 
 /** Polite words around a request ("giúp tôi", "dùm", "nhé"…), in plain form. */
 // Not "cho anh / cho em": they are common in song names ("Hãy Trao Cho Anh").
-const FILLER_END =
+export const FILLER_END =
   /( (giup|dum) (toi|minh|em|tui)| giup| dum| di| nhe| nha| nhen| please| pls| di nao)+$/;
-const FILLER_START =
+export const FILLER_START =
   /^((hay|giup|dum|cho) (toi|minh|em|tui) (hoi )?|giup |dum |hay |hoi |please |pls |ban oi |dj oi )+/;
 
+/** Trailing filler words as written (FILLER_END matches them without accents). */
+const FILLER_WORDS = new Set([
+  'giúp',
+  'dùm',
+  'tôi',
+  'mình',
+  'em',
+  'tui',
+  'đi',
+  'nhé',
+  'nha',
+  'nhá',
+  'nhen',
+  'please',
+  'pls',
+  'nào',
+]);
+
 /** The original words from index `from`, trailing filler removed. */
-function tail(original: string, from: number): string {
+export function tail(original: string, from: number): string {
   const ws = words(original).slice(from);
   let p = plain(ws.join(' '));
   while (ws.length) {
@@ -97,6 +162,13 @@ function tail(original: string, from: number): string {
     const cut = (' ' + p).replace(FILLER_END, '').trim();
     if (cut === p) break;
     const drop = p.split(' ').length - cut.split(' ').filter(Boolean).length;
+    // With their accents: "nhà" (Một Nhà) is not "nha", "dì" is not "đi".
+    if (
+      !ws
+        .slice(ws.length - drop)
+        .every((w) => FILLER_WORDS.has(w.toLowerCase()))
+    )
+      break;
     ws.splice(ws.length - drop, drop);
     p = cut;
   }
@@ -147,6 +219,20 @@ const INFOS: [InfoKind, RegExp][] = [
 ];
 
 const SIMILAR = /(^| )(giong|tuong tu|na na|nhu bai|similar|like this)( |$)/;
+const SIMILAR_ACCENTED =
+  /(^| )(giống|tương tự|na ná|như bài|similar|like this)( |$)/;
+
+/** SIMILAR on the words as written when they carry accents ("Giông" is not "giống"). */
+function similarIn(original: string, p: string): boolean {
+  const lower = original
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return lower === plain(original)
+    ? SIMILAR.test(p)
+    : SIMILAR_ACCENTED.test(lower);
+}
 
 const HELLO =
   /^(hi|hello|hey|chao|xin chao|alo|help|tro giup|giup voi|ban lam (duoc )?gi|lam duoc gi|cam on|thanks|thank you)( |$)/;
@@ -162,7 +248,7 @@ const NOT_ARTIST =
   /^(hom nay|dao nay|tuan nay|thang nay|nam nay|gan day|bay gio|hien tai|hien gio|ban|minh|toi|tui|em|anh|chi|phong|ai|nguoi ta|youtube|tiktok)$/;
 
 /** `offset`: words of `original` already cut from the front of `p` (polite words). */
-function freshMatch(
+export function freshMatch(
   original: string,
   p: string,
   offset: number,
@@ -180,7 +266,7 @@ function freshMatch(
       .split(' ').length;
     const artist = tail(original, offset + before);
     // Trending is tried first: "bài mới trending của X" asks for the trending one.
-    if (artist && !vague(plain(artist))) return { kind: 'fresh', artist, mode };
+    if (artist && !vagueIn(artist)) return { kind: 'fresh', artist, mode };
   }
   const m = FRESH_HAS_NEW.exec(p);
   if (m && !NOT_ARTIST.test(m[1]) && !vague(m[1])) {
@@ -207,7 +293,7 @@ export function matchRules(request: string): RuleMatch | null {
   if (fresh) return fresh;
 
   // "bài gì giống bài đang phát": a song request, not a question about the song on air.
-  if (SIMILAR.test(p)) return null;
+  if (similarIn(original, p)) return null;
 
   for (const [info, re] of INFOS) if (re.test(p)) return { kind: 'info', info };
 
@@ -232,9 +318,9 @@ export function matchRules(request: string): RuleMatch | null {
     if (guideOfRest) return { kind: 'guide', guide: guideOfRest[0] };
     if (!rest) return { kind: 'guide', guide: 'add' };
     // "bật bài của X", "bật nhạc vui": the DJ has to choose.
-    if (vague(rest) || /^(cua|of|by) /.test(rest)) return null;
     const start = offset + add[0].trim().split(' ').length;
     const query = tail(original, start);
+    if (vagueIn(query) || /^(cua|of|by) /.test(rest)) return null;
     return query ? { kind: 'guide', guide: 'add', query } : null;
   }
 
@@ -263,6 +349,9 @@ export function isSlackCommand(text: string): boolean {
   return (
     arg.split(/\s+/).length <= 8 &&
     !vague(p) &&
-    !/^(bai |nhac )?(cua|of|by) /.test(p)
+    !/^(bai |nhac )?(cua|of|by) /.test(p) &&
+    // Several songs or a wish ("add Lạc Trôi và Nàng Thơ", "… kèm lời chúc"): the DJ.
+    !/[,;]/.test(arg) &&
+    !/ (va|roi|kem|tang|loi chuc|loi nhan) /.test(` ${p} `)
   );
 }

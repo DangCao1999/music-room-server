@@ -1,6 +1,6 @@
 import { chatError } from '../chat/chat-text';
 import { AppError } from '../common/app-error';
-import type { DjReply, GuideTarget } from '../contracts';
+import type { DjAction, DjReply, DjStep, GuideTarget } from '../contracts';
 
 /**
  * The DJ's answer as plain Vietnamese: the chat history's `content`, the speaker screen and
@@ -59,6 +59,84 @@ function infoText(r: DjReply): string {
   }
 }
 
+const VERB: Record<DjAction, string> = {
+  add: 'thêm bài',
+  heart: 'thả tim',
+  remove: 'gỡ bài',
+  pin: 'ghim bài',
+  skip: 'chuyển bài',
+  vote: 'bỏ phiếu bỏ qua',
+  pause: 'tạm dừng',
+  resume: 'phát tiếp',
+};
+
+/** One line of a combo answer. */
+export function stepText(s: DjStep): string {
+  const song = s.track ? `"${s.track.title}"` : 'bài';
+  if (s.ok)
+    switch (s.action) {
+      case 'add': {
+        const wish = s.wish ? `, kèm lời chúc "${s.wish}"` : '';
+        if (s.position === 0) return `Đã bật ${song}, đang phát ngay${wish}`;
+        const at = s.position
+          ? `, đứng thứ ${s.position}${when(s.etaSec)}`
+          : '';
+        return `Đã thêm ${song}${at}${wish}`;
+      }
+      case 'heart':
+        if (s.reason === 'alreadyHearted')
+          return `${song} đã được thả tim từ trước`;
+        return s.reason === 'oneHeart'
+          ? `Đã thả tim ${song} (mỗi người chỉ thả tim được 1 bài trong hàng chờ)`
+          : `Đã thả tim ${song}`;
+      case 'remove':
+        return `Đã gỡ ${song}`;
+      case 'pin':
+        return s.now
+          ? `Đã chuyển sang ${song} ngay`
+          : `Đã ghim ${song} phát tiếp theo`;
+      case 'skip':
+        return `Đã bỏ qua ${song}`;
+      case 'vote':
+        return `Đã bỏ phiếu bỏ qua ${song}`;
+      case 'pause':
+        return 'Đã tạm dừng nhạc';
+      case 'resume':
+        return 'Đã phát tiếp nhạc';
+    }
+  switch (s.reason) {
+    case 'notFound':
+      if (s.got !== undefined) return `Chỉ thêm được ${s.got}/${s.wanted} bài`;
+      return s.query
+        ? `Không tìm thấy "${s.query}"`
+        : 'Không tìm thấy bài phù hợp';
+    case 'busy':
+      return 'DJ đang bận, chưa chọn được bài';
+    case 'nothingPlaying':
+      return 'Phòng chưa phát bài nào';
+    case 'notMine':
+      return 'Chỉ gỡ được bài của chính mình';
+  }
+  const why =
+    s.errorCode === 'FORBIDDEN'
+      ? s.action === 'remove'
+        ? 'chỉ gỡ được bài của chính mình'
+        : 'cần quyền điều khiển'
+      : s.errorCode && s.errorCode !== 'INTERNAL'
+        ? chatError(new AppError(s.errorCode, s.errorParams))
+        : 'có lỗi, thử lại sau nhé';
+  // Pause / resume are about the room, not a song.
+  const what =
+    s.action === 'pause' || s.action === 'resume'
+      ? ''
+      : s.track
+        ? ` "${s.track.title}"`
+        : s.query
+          ? ` "${s.query}"`
+          : '';
+  return `Không ${VERB[s.action]} được${what}: ${why}`;
+}
+
 export function djText(r: DjReply): string {
   switch (r.kind) {
     case 'hello':
@@ -70,6 +148,11 @@ export function djText(r: DjReply): string {
     }
     case 'info':
       return infoText(r);
+    case 'done':
+      return [
+        `Xong, mình đã làm cho ${r.forName}:`,
+        ...(r.steps ?? []).map((s) => `- ${stepText(s)}`),
+      ].join('\n');
     case 'added': {
       const what =
         r.fresh === 'latest'
