@@ -1,10 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { parseYouTubeVideo } from '../../contracts';
+import { DjBrainService } from '../../dj/dj-brain.service';
+import { isSlackCommand } from '../../dj/dj-rules';
 import { ChatNotifierService } from '../chat-notifier.service';
 import { type ChatUser, ChatRoomService } from '../chat-room.service';
 import { CHAT, chatError } from '../chat-text';
 import { SlackApi } from './slack-api.service';
-import { nowMessage, queueMessage, searchMessage } from './slack-blocks';
+import {
+  djSlackOut,
+  nowMessage,
+  queueMessage,
+  searchMessage,
+} from './slack-blocks';
 
 /**
  * Where a command was typed. `mention`: an @Music Room message — everyone in the channel
@@ -49,6 +56,7 @@ export class SlackCommands {
     private readonly slack: SlackApi,
     private readonly chat: ChatRoomService,
     private readonly notifier: ChatNotifierService,
+    private readonly brain: DjBrainService,
   ) {}
 
   private user(ctx: SlackCtx): Promise<ChatUser> {
@@ -101,6 +109,32 @@ export class SlackCommands {
         );
         this.notifier.forget(roomId);
         return pub(ctx.threadTs ? CHAT.hereThread : CHAT.hereChannel);
+      }
+
+      // A natural sentence, even one starting with a command word ("skip giúp tôi bài này"),
+      // goes to the DJ; the old commands only in their short form (spec 2026-10-18-dj-chat).
+      if (!isSlackCommand(text)) {
+        const user = await this.user(ctx);
+        const later = this.chat
+          .asMember(roomId, user)
+          .then(async ({ actor }) => {
+            const reply = await this.brain.handle({
+              actor,
+              request: text.trim(),
+            });
+            const view = await this.chat.now(roomId);
+            return djSlackOut(reply, view?.roomUrl ?? null);
+          })
+          .catch(
+            (e: unknown): SlackOut => ({
+              visibility: 'ephemeral',
+              text: chatError(e),
+            }),
+          );
+        return {
+          now: { visibility: 'ephemeral', text: CHAT.askingDj },
+          later,
+        };
       }
 
       switch (sub) {

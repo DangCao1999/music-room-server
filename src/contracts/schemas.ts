@@ -271,12 +271,6 @@ export const C2S = {
     .refine((v) => v.queueItemId !== undefined || v.title !== undefined, {
       message: 'queueItemId or title',
     }),
-  /** AI2: songs for a request in plain words ("nhạc chill chiều thứ 6"). */
-  'dj:ask': z.strictObject({
-    prompt: line(LIMITS.djPrompt),
-    /** The asker's language: only a Vietnamese asker gets Vietnamese music favoured. */
-    language: LangSchema.optional(),
-  }),
   /** A8: what the room played since `since` (at most 31 days back). */
   'room:recap': z.strictObject({
     since: z.iso.datetime(),

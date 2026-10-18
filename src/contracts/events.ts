@@ -61,7 +61,6 @@ export interface CommandResults {
   /** Admin only: the room's blocked videos, most recently blocked first. */
   'track:blocked': { items: BlockedTrackView[] };
   'suggest:next': { items: SuggestionView[] };
-  'dj:ask': { items: SuggestionView[] };
   'wish:suggest': { text: string };
   'auth:google': { token: string; user: UserView };
   'auth:me': { user: UserView | null };

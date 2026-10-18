@@ -1,0 +1,268 @@
+import {
+  type GuideTarget,
+  type InfoKind,
+  normalizeQuery,
+  parseYouTubeVideo,
+} from '../contracts';
+
+/**
+ * "@DJ" requests the rules understand on their own, without the AI (spec 2026-10-18-dj-chat):
+ * how-to questions (the DJ shows the button), questions about the room, a greeting, and
+ * "the newest / trending songs of <artist>". Anything else is vague and goes to the AI.
+ * Matching runs on the accent-free lower-case text; names are cut from the original words.
+ */
+
+export type RuleMatch =
+  | { kind: 'guide'; guide: GuideTarget; query?: string }
+  | { kind: 'info'; info: InfoKind }
+  | { kind: 'hello' }
+  | { kind: 'fresh'; artist: string; mode: 'latest' | 'popular' };
+
+/** "@DJ" as a word of its own (not "dj@x.com", not "dj" alone). */
+const MENTION = /(^|[\s([{"'“])@dj(?=$|[\s,.:;!?)\]}"'”])/i;
+const MENTION_ALL = new RegExp(MENTION.source, 'gi');
+
+/** The request without "@DJ"; null = not addressed to the DJ, '' = only "@DJ". */
+export function extractDjRequest(content: string): string | null {
+  if (!MENTION.test(content)) return null;
+  return content
+    .replace(MENTION_ALL, '$1')
+    .replace(/^[\s,.:;!?-]+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Words that make a song request vague: the DJ has to choose (AI or a real lookup). */
+const VAGUE = [
+  'moi',
+  'moi nhat',
+  'vua ra',
+  'trending',
+  'hot',
+  'thinh hanh',
+  'giong',
+  'chill',
+  'vui',
+  'buon',
+  'vai bai',
+  'may bai',
+  'gi do',
+  'nao do',
+  'bat ky',
+  'ngau nhien',
+  'random',
+  'latest',
+  'new',
+  'popular',
+  'something',
+  'some',
+  'nhe nhang',
+  'soi dong',
+  'tam trang',
+  'hop',
+  'phu hop',
+  'nhac',
+];
+
+/** Accent-free, lower case, punctuation as spaces. Word positions match `words()`. */
+function plain(text: string): string {
+  return normalizeQuery(text.replace(/[^\p{L}\p{N}\s'-]/gu, ' '));
+}
+function words(text: string): string[] {
+  return text
+    .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+function has(text: string, phrase: string): boolean {
+  return new RegExp(`(^| )${phrase}( |$)`).test(text);
+}
+function vague(text: string): boolean {
+  return VAGUE.some((w) => has(text, w));
+}
+
+/** Polite words around a request ("giúp tôi", "dùm", "nhé"…), in plain form. */
+// Not "cho anh / cho em": they are common in song names ("Hãy Trao Cho Anh").
+const FILLER_END =
+  /( (giup|dum) (toi|minh|em|tui)| giup| dum| di| nhe| nha| nhen| please| pls| di nao)+$/;
+const FILLER_START =
+  /^((hay|giup|dum|cho) (toi|minh|em|tui) (hoi )?|giup |dum |hay |hoi |please |pls |ban oi |dj oi )+/;
+
+/** The original words from index `from`, trailing filler removed. */
+function tail(original: string, from: number): string {
+  const ws = words(original).slice(from);
+  let p = plain(ws.join(' '));
+  while (ws.length) {
+    // A leading space, so a tail made only of filler ("đi", "giúp tôi") is cut too.
+    const cut = (' ' + p).replace(FILLER_END, '').trim();
+    if (cut === p) break;
+    const drop = p.split(' ').length - cut.split(' ').filter(Boolean).length;
+    ws.splice(ws.length - drop, drop);
+    p = cut;
+  }
+  return ws.join(' ').trim();
+}
+
+const ADD_VERB =
+  /^(bat|them|mo|play|add|phat|cho nghe|nghe|queue)( (giup|dum|cho) (toi|minh|em|tui)| giup| dum)?( (bai hat|bai|nhac|song))? /;
+
+/** How-to phrases (the DJ shows the button) in plain form, most specific first. */
+const GUIDES: [GuideTarget, RegExp][] = [
+  // "chặn bài" only with its accent: "chán bài này" (bored of it) is the same without.
+  ['block', /(^| )(chan bai|block)( |$)/],
+  ['lyrics', /(^| )(loi bai hat|loi bai|xem loi|lyrics?)( |$)/],
+  ['listen', /(^| )(nghe cung|listen along)( |$)/],
+  ['mini', /(^| )(thu nho|man hinh nho|mini player|mini|pip)( |$)/],
+  ['share', /(^| )(chia se|share|invite|qr|ma qr|ma phong|link phong)( |$)/],
+  ['pause', /(^| )(tam dung|dung nhac|tat nhac|phat tiep|pause|resume)( |$)/],
+  ['heart', /(^| )(tha tim|like bai|like|heart)( |$)/],
+  ['save', /(^| )(luu|save|yeu thich|favorite|favourite)( |$)/],
+  [
+    'skip',
+    /(^| )(skip|bo qua|qua bai|next|chuyen bai|bai tiep|bai tiep theo)( |$)/,
+  ],
+];
+
+const INFOS: [InfoKind, RegExp][] = [
+  [
+    'myCount',
+    /(^| )(toi|minh|em|tui) (da )?(them|chon|bat) (bao nhieu|may) bai/,
+  ],
+  [
+    'myNext',
+    /((bao (nhieu|lau)|may bai|khi nao|bao gio|con (may|bao)).*(cua|toi|den|den luot) (toi|minh|em|tui))|(when.*my (song|turn))|(luot (cua )?(toi|minh))/,
+  ],
+  [
+    'whoPicked',
+    /(^| )((ai (chon|them|bat|mo))|cua ai|who (picked|added|chose))( |$)/,
+  ],
+  [
+    'nowPlaying',
+    /(^| )(dang phat|bai (gi|nao) (day|vay|the|dang)|bai nay la( bai)? gi|ten bai|now playing|what('s| is) (this|playing))( |$)/,
+  ],
+  [
+    'queueLength',
+    /(^| )(hang cho|con (bao nhieu|may) bai|queue|bao nhieu bai (dang )?cho)( |$)/,
+  ],
+];
+
+const SIMILAR = /(^| )(giong|tuong tu|na na|nhu bai|similar|like this)( |$)/;
+
+const HELLO =
+  /^(hi|hello|hey|chao|xin chao|alo|help|tro giup|giup voi|ban lam (duoc )?gi|lam duoc gi|cam on|thanks|thank you)( |$)/;
+
+/** "(bài) mới / trending của <X>", "<X> có bài (gì) mới". */
+const FRESH_POPULAR =
+  /(^| )(trending|hot|dang hot|thinh hanh|popular|hit) (cua|of|by) /;
+const FRESH_LATEST =
+  /(^| )(moi nhat|moi ra|vua ra|moi|latest|new) (cua|of|by) /;
+const FRESH_HAS_NEW = /^(.+) co bai( hat)?( gi)? moi/;
+/** Not an artist: "hôm nay có bài gì mới", "bạn có bài gì mới". */
+const NOT_ARTIST =
+  /^(hom nay|dao nay|tuan nay|thang nay|nam nay|gan day|bay gio|hien tai|hien gio|ban|minh|toi|tui|em|anh|chi|phong|ai|nguoi ta|youtube|tiktok)$/;
+
+/** `offset`: words of `original` already cut from the front of `p` (polite words). */
+function freshMatch(
+  original: string,
+  p: string,
+  offset: number,
+): Extract<RuleMatch, { kind: 'fresh' }> | null {
+  for (const [re, mode] of [
+    [FRESH_POPULAR, 'popular'],
+    [FRESH_LATEST, 'latest'],
+  ] as const) {
+    const m = re.exec(p);
+    if (!m) continue;
+    // The artist: the original words after "của / of / by".
+    const before = p
+      .slice(0, m.index + m[0].length)
+      .trim()
+      .split(' ').length;
+    const artist = tail(original, offset + before);
+    // Trending is tried first: "bài mới trending của X" asks for the trending one.
+    if (artist && !vague(plain(artist))) return { kind: 'fresh', artist, mode };
+  }
+  const m = FRESH_HAS_NEW.exec(p);
+  if (m && !NOT_ARTIST.test(m[1]) && !vague(m[1])) {
+    const n = m[1].split(' ').length;
+    const artist = words(original)
+      .slice(offset, offset + n)
+      .join(' ');
+    if (artist) return { kind: 'fresh', artist, mode: 'latest' };
+  }
+  return null;
+}
+
+/** null = the request is vague: the AI decides. */
+export function matchRules(request: string): RuleMatch | null {
+  const original = request.trim();
+  const p0 = plain(original);
+  if (!p0) return { kind: 'hello' };
+  const p = p0.replace(FILLER_START, '');
+  const offset = p0.split(' ').length - (p ? p.split(' ').length : 0);
+  const guideOk = (g: GuideTarget) =>
+    g !== 'block' || /chặn|block/i.test(original);
+
+  const fresh = freshMatch(original, p, offset);
+  if (fresh) return fresh;
+
+  // "bài gì giống bài đang phát": a song request, not a question about the song on air.
+  if (SIMILAR.test(p)) return null;
+
+  for (const [info, re] of INFOS) if (re.test(p)) return { kind: 'info', info };
+
+  // "mời mọi người": only with the accent ("mọi người" = everyone).
+  if (/(^|\s)mời\s+(bạn|mọi người|người|ai|thêm|đồng nghiệp)/i.test(original))
+    return { kind: 'guide', guide: 'share' };
+  // "nghe cùng", "phát tiếp" start like a song request ("nghe…", "phát…").
+  for (const [guide, re] of GUIDES)
+    if ((guide === 'listen' || guide === 'pause') && re.test(p))
+      return { kind: 'guide', guide };
+
+  // "bật / thêm (bài) <tên>": a clear name is something the asker can search themselves.
+  const add = ADD_VERB.exec(p + ' ');
+  if (add) {
+    // "bật nhạc đi", "thêm bài giúp tôi": nothing but polite words after the verb.
+    const rest = (' ' + p.slice(add[0].length).trim())
+      .replace(FILLER_END, '')
+      .trim();
+    const guideOfRest = GUIDES.find(
+      ([g, re]) => re.test(rest) && rest.split(' ').length <= 3 && guideOk(g),
+    );
+    if (guideOfRest) return { kind: 'guide', guide: guideOfRest[0] };
+    if (!rest) return { kind: 'guide', guide: 'add' };
+    // "bật bài của X", "bật nhạc vui": the DJ has to choose.
+    if (vague(rest) || /^(cua|of|by) /.test(rest)) return null;
+    const start = offset + add[0].trim().split(' ').length;
+    const query = tail(original, start);
+    return query ? { kind: 'guide', guide: 'add', query } : null;
+  }
+
+  for (const [guide, re] of GUIDES)
+    if (re.test(p) && guideOk(guide)) return { kind: 'guide', guide };
+
+  if (HELLO.test(p) && p.split(' ').length <= 6) return { kind: 'hello' };
+  return null;
+}
+
+/**
+ * Slack: the old commands only in their short form (spec table); a natural sentence that
+ * merely starts with a command word ("skip giúp tôi bài này") goes to the DJ.
+ */
+export function isSlackCommand(text: string): boolean {
+  const t = text.trim();
+  if (!t) return true;
+  const first = t.split(/\s+/)[0].toLowerCase();
+  if (first === 'connect' || first === 'disconnect') return true;
+  if (/^(skip|now|queue|help|here)[.!?]*$/i.test(t)) return true;
+  const add = /^add\s+(.+)$/i.exec(t);
+  if (!add) return false;
+  const arg = add[1].trim();
+  if (parseYouTubeVideo(arg)) return true;
+  const p = plain(arg);
+  return (
+    arg.split(/\s+/).length <= 8 &&
+    !vague(p) &&
+    !/^(bai |nhac )?(cua|of|by) /.test(p)
+  );
+}

@@ -7,7 +7,6 @@ export const LIMITS = {
   displayName: 30,
   input: 2048,
   query: 100,
-  djPrompt: 200,
   playlistName: 60,
   playlistDescription: 200,
   wish: 200,

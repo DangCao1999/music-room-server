@@ -19,7 +19,7 @@ import {
   type CommandInput,
   type CommandName,
 } from '../contracts';
-import { DjService } from '../ai/dj.service';
+import { DjBrainService } from '../dj/dj-brain.service';
 import { WishWriterService } from '../ai/wish-writer.service';
 import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
@@ -89,7 +89,6 @@ export const LOOKUP_LIMIT = { count: 10, windowMs: 60_000 };
 /** Lyrics are asked once per song per device (cached on the server). */
 export const LYRICS_LIMIT = { count: 20, windowMs: 60_000 };
 /** AI2: free AI quota is shared by the whole server. */
-export const DJ_LIMIT = { count: 3, windowMs: 3600_000 };
 /** "Nhờ MC viết": one short AI call each, same shared free quota. */
 export const WISH_AI_LIMIT = { count: 10, windowMs: 3600_000 };
 export const RECAP_LIMIT = { count: 20, windowMs: 60_000 };
@@ -137,7 +136,7 @@ export class RealtimeGateway
     private readonly suggest: SuggestService,
     private readonly playlists: PlaylistService,
     private readonly lyrics: LyricsService,
-    private readonly djAi: DjService,
+    private readonly djBrain: DjBrainService,
     private readonly wishWriter: WishWriterService,
     private readonly users: UsersService,
     private readonly personal: PlaylistsService,
@@ -692,26 +691,6 @@ export class RealtimeGateway
     });
   }
 
-  @SubscribeMessage('dj:ask')
-  askDj(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
-    return this.run('dj:ask', s, body, async (input, actor) => {
-      await this.requireMember(actor);
-      this.limit(`dj:${actor.memberId}`, DJ_LIMIT);
-      const room = await this.prisma.room.findUniqueOrThrow({
-        where: { id: actor.roomId },
-        select: { settings: true },
-      });
-      return {
-        items: await this.djAi.ask(
-          actor.roomId,
-          input.prompt,
-          readSettings(room.settings),
-          input.language ?? 'vi',
-        ),
-      };
-    });
-  }
-
   @SubscribeMessage('room:recap')
   recap(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('room:recap', s, body, (input, actor) => {
@@ -931,9 +910,11 @@ export class RealtimeGateway
 
   @SubscribeMessage('chat:send')
   chat(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
-    return this.run('chat:send', s, body, (input, actor) =>
-      this.social.chat(actor, input.content),
-    );
+    return this.run('chat:send', s, body, async (input, actor) => {
+      const saved = await this.social.chat(actor, input.content);
+      // "@DJ": answered in the background, as a chat message of its own.
+      this.djBrain.onRoomChat(actor, saved);
+    });
   }
 
   @SubscribeMessage('room:reaction')

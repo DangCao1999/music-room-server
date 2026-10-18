@@ -22,6 +22,11 @@ export class RateLimiter {
     return { ok: true };
   }
 
+  /** Gives back the latest hit of `key` (the work it paid for did not happen). */
+  undo(key: string): void {
+    this.hits.get(key)?.pop();
+  }
+
   /** Drop idle keys so the map does not grow forever. */
   sweep(now: number, maxWindowMs: number): void {
     for (const [key, list] of this.hits) {

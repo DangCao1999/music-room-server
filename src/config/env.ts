@@ -35,6 +35,8 @@ const EnvSchema = z.object({
   GROQ_MODEL: z.string().default('qwen/qwen3.8-27b'),
   OPENROUTER_API_KEY: optionalString,
   OPENROUTER_MODEL: optionalString,
+  /** "@DJ": requests that need the AI, per member per hour (requests the rules answer are free). */
+  DJ_AI_PER_HOUR: z.coerce.number().int().min(1).max(1000).default(10),
   /** Đợt 3: the Slack app of this workspace ("/music"). Both needed; otherwise Slack is off. */
   SLACK_BOT_TOKEN: optionalString,
   SLACK_SIGNING_SECRET: optionalString,
