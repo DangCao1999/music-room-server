@@ -241,3 +241,26 @@ Không có test tự động (quy ước dự án). Mỗi task: `npm run lint` +
 - Gợi ý thêm bài có tên bài: ô Thêm bài được điền sẵn, người dùng bấm Tìm.
 - Tìm "bài mới / trending": tra YouTube với `"<nghệ sĩ> MV"`, chỉ nhận bài 1–10 phút của kênh nghệ sĩ, kênh official hoặc có dấu phát hành (MV, Official…).
 - Câu "giống / tương tự bài đang phát" luôn đi qua AI.
+
+## Combo: DJ tự làm khi yêu cầu có nhiều tác vụ (2026-10-18)
+
+Người dùng duyệt: **nhiều tác vụ trong một câu thì DJ làm luôn; một tác vụ đơn mà người dùng tự làm được thì vẫn hướng dẫn** ("Chỉ cho tôi"). Việc mơ hồ (DJ phải tự chọn bài) vẫn do DJ làm như trước.
+
+| Combo | Ví dụ | Quyền |
+|---|---|---|
+| Thêm nhiều bài | "thêm Lạc Trôi và Nàng Thơ", "3 bài của Thùy Chi", "vài bài chill" | mọi người, trong giới hạn bài mỗi người |
+| Thêm kèm lời chúc / tặng | "… kèm lời chúc 'chiều vui'", "bật Nàng Thơ tặng Lan" (lời chúc "Tặng Lan") | mọi người; lời chúc gắn vào bài đầu tiên được thêm |
+| Thả tim | "thả tim Lạc Trôi và Nàng Thơ", "thả tim hết bài của Lan" | mọi người; **mỗi người chỉ có 1 tim trong hàng chờ** (luật phòng): DJ tim bài đầu tiên khớp và nói rõ |
+| Gỡ nhiều bài | "gỡ hết bài của tôi", "gỡ Lạc Trôi và Nàng Thơ" | bài của chính mình (quản trị viên: mọi bài) |
+| Bật lại / từ danh sách | "bật lại 3 bài vừa phát", "thêm mấy bài tôi đã lưu" | mọi người |
+| Thêm rồi phát tiếp / ngay | "bật X ngay sau bài này", "phát X luôn" | thêm: mọi người; ghim / chuyển: quyền điều khiển |
+| Đổi bài | "đổi bài Nàng Thơ của tôi thành Lạc Trôi" | bài của chính mình |
+| Ghép khác loại | "skip rồi bật Nàng Thơ", "tạm dừng rồi thêm 2 bài chill" | theo quyền từng phần (bỏ qua: quyền điều khiển chuyển ngay, người khác bỏ phiếu) |
+
+- Tách câu bằng luật (`dj-plan.ts`): "và", "rồi", "sau đó", dấu phẩy; phần không có động từ là thêm đối tượng của động từ trước. "Vài / mấy bài" = 3, tối đa 5.
+- Bài theo tên: chỉ thử bản khác khi bản đầu không phát được (không nhúng, quá dài, live); không lách bài bị chặn, "vừa phát" / "đang chờ" là câu trả lời.
+- Bài của nghệ sĩ: tra YouTube thật (kênh nghệ sĩ / official), không cần AI. Phần mơ hồ: tối đa một lần gọi AI, tính vào lượt của người hỏi (AI không trả lời thì không trừ lượt).
+- Từ mơ hồ so trên chữ có dấu khi người dùng gõ dấu ("Giông" ≠ "giống", "Nhà" ≠ "nha").
+- Trả lời: một tin `kind: 'done'` với `steps[]`; mỗi bước thành công / không thành công kèm lý do; bài thêm vào có thẻ và nút "Gỡ" cho người hỏi. Chỉ một bài được thêm (không lời chúc) thì vẫn là tin "Đã thêm" như cũ.
+- Slack: "add" có danh sách / lời chúc đi tới DJ; câu trả lời combo đăng công khai.
+- Ngoài phạm vi: hẹn giờ ("tạm dừng 5 phút"), chặn hàng loạt.

@@ -25,7 +25,8 @@ export async function findFresh(
   deps: { innertube: InnerTubeProvider; search: SearchService },
   memberId: string,
   artist: string,
-  mode: 'latest' | 'popular',
+  /** top: the artist's best-known songs, any year ("vài bài của Thùy Chi"). */
+  mode: 'latest' | 'popular' | 'top',
 ): Promise<{ videos: FoundVideo[]; verified: boolean }> {
   if (deps.innertube.available) {
     try {
@@ -35,12 +36,14 @@ export async function findFresh(
               { upload_date: 'month' as const },
               { upload_date: 'year' as const },
             ]
-          : [
-              {
-                upload_date: 'year' as const,
-                prioritize: 'popularity' as const,
-              },
-            ];
+          : mode === 'popular'
+            ? [
+                {
+                  upload_date: 'year' as const,
+                  prioritize: 'popularity' as const,
+                },
+              ]
+            : [{ prioritize: 'popularity' as const }];
       for (const filters of tries) {
         const { videos } = await deps.innertube.search(
           `${artist} MV`,
@@ -55,7 +58,10 @@ export async function findFresh(
       // InnerTube failing: the plain search below.
     }
   }
-  const { results } = await deps.search.search(memberId, `${artist} mới nhất`);
+  const { results } = await deps.search.search(
+    memberId,
+    mode === 'top' ? artist : `${artist} mới nhất`,
+  );
   return {
     videos: rank(
       results.map((t) => ({

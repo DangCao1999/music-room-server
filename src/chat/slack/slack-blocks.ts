@@ -191,7 +191,9 @@ const DJ_HELP = 'Gõ `/music help` để xem mọi lệnh.';
 /** "@Music Room <câu>": the DJ's answer for Slack (spec 2026-10-18-dj-chat). */
 export function djSlackOut(r: DjReply, roomUrl: string | null): SlackOut {
   const text = djText(r);
-  if (r.kind === 'added') return { visibility: 'public', text };
+  // Songs added or the room changed: the channel sees it, like the room chat.
+  if (r.kind === 'added' || r.kind === 'done')
+    return { visibility: 'public', text };
   if (r.kind === 'guide') {
     const cmd =
       r.guide === 'skip'

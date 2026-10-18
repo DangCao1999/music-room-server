@@ -11,6 +11,7 @@ import { UsersService } from './users/users.service';
 import { AiService } from './ai/ai.service';
 import { DjService } from './ai/dj.service';
 import { DjBrainService } from './dj/dj-brain.service';
+import { DjComboService } from './dj/dj-combo.service';
 import { McService } from './ai/mc.service';
 import { ModerationService } from './ai/moderation.service';
 import { LastFmService } from './music/lastfm.service';
@@ -82,6 +83,7 @@ export class AppModule {
         TtsService,
         DjService,
         DjBrainService,
+        DjComboService,
         WishWriterService,
         LastFmService,
         TrackMetaService,
