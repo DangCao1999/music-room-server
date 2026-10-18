@@ -11,7 +11,7 @@ Xoá sạch app: `kubectl delete namespace music-room` (mất cả dữ liệu P
 | `api.yaml` | API (1 replica, `Recreate`), tự chạy migration khi khởi động |
 | `ingress.yaml` | Traefik (có sẵn trong k3s) mở API ra cổng 80 |
 
-Secret **không** nằm trong git; tạo bằng lệnh ở bước 5.
+Secret **không** nằm trong git; tạo bằng lệnh ở bước 5. Setup lần đầu làm tay (bước 1–6); sau đó GitHub Actions tự cập nhật image API (bước 9).
 
 ## 1. Chuẩn bị Raspberry Pi
 
@@ -136,3 +136,41 @@ Ghi chú:
 - API giữ phòng và bộ hẹn giờ trong bộ nhớ, nên **luôn chỉ 1 replica**; cập nhật sẽ ngắt kết nối vài giây rồi client tự nối lại.
 - Dữ liệu Postgres nằm ở `/var/lib/rancher/k3s/storage/` trên Pi. Nên đặt cron sao lưu ra ổ khác.
 - Thêm app khác: tạo namespace mới với `LimitRange` + `ResourceQuota` tương tự `namespace.yaml`. Tổng RAM: k3s ~500 MB, Music Room ~0,5–1 GB, còn lại ~2 GB cho các app khác.
+
+## 9. Tự động cập nhật API bằng GitHub Actions
+
+Mỗi lần push tag `v*`, `ci.yml` build image rồi job `deploy-k3s` SSH vào Pi chạy
+`kubectl set image` cho API và chờ API lên lại. GitHub **chỉ đổi image**: manifest, Secret, Postgres giữ nguyên như bạn đã setup ở bước 1–6, nên GitHub không cần biết mật khẩu hay API key nào.
+
+Cấu hình một lần:
+
+1. **Tạo key SSH cho GitHub** (Terminal trên Mac):
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/k3s-deploy -N "" -C github-actions
+   cat ~/.ssh/k3s-deploy.pub
+   ```
+2. **Cho key đó vào Pi** (Termius), dán dòng vừa in:
+   ```bash
+   echo 'ssh-ed25519 AAAA… github-actions' >> ~/.ssh/authorized_keys
+   ```
+3. **Lấy dấu vân tay của Pi** (Terminal trên Mac), để GitHub chắc chắn đang vào đúng Pi:
+   ```bash
+   ssh-keyscan -t ed25519 <IP_PI> 2>/dev/null
+   ```
+4. **GitHub → repo → Settings → Secrets and variables → Actions**:
+
+   | Tab | Tên | Giá trị |
+   |---|---|---|
+   | Variables | `K3S_HOST` | IP SSH của Pi |
+   | Variables | `K3S_USER` | user SSH trên Pi |
+   | Variables | `K3S_KNOWN_HOSTS` | dòng in ra ở mục 3 |
+   | Variables | `K3S_SSH_PORT` | chỉ khi SSH không ở cổng 22 |
+   | Secrets | `K3S_SSH_KEY` | private key: `pbcopy < ~/.ssh/k3s-deploy` rồi dán (gồm cả dòng `BEGIN`/`END`) |
+
+   Xong thì xoá private key trên Mac: `rm ~/.ssh/k3s-deploy`.
+
+Phát hành bản mới: `git tag v1.5.0 && git push origin v1.5.0`. Xem kết quả ở tab *Actions*; job `deploy-k3s` in danh sách pod và log ở bước *Status*.
+
+Ghi chú:
+- Sửa `configmap.yaml` / `ingress.yaml` / Secret vẫn làm tay trên Pi (bước 4–6, `git pull && kubectl apply -k .`).
+- `kubectl apply -k .` đưa API về tag ghi trong `api.yaml` (`latest`, cũng là bản mới nhất). Muốn giữ đúng tag đang chạy thì sửa `api.yaml` trước khi apply.
