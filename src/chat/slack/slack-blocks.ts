@@ -1,4 +1,6 @@
-import type { TrackSummary } from '../../contracts';
+import { djText } from '../../dj/dj-text';
+import type { SlackOut } from './slack-commands.service';
+import type { DjReply, TrackSummary } from '../../contracts';
 import type { NowView } from '../chat-room.service';
 import { CHAT } from '../chat-text';
 
@@ -182,4 +184,52 @@ export function queueMessage(v: NowView): string {
         `${i + 1}. ${esc(n.title)}${n.pickedBy ? ` — ${esc(n.pickedBy)}` : ''}`,
     ),
   ].join('\n');
+}
+
+const DJ_HELP = 'Gõ `/music help` để xem mọi lệnh.';
+
+/** "@Music Room <câu>": the DJ's answer for Slack (spec 2026-10-18-dj-chat). */
+export function djSlackOut(r: DjReply, roomUrl: string | null): SlackOut {
+  const text = djText(r);
+  if (r.kind === 'added') return { visibility: 'public', text };
+  if (r.kind === 'guide') {
+    const cmd =
+      r.guide === 'skip'
+        ? '`/music skip`'
+        : r.guide === 'add'
+          ? `\`/music add ${r.query ?? '<tên bài>'}\``
+          : r.guide === 'myItem'
+            ? '`/music queue`'
+            : null;
+    const lines = [
+      text,
+      cmd ? `Trên Slack: gõ ${cmd}.` : 'Việc này làm trên trang phòng.',
+      DJ_HELP,
+    ];
+    const out: SlackOut = { visibility: 'ephemeral', text: lines.join('\n') };
+    if (!cmd && roomUrl)
+      out.blocks = [
+        { type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } },
+        {
+          type: 'actions',
+          elements: [
+            {
+              type: 'button',
+              text: { type: 'plain_text', text: 'Mở phòng', emoji: true },
+              url: roomUrl,
+              action_id: 'open_room',
+            },
+          ],
+        },
+      ];
+    return out;
+  }
+  if (r.kind === 'info' && r.info?.kind === 'myNext')
+    return {
+      visibility: 'ephemeral',
+      text: `${text}\nGõ \`/music queue\` để xem hàng chờ.`,
+    };
+  if (r.kind === 'other' || r.kind === 'hello')
+    return { visibility: 'ephemeral', text: `${text}\n${DJ_HELP}` };
+  return { visibility: 'ephemeral', text };
 }

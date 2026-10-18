@@ -2,8 +2,9 @@ import { maskBlocked } from '../ai/moderation';
 import { Injectable } from '@nestjs/common';
 import { AppError } from '../common/app-error';
 import { RateLimiter } from '../common/rate-limiter';
-import type { DjSound, Reaction } from '../contracts';
-import type { Member } from '../generated/prisma/client';
+import type { DjReply, DjSound, Reaction } from '../contracts';
+import { djText } from '../dj/dj-text';
+import type { Member, Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { Broadcaster } from '../realtime/broadcaster.service';
 import type { Actor } from '../state/room-state.service';
@@ -43,7 +44,8 @@ export class SocialService {
     if (!r.ok) throw new AppError('RATE_LIMITED', { seconds: r.retryAfterSec });
   }
 
-  async chat(actor: Actor, content: string): Promise<void> {
+  /** Returns the text as saved (blocked words masked): what "@DJ" reads. */
+  async chat(actor: Actor, content: string): Promise<string> {
     const me = await this.sender(actor);
     this.limit(`chat:${me.id}`, CHAT_LIMIT);
     const row = await this.prisma.chatMessage.create({
@@ -56,9 +58,30 @@ export class SocialService {
       },
     });
     this.broadcaster.toRoom(actor.roomId, 'chat:receive', toChatView(row));
+    await this.trimChat(actor.roomId);
+    return row.content;
+  }
+
+  /** The "@DJ" assistant's answer, as a chat message of its own (spec 2026-10-18-dj-chat). */
+  async postDj(roomId: string, reply: DjReply): Promise<void> {
+    const row = await this.prisma.chatMessage.create({
+      data: {
+        roomId,
+        memberId: 'dj',
+        displayName: 'DJ',
+        kind: 'dj',
+        content: djText(reply),
+        payload: reply as unknown as Prisma.InputJsonValue,
+      },
+    });
+    this.broadcaster.toRoom(roomId, 'chat:receive', toChatView(row));
+    await this.trimChat(roomId);
+  }
+
+  private async trimChat(roomId: string): Promise<void> {
     await this.prisma.$executeRaw`
       DELETE FROM "ChatMessage" WHERE "id" IN (
-        SELECT "id" FROM "ChatMessage" WHERE "roomId" = ${actor.roomId}
+        SELECT "id" FROM "ChatMessage" WHERE "roomId" = ${roomId}
         ORDER BY "createdAt" DESC OFFSET ${KEEP_CHAT})`;
   }
 

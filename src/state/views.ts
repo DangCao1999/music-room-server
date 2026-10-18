@@ -2,6 +2,7 @@ import type {
   ActivityLogView,
   ActivityParams,
   ChatMessageView,
+  DjReply,
   QueueItemView,
   SpeechView,
   TrackSummary,
@@ -77,13 +78,17 @@ export function toItemView(
 }
 
 export function toChatView(m: ChatMessage): ChatMessageView {
-  return {
+  const view: ChatMessageView = {
     id: m.id,
     memberId: m.memberId,
     displayName: m.displayName,
     content: m.content,
     createdAt: m.createdAt.toISOString(),
   };
+  // Only the DJ's answers carry the extra fields: member messages keep their old shape.
+  if (m.kind === 'dj' && m.payload)
+    return { ...view, kind: 'dj', dj: m.payload as unknown as DjReply };
+  return view;
 }
 
 const PARAM_KEYS = [

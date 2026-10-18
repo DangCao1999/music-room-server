@@ -2,6 +2,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ENV, type Env } from '../config/env';
 import { HTTP_TIMEOUT_MS } from './youtube.provider';
 
+/** youtubei.js search filters the DJ uses for "newest / trending" (spec 2026-10-18-dj-chat). */
+export interface SearchFilters {
+  upload_date?: 'week' | 'month' | 'year';
+  prioritize?: 'popularity';
+}
+
 /** A video found by YouTube's own web search (not yet checked through the Data API). */
 export interface FoundVideo {
   externalId: string;
@@ -64,9 +70,10 @@ export class InnerTubeProvider {
   async search(
     q: string,
     max: number,
+    filters?: SearchFilters,
   ): Promise<{ videos: FoundVideo[]; more: boolean }> {
     try {
-      const found = await this.find(q, max);
+      const found = await this.find(q, max, filters);
       this.failures = 0;
       return found;
     } catch (e) {
@@ -85,10 +92,11 @@ export class InnerTubeProvider {
   private async find(
     q: string,
     max: number,
+    filters?: SearchFilters,
   ): Promise<{ videos: FoundVideo[]; more: boolean }> {
     const yt = await this.session();
     let res = await withTimeout(
-      yt.search(q, { type: 'video' }),
+      yt.search(q, { type: 'video', ...filters }),
       HTTP_TIMEOUT_MS,
     );
     // A page we cannot read (layout changed) is a failure, not "no results".

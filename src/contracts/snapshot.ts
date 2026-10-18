@@ -1,3 +1,4 @@
+import type { DjReply } from './dj';
 import type { DjSound, Reaction, Voice, VoicePreset } from './constants';
 import type { Lang, RoomSettings } from './schemas';
 
@@ -245,10 +246,15 @@ export interface BlockedTrackView {
 
 export interface ChatMessageView {
   id: string;
+  /** 'dj' for the DJ's answers. */
   memberId: string;
   displayName: string;
+  /** Plain text (Vietnamese for the DJ: history, speaker screen, Slack). */
   content: string;
   createdAt: string;
+  /** The DJ's answer ("@DJ"): `dj` holds it in structure, worded per viewer. */
+  kind?: 'dj';
+  dj?: DjReply;
 }
 
 /**
