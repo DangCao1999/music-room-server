@@ -8,6 +8,7 @@ import type {
   LibraryItemView,
   LyricsView,
   MyRoomView,
+  RoomStatusView,
   PlaylistSummaryView,
   PlaylistView,
   YouTubePlaylistView,
@@ -65,6 +66,8 @@ export interface CommandResults {
   'auth:google': { token: string; user: UserView };
   'auth:me': { user: UserView | null };
   'me:rooms': { rooms: MyRoomView[] };
+  /** Rooms that no longer exist are left out. */
+  'rooms:status': { rooms: RoomStatusView[] };
   'me:favorites-import': { imported: number };
   'playlist:mine': { playlists: PlaylistSummaryView[] };
   'playlist:create': { id: string };

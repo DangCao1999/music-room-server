@@ -353,6 +353,8 @@ export class QueueService {
       if (me.isDevice) throw new AppError('FORBIDDEN');
       const item = await this.item(tx, actor.roomId, queueItemId);
       this.requireQueued(item);
+      // Hearts lift other people's songs; the picker cannot vote for their own.
+      if (item.addedById === me.id) throw new AppError('OWN_SONG');
       const existing = await tx.heart.findUnique({
         where: { queueItemId_memberId: { queueItemId, memberId: me.id } },
       });

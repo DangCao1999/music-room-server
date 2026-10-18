@@ -72,7 +72,9 @@ export type DjStepReason =
   | 'nothingPlaying'
   | 'busy'
   | 'oneHeart'
-  | 'alreadyHearted';
+  | 'alreadyHearted'
+  /** heart: the only matches were the asker's own songs. */
+  | 'ownSong';
 
 export interface DjStep {
   action: DjAction;

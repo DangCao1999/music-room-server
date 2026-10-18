@@ -349,15 +349,26 @@ export class DjComboService {
 
   /** One heart per member in this room (QueueService.heart moves it): the first match gets it. */
   private async heart(run: Run, t: Target): Promise<void> {
-    const items = this.pick(await this.queueNow(run), t, run.me);
+    const matched = this.pick(await this.queueNow(run), t, run.me);
+    // The picker cannot heart their own songs (QueueService.heart refuses: OWN_SONG).
+    const items = matched.filter((q) => q.addedBy?.id !== run.me.id);
     const first = items[0];
     if (!first) {
-      run.steps.push({
-        action: 'heart',
-        ok: false,
-        reason: 'notFound',
-        ...(t.titles ? { query: t.titles.join(', ') } : {}),
-      });
+      run.steps.push(
+        matched[0]
+          ? {
+              action: 'heart',
+              ok: false,
+              reason: 'ownSong',
+              track: matched[0].track,
+            }
+          : {
+              action: 'heart',
+              ok: false,
+              reason: 'notFound',
+              ...(t.titles ? { query: t.titles.join(', ') } : {}),
+            },
+      );
       return;
     }
     const base = {
