@@ -18,6 +18,7 @@ const ERRORS: Partial<Record<ErrorCode, (p: ErrorParams) => string>> = {
   PIN_NOT_SET: () =>
     'Phòng này chưa đặt mã PIN quản trị. Hãy đặt mã trong Cài đặt phòng trên web.',
   ALREADY_QUEUED: () => 'Bài này đã có trong hàng chờ hoặc đang phát.',
+  OWN_SONG: () => 'Không thả tim được bài của chính mình.',
   PLAYED_RECENTLY: (p) =>
     `Bài này vừa phát ${p.minutes} phút trước. Phòng chỉ cho thêm lại sau ${p.gap} phút.`,
   QUEUE_LIMIT: (p) =>

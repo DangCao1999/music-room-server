@@ -169,6 +169,10 @@ export function tail(original: string, from: number): string {
         .every((w) => FILLER_WORDS.has(w.toLowerCase()))
     )
       break;
+    // "Chạy Ngay Đi": a capitalised word right after another capitalised one is the title's.
+    const at = ws.length - drop;
+    const capital = (w?: string) => Boolean(w && w[0] !== w[0].toLowerCase());
+    if (capital(ws[at]) && capital(ws[at - 1])) break;
     ws.splice(ws.length - drop, drop);
     p = cut;
   }

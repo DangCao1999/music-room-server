@@ -479,6 +479,14 @@ export class RealtimeGateway
     }));
   }
 
+  @SubscribeMessage('rooms:status')
+  roomsStatus(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('rooms:status', s, body, async (input) => {
+      this.limit(`peek:${s.data.ip}`, PEEK_LIMIT);
+      return { rooms: await this.users.roomsStatus(input.codes) };
+    });
+  }
+
   @SubscribeMessage('me:favorites-import')
   importFavorites(
     @ConnectedSocket() s: AppSocket,

@@ -206,6 +206,10 @@ export const C2S = {
   'auth:me': z.strictObject({}),
   /** L6: rooms the signed-in user owns or has joined. */
   'me:rooms': z.strictObject({}),
+  /** Rooms this device remembers (not signed in): name, who is online, the song on air. */
+  'rooms:status': z.strictObject({
+    codes: z.array(RoomCodeSchema).min(1).max(20),
+  }),
   /** L1: songs saved on this device before signing in, added to the account. */
   'me:favorites-import': z.strictObject({
     videoIds: z.array(z.string().regex(VIDEO_ID)).max(300),
@@ -340,6 +344,7 @@ export const ANONYMOUS_COMMANDS: readonly CommandName[] = [
   'auth:google',
   'auth:me',
   'me:rooms',
+  'rooms:status',
   'me:room-delete',
   'me:favorites-import',
   'playlist:mine',

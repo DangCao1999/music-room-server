@@ -3,7 +3,7 @@ import { GoogleVerifier } from '../auth/google';
 import { AuthService } from '../auth/auth.service';
 import { AppError } from '../common/app-error';
 import { ENV, type Env } from '../config/env';
-import type { MyRoomView, UserView } from '../contracts';
+import type { MyRoomView, RoomStatusView, UserView } from '../contracts';
 import type { User } from '../generated/prisma/client';
 import { LibraryService } from '../library/library.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -104,6 +104,33 @@ export class UsersService {
       })
       .sort((a, b) => b.lastVisitedAt.localeCompare(a.lastVisitedAt))
       .slice(0, 20);
+  }
+
+  /** Rooms a device remembers (not signed in): rooms that no longer exist are left out. */
+  async roomsStatus(codes: string[]): Promise<RoomStatusView[]> {
+    const rooms = await this.prisma.room.findMany({
+      where: { code: { in: [...new Set(codes)] } },
+      include: { playback: { select: { currentItemId: true } } },
+    });
+    const playingIds = rooms
+      .map((r) => r.playback?.currentItemId)
+      .filter((x): x is string => Boolean(x));
+    const playing = new Map(
+      (
+        await this.prisma.queueItem.findMany({
+          where: { id: { in: playingIds } },
+          select: { id: true, track: { select: { title: true } } },
+        })
+      ).map((q) => [q.id, q.track.title]),
+    );
+    return rooms.map((r) => ({
+      code: r.code,
+      name: r.name,
+      onlineCount: this.presence.onlineMembers(r.id).size,
+      nowPlaying:
+        (r.playback?.currentItemId && playing.get(r.playback.currentItemId)) ||
+        null,
+    }));
   }
 
   /** L1: songs saved on a device before signing in join the account's favourites. */

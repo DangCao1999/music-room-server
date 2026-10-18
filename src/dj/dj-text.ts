@@ -116,6 +116,8 @@ export function stepText(s: DjStep): string {
       return 'Phòng chưa phát bài nào';
     case 'notMine':
       return 'Chỉ gỡ được bài của chính mình';
+    case 'ownSong':
+      return `Không thả tim được ${song}: đó là bài của chính bạn`;
   }
   const why =
     s.errorCode === 'FORBIDDEN'

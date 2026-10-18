@@ -13,6 +13,8 @@ export const ERROR_CODES = [
   'QUEUE_LIMIT',
   /** A6: the song is already waiting or on air. */
   'ALREADY_QUEUED',
+  /** Hearts are for other people's songs: the picker cannot heart their own. */
+  'OWN_SONG',
   /** A6: the song started less than `gap` minutes ago (`minutes` = how long ago). */
   'PLAYED_RECENTLY',
   /** A5: reading a playlist needs YOUTUBE_API_KEY on the server. */

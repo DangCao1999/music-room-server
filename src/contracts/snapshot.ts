@@ -36,6 +36,15 @@ export interface MyRoomView {
   lastVisitedAt: string;
 }
 
+/** A room this device remembers, as it is now (`rooms:status`). */
+export interface RoomStatusView {
+  code: string;
+  name: string;
+  onlineCount: number;
+  /** Title of the song on air. */
+  nowPlaying: string | null;
+}
+
 /** L2: a playlist in a list. `hasTrack` answers "is this song in it?" for "Lưu vào…". */
 export interface PlaylistSummaryView {
   id: string;
