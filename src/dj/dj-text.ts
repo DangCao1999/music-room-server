@@ -71,14 +71,17 @@ export function djText(r: DjReply): string {
     case 'info':
       return infoText(r);
     case 'added': {
-      const title = r.track?.title ?? 'bài';
       const what =
         r.fresh === 'latest'
           ? 'bài mới nhất mình tìm được'
           : r.fresh === 'popular'
             ? 'bài đang hot mình tìm được'
             : 'bài';
-      return `Đã thêm ${what} "${title}" cho ${r.forName}, đứng thứ ${r.position ?? '?'}${when(r.etaSec)}.`;
+      const song = r.track?.title ? `${what} "${r.track.title}"` : what;
+      if (r.position === 0)
+        return `Đã bật ${song} cho ${r.forName}, đang phát ngay.`;
+      const at = r.position ? `, đứng thứ ${r.position}${when(r.etaSec)}` : '';
+      return `Đã thêm ${song} cho ${r.forName}${at}.`;
     }
     case 'denied':
       return r.errorCode && r.errorCode !== 'FORBIDDEN'

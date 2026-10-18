@@ -375,6 +375,17 @@ export class DjBrainService {
           input: `https://www.youtube.com/watch?v=${id}`,
         });
         const snap = await this.snapshots.build(actor.roomId);
+        // An idle room plays the song at once: it is on air, not in the queue.
+        if (snap?.nowPlaying?.item.id === queueItemId)
+          return {
+            ...base,
+            kind: 'added',
+            queueItemId,
+            track: snap.nowPlaying.item.track,
+            position: 0,
+            etaSec: 0,
+            fresh,
+          };
         const at = snap?.queue.findIndex((q) => q.id === queueItemId) ?? -1;
         const item = at >= 0 ? snap!.queue[at] : null;
         return {
