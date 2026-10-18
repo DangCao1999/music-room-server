@@ -1,5 +1,6 @@
-import type { DjSound, Reaction, VoicePreset } from './constants';
-import type { RoomSettings } from './schemas';
+import type { DjReply } from './dj';
+import type { DjSound, Reaction, Voice, VoicePreset } from './constants';
+import type { Lang, RoomSettings } from './schemas';
 
 export type Role = 'ADMIN' | 'USER';
 export type PlaybackStatus = 'IDLE' | 'PLAYING' | 'PAUSED';
@@ -35,6 +36,15 @@ export interface MyRoomView {
   lastVisitedAt: string;
 }
 
+/** A room this device remembers, as it is now (`rooms:status`). */
+export interface RoomStatusView {
+  code: string;
+  name: string;
+  onlineCount: number;
+  /** Title of the song on air. */
+  nowPlaying: string | null;
+}
+
 /** L2: a playlist in a list. `hasTrack` answers "is this song in it?" for "Lưu vào…". */
 export interface PlaylistSummaryView {
   id: string;
@@ -44,7 +54,11 @@ export interface PlaylistSummaryView {
   shared: boolean;
   updatedAt: string;
   hasTrack?: boolean;
+  /** Made by the app (YouTube likes, "for you" mix): clients show its name in the reader's language. */
+  kind?: PlaylistKind | null;
 }
+
+export type PlaylistKind = 'liked' | 'mix';
 
 /** L3: one of the user's YouTube playlists. `importedId`: our playlist made from it. */
 export interface YouTubePlaylistView {
@@ -80,6 +94,7 @@ export interface PlaylistView {
   isOwner: boolean;
   shareCode: string | null;
   tracks: TrackSummary[];
+  kind?: PlaylistKind | null;
 }
 
 /** A7: `synced` lines carry their start time in seconds; `plain` is the text alone. */
@@ -90,6 +105,10 @@ export interface LyricsView {
 
 /** Why a song is suggested (A3). */
 export type SuggestionReason =
+  /** YouTube's own "up next" for the song on air (or the songs just played). */
+  | 'youtube'
+  /** Nothing played lately: YouTube's trending music in Vietnam. */
+  | 'trending'
   | 'similar'
   | 'room'
   | 'artist'
@@ -167,7 +186,10 @@ export interface QueueItemView {
   heartedBy: string[];
   pinned: boolean;
   wishMessage: string | null;
-  voicePreset: VoicePreset | null;
+  /** The wish voice the sender picked; null = none picked yet (no wish, or a wish from before voices). */
+  voice?: Voice | null;
+  /** What the speaker reads for this item's wish; only set on the song now playing. */
+  wishSpeech?: SpeechView | null;
   addedAt: string;
 }
 
@@ -233,10 +255,31 @@ export interface BlockedTrackView {
 
 export interface ChatMessageView {
   id: string;
+  /** 'dj' for the DJ's answers. */
   memberId: string;
   displayName: string;
+  /** Plain text (Vietnamese for the DJ: history, speaker screen, Slack). */
   content: string;
   createdAt: string;
+  /** The DJ's answer ("@DJ"): `dj` holds it in structure, worded per viewer. */
+  kind?: 'dj';
+  dj?: DjReply;
+}
+
+/**
+ * What a log line is about, so each reader can word it in their own language. `variant` tells
+ * apart the sentences of one `type` (the table lives in the server's ActivityService callers).
+ */
+export interface ActivityParams {
+  variant?: string;
+  title?: string;
+  target?: string;
+  targetDevice?: boolean;
+  count?: number;
+  yes?: number;
+  no?: number;
+  code?: number;
+  actorDevice?: boolean;
 }
 
 export interface ActivityLogView {
@@ -244,7 +287,9 @@ export interface ActivityLogView {
   type: string;
   memberId: string | null;
   displayName: string | null;
+  /** The Vietnamese sentence as stored; the fallback when `params` is missing (older lines). */
   message: string;
+  params?: ActivityParams | null;
   createdAt: string;
 }
 
@@ -254,9 +299,21 @@ export interface PlayerCommand {
   status: PlaybackStatus;
   positionSec: number;
   positionAt: number;
+  /** Older clients read `wish` / `intro`; `voicePreset` is always null now. */
   wish: { message: string; voicePreset: VoicePreset | null } | null;
   /** AI3: the MC's line for this song, read when there is no wish. */
   intro: string | null;
+  /** What to read before this song: the wish, else the MC line. */
+  speech?: SpeechView | null;
+}
+
+/** A line for the speaker. `audio`: key of the Edge mp3 at /api/tts/<key>.mp3, null = not ready (read with the browser voice). */
+export interface SpeechView {
+  text: string;
+  audio: string | null;
+  lang: Lang;
+  /** The mp3 is being made: hold the line a few seconds, it arrives in an updated command / snapshot. */
+  pending?: boolean;
 }
 
 /** `room_deleted`: the room's owner deleted it (everyone is sent home). */

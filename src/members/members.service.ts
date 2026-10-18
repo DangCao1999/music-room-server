@@ -126,6 +126,7 @@ export class MembersService {
               displayName: m.displayName,
               type: 'room_create',
               message: 'đã tạo phòng',
+              metadata: { v: 1 },
             },
           });
           return m;
@@ -205,6 +206,7 @@ export class MembersService {
           m,
           'user_join',
           'đã vào phòng',
+          { variant: 'join' },
         );
         return m;
       });
@@ -283,6 +285,7 @@ export class MembersService {
         reset
           ? 'đã quay lại phòng (quyền điều khiển, DJ, máy phát cần được cấp lại)'
           : 'đã quay lại phòng',
+        { variant: reset ? 'rightsReset' : 'plain' },
       );
       return { m, reset };
     });
@@ -336,6 +339,7 @@ export class MembersService {
           m,
           'user_rejoin',
           'đã quay lại phòng',
+          { variant: 'plain' },
         );
         return m;
       });
@@ -373,6 +377,7 @@ export class MembersService {
             m,
             'user_join',
             'đã vào phòng',
+            { variant: 'join' },
           );
           return m;
         });
@@ -529,6 +534,10 @@ export class MembersService {
         me,
         'member_kick',
         `đã mời ${target.displayName} ra khỏi phòng`,
+        {
+          target: target.displayName,
+          targetDevice: target.isDevice || undefined,
+        },
       );
       await this.playback.reevaluateSkip(tx, ctx, actor.roomId);
       ctx.afterCommit(() => {
@@ -619,12 +628,18 @@ export class MembersService {
         throw new AppError('FORBIDDEN');
 
       const data: Prisma.MemberUpdateInput = {};
-      const changes: string[] = [];
+      const changes: { message: string; variant: string }[] = [];
       const name = target.displayName;
-      const flag = (on: boolean, grant: string, revoke: string) =>
-        changes.push(
-          on ? grant.replace('{n}', name) : revoke.replace('{n}', name),
-        );
+      const flag = (
+        on: boolean,
+        grant: string,
+        revoke: string,
+        variants: [grant: string, revoke: string],
+      ) =>
+        changes.push({
+          message: (on ? grant : revoke).replace('{n}', name),
+          variant: on ? variants[0] : variants[1],
+        });
 
       if (
         input.canControl !== undefined &&
@@ -635,11 +650,15 @@ export class MembersService {
           input.canControl,
           'đã cấp quyền điều khiển cho {n}',
           'đã bỏ quyền điều khiển của {n}',
+          ['grantControl', 'revokeControl'],
         );
       }
       if (input.canDj !== undefined && input.canDj !== target.canDj) {
         data.canDj = input.canDj;
-        flag(input.canDj, 'đã cấp quyền DJ cho {n}', 'đã bỏ quyền DJ của {n}');
+        flag(input.canDj, 'đã cấp quyền DJ cho {n}', 'đã bỏ quyền DJ của {n}', [
+          'grantDj',
+          'revokeDj',
+        ]);
       }
       if (input.role !== undefined && input.role !== target.role) {
         data.role = input.role;
@@ -651,6 +670,7 @@ export class MembersService {
           input.role === 'ADMIN',
           'đã cấp quyền quản trị cho {n}',
           'đã bỏ quyền quản trị của {n}',
+          ['grantAdmin', 'revokeAdmin'],
         );
       }
       let revokePlayerOf: string | null = null;
@@ -672,10 +692,13 @@ export class MembersService {
           if (holder.playerMemberId && holder.playerMemberId !== target.id) {
             revokePlayerOf = holder.playerMemberId;
           }
-          flag(true, 'đã đặt {n} làm máy phát', '');
+          flag(true, 'đã đặt {n} làm máy phát', '', ['makePlayer', '']);
         } else {
           revokePlayerOf = target.id;
-          changes.push(`đã bỏ quyền máy phát của ${name}`);
+          changes.push({
+            message: `đã bỏ quyền máy phát của ${name}`,
+            variant: 'revokePlayer',
+          });
         }
       }
       if (Object.keys(data).length === 0) return;
@@ -687,7 +710,12 @@ export class MembersService {
           actor.roomId,
           me,
           'permission_change',
-          c,
+          c.message,
+          {
+            variant: c.variant,
+            target: name,
+            targetDevice: target.isDevice || undefined,
+          },
         );
       }
       if (revokePlayerOf) {
@@ -728,6 +756,11 @@ export class MembersService {
         Object.keys(patch).every((k) => k === 'theme')
           ? 'đã đổi giao diện phòng'
           : 'đã thay đổi cài đặt phòng',
+        {
+          variant: Object.keys(patch).every((k) => k === 'theme')
+            ? 'theme'
+            : 'other',
+        },
       );
       await this.playback.reevaluateSkip(tx, ctx, actor.roomId);
       // Radio just switched on in a silent room: start it now (A4).
@@ -793,7 +826,9 @@ export class MembersService {
           isDevice: true,
         },
       });
-      await this.activity.log(tx, ctx, room.id, m, 'user_join', 'đã kết nối');
+      await this.activity.log(tx, ctx, room.id, m, 'user_join', 'đã kết nối', {
+        variant: 'device',
+      });
       return m;
     });
     return this.session(member, room.code);

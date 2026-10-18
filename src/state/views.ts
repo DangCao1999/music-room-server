@@ -1,9 +1,12 @@
 import type {
   ActivityLogView,
+  ActivityParams,
   ChatMessageView,
+  DjReply,
   QueueItemView,
+  SpeechView,
   TrackSummary,
-  VoicePreset,
+  Voice,
 } from '../contracts';
 import type {
   ActivityLog,
@@ -12,6 +15,7 @@ import type {
   QueueItem,
   Track,
 } from '../generated/prisma/client';
+import { voiceOf } from '../tts/tts-lang';
 
 export type ItemWithRelations = QueueItem & {
   track: Track;
@@ -39,7 +43,11 @@ export function toTrackSummary(t: Track): TrackSummary {
   };
 }
 
-export function toItemView(i: ItemWithRelations): QueueItemView {
+/** `speechFor`: only for the song now playing, so listeners hear its wish with the Edge voice. */
+export function toItemView(
+  i: ItemWithRelations,
+  speechFor?: (text: string, voice: Voice) => SpeechView,
+): QueueItemView {
   return {
     id: i.id,
     track: toTrackSummary(i.track),
@@ -50,7 +58,14 @@ export function toItemView(i: ItemWithRelations): QueueItemView {
     heartedBy: i.hearts.map((h) => h.memberId),
     pinned: i.pinnedAt !== null,
     wishMessage: i.wishMessage,
-    voicePreset: (i.voicePreset as VoicePreset | null) ?? null,
+    voice:
+      i.voicePreset === 'male' || i.voicePreset === 'female'
+        ? i.voicePreset
+        : null,
+    wishSpeech:
+      speechFor && i.wishMessage
+        ? speechFor(i.wishMessage, voiceOf(i.voicePreset))
+        : undefined,
     addedAt: i.addedAt.toISOString(),
     // Older automatic items predate the column: no member means the fallback playlist.
     auto:
@@ -63,13 +78,39 @@ export function toItemView(i: ItemWithRelations): QueueItemView {
 }
 
 export function toChatView(m: ChatMessage): ChatMessageView {
-  return {
+  const view: ChatMessageView = {
     id: m.id,
     memberId: m.memberId,
     displayName: m.displayName,
     content: m.content,
     createdAt: m.createdAt.toISOString(),
   };
+  // Only the DJ's answers carry the extra fields: member messages keep their old shape.
+  if (m.kind === 'dj' && m.payload)
+    return { ...view, kind: 'dj', dj: m.payload as unknown as DjReply };
+  return view;
+}
+
+const PARAM_KEYS = [
+  'variant',
+  'title',
+  'target',
+  'targetDevice',
+  'count',
+  'yes',
+  'no',
+  'code',
+  'actorDevice',
+] as const satisfies readonly (keyof ActivityParams)[];
+
+/** Lines written since params exist carry `{ v: 1, ... }`; older ones have none (null). */
+function logParams(metadata: unknown): ActivityParams | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const m = metadata as Record<string, unknown>;
+  if (m.v !== 1) return null;
+  const out: Record<string, unknown> = {};
+  for (const k of PARAM_KEYS) if (m[k] !== undefined) out[k] = m[k];
+  return out as ActivityParams;
 }
 
 export function toLogView(l: ActivityLog): ActivityLogView {
@@ -79,6 +120,7 @@ export function toLogView(l: ActivityLog): ActivityLogView {
     memberId: l.memberId,
     displayName: l.displayName,
     message: l.message,
+    params: logParams(l.metadata),
     createdAt: l.createdAt.toISOString(),
   };
 }

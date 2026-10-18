@@ -13,7 +13,7 @@ import {
   parseYouTubePlaylist,
   type PlayerRevokeReason,
   SKIP_MIN_YES,
-  type VoicePreset,
+  type Voice,
 } from '../contracts';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
 import { orderQueue } from '../queue/fair-queue';
@@ -28,6 +28,8 @@ import { readSettings } from '../state/settings';
 import { SnapshotService } from '../state/snapshot.service';
 import { estimatePosition } from '../state/views';
 import { McService } from '../ai/mc.service';
+import { TtsService } from '../tts/tts.service';
+import { voiceOf } from '../tts/tts-lang';
 import { SuggestService } from '../music/suggest.service';
 import { pickFallback } from './fallback';
 import { LeaseService } from './lease.service';
@@ -38,6 +40,9 @@ export type AdvanceReason = 'ended' | 'timer' | 'skip' | 'error' | 'start';
 /** Drift (s) between the player's report and our estimate that triggers a re-broadcast. */
 const DRIFT_SEC = 2;
 const FALLBACK_RECENT = 20;
+/** Re-making waiting wishes' Edge audio (lost on restart): how often per room, how many. */
+const WARM_EVERY_MS = 60_000;
+const WARM_MAX = 6;
 
 /** V1: after a vote keeps a song, no new vote on it for this long. */
 export const SKIP_BLOCK_MS = 2 * 60_000;
@@ -48,6 +53,9 @@ export class PlaybackService
 {
   private readonly logger = new Logger(PlaybackService.name);
   private readonly timers = new Map<string, NodeJS.Timeout>();
+  private readonly warmedAt = new Map<string, number>();
+  /** `roomId item` whose line is being made right now: re-sent once, when the audio is ready. */
+  private readonly awaitingSpeech = new Set<string>();
   /** V1: one open skip vote per room at most; fires at its deadline. */
   private readonly voteTimers = new Map<string, NodeJS.Timeout>();
 
@@ -61,6 +69,7 @@ export class PlaybackService
     @Inject(TIMING) private readonly timing: Timing,
     private readonly suggest: SuggestService,
     private readonly mc: McService,
+    private readonly tts: TtsService,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
@@ -332,6 +341,7 @@ export class PlaybackService
         null,
         'track_skip',
         `"${item.track.title}" đã bị bỏ qua sau ${yes} phiếu`,
+        { variant: 'votes', title: item.track.title, yes },
       );
       return;
     }
@@ -348,6 +358,7 @@ export class PlaybackService
         null,
         'track_skip',
         `"${item.track.title}" đã bị bỏ qua khi hết giờ (✅ ${yes} · ❌ ${no})`,
+        { variant: 'timeout', title: item.track.title, yes, no },
       );
       return;
     }
@@ -371,6 +382,7 @@ export class PlaybackService
       null,
       'skip_kept',
       `Cả phòng chọn nghe tiếp "${item.track.title}" (✅ ${yes} · ❌ ${no})`,
+      { title: item.track.title, yes, no },
     );
     ctx.afterCommit(() => this.clearVoteTimer(roomId));
   }
@@ -507,6 +519,7 @@ export class PlaybackService
             me,
             'track_skip',
             `đã bỏ qua "${item.track.title}"`,
+            { variant: 'by', title: item.track.title },
           );
           return;
       }
@@ -625,6 +638,7 @@ export class PlaybackService
             null,
             'track_error',
             `Bỏ qua "${item.track.title}" vì video không phát được (mã ${input.errorCode ?? '?'})`,
+            { title: item.track.title, code: input.errorCode },
           );
         }
       });
@@ -674,6 +688,7 @@ export class PlaybackService
   }
 
   async buildPlayerCommand(roomId: string): Promise<PlayerCommand> {
+    void this.warmWishes(roomId);
     const ps = await this.prisma.playbackState.findUniqueOrThrow({
       where: { roomId },
     });
@@ -684,6 +699,19 @@ export class PlaybackService
           include: { track: true },
         })
       : null;
+    // AI3: a wish is read instead of the MC line, never both.
+    const intro =
+      item && !item.wishMessage && item.addedById && (await this.mcOn(roomId))
+        ? this.mc.lineFor(item.id)
+        : null;
+    const line = item?.wishMessage
+      ? { text: item.wishMessage, voice: voiceOf(item.voicePreset) }
+      : intro
+        ? { text: intro, voice: 'male' as const }
+        : null;
+    const speech = line ? this.tts.speech(line.text, line.voice) : null;
+    if (item && line && speech?.pending)
+      this.resendWhenReady(roomId, item.id, line.text, line.voice);
     return {
       queueItemId: item?.id ?? null,
       videoId: item?.track.externalId ?? null,
@@ -693,15 +721,68 @@ export class PlaybackService
       wish: item?.wishMessage
         ? {
             message: item.wishMessage,
-            voicePreset: (item.voicePreset as VoicePreset) ?? null,
+            voicePreset: null,
           }
         : null,
-      // AI3: a wish is read instead of the MC line, never both.
-      intro:
-        item && !item.wishMessage && item.addedById && (await this.mcOn(roomId))
-          ? this.mc.lineFor(item.id)
-          : null,
+      intro,
+      speech,
     };
+  }
+
+  /**
+   * The song started before its line's Edge audio was ready (the speaker holds the line a few
+   * seconds): once it is, send the command again (speaker) and the snapshot (listen-along).
+   */
+  private resendWhenReady(
+    roomId: string,
+    itemId: string,
+    text: string,
+    voice: Voice,
+  ): void {
+    const id = `${roomId} ${itemId}`;
+    if (this.awaitingSpeech.has(id)) return;
+    this.awaitingSpeech.add(id);
+    void this.tts
+      .whenReady(text, voice)
+      .then(async (key) => {
+        if (!key) return;
+        const ps = await this.prisma.playbackState.findUnique({
+          where: { roomId },
+          select: { currentItemId: true },
+        });
+        if (ps?.currentItemId !== itemId) return;
+        await this.sendPlayerCommand(roomId);
+        await this.state.touch(roomId);
+      })
+      .catch((e: unknown) =>
+        this.logger.warn(`Re-sending the wish audio failed: ${String(e)}`),
+      )
+      .finally(() => this.awaitingSpeech.delete(id));
+  }
+
+  /**
+   * Edge audio lives in memory: after a restart (deploy, Render waking up) the waiting wishes
+   * have none. Remake it ahead of their turn, at most once a minute per room.
+   */
+  private async warmWishes(roomId: string): Promise<void> {
+    const now = Date.now();
+    if (now - (this.warmedAt.get(roomId) ?? 0) < WARM_EVERY_MS) return;
+    this.warmedAt.set(roomId, now);
+    try {
+      const items = await this.prisma.queueItem.findMany({
+        where: { roomId, status: 'QUEUED', wishMessage: { not: null } },
+        select: { wishMessage: true, voicePreset: true },
+        orderBy: { addedAt: 'asc' },
+        take: WARM_MAX,
+      });
+      for (const i of items)
+        if (i.wishMessage)
+          void this.tts.prepare(i.wishMessage, voiceOf(i.voicePreset));
+    } catch (e) {
+      this.logger.warn(
+        `Warming wishes for room ${roomId} failed: ${String(e)}`,
+      );
+    }
   }
 
   private async mcOn(roomId: string): Promise<boolean> {

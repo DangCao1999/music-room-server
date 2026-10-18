@@ -7,13 +7,16 @@ export const LIMITS = {
   displayName: 30,
   input: 2048,
   query: 100,
-  djPrompt: 200,
   playlistName: 60,
   playlistDescription: 200,
   wish: 200,
   chat: 500,
   rawText: 4000,
 } as const;
+
+/** Song search: results per page ("Xem thêm" adds one) and at most this many in all. */
+export const SEARCH_PAGE_SIZE = 12;
+export const SEARCH_MAX_RESULTS = 36;
 
 export const VOICE_PRESETS = [
   'radio',
@@ -24,6 +27,10 @@ export const VOICE_PRESETS = [
   'sleepy',
 ] as const;
 export type VoicePreset = (typeof VOICE_PRESETS)[number];
+
+/** The wish voice the sender picks (Edge TTS). `VOICE_PRESETS` stay only so older clients' commands still pass. */
+export const VOICES = ['male', 'female'] as const;
+export type Voice = (typeof VOICES)[number];
 
 export const REACTIONS = [
   '❤️',

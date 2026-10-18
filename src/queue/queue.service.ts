@@ -10,6 +10,7 @@ import {
 } from '../contracts';
 import type { Member, QueueItem, Track } from '../generated/prisma/client';
 import { ModerationService } from '../ai/moderation.service';
+import { TtsService } from '../tts/tts.service';
 import { TrackCacheService } from '../music/track-cache.service';
 import { PlaybackService } from '../playback/playback.service';
 import { isBlocked } from './block.service';
@@ -35,6 +36,9 @@ type ItemWithTrack = QueueItem & { track: Track };
 /** Each add may cost YouTube quota; 20 per minute per member is plenty for humans. */
 export const ADD_LIMIT = { count: 20, windowMs: 60_000 };
 
+/** First song of an idle room added with a wish: how long the add waits for its Edge voice. */
+const IDLE_WISH_WAIT_MS = 4000;
+
 @Injectable()
 export class QueueService {
   readonly limiter = new RateLimiter();
@@ -46,6 +50,7 @@ export class QueueService {
     private readonly playback: PlaybackService,
     private readonly activity: ActivityService,
     private readonly moderation: ModerationService,
+    private readonly tts: TtsService,
   ) {}
 
   /** Loads a queue item of the actor's room or throws STALE_ITEM. */
@@ -149,7 +154,16 @@ export class QueueService {
       throw new AppError('TRACK_BLOCKED');
     // Network work (track lookup, AI4 wish check) happens outside the room lock.
     await this.moderation.checkWish(input.wishMessage);
+    // The wish's Edge voice is started now, before the write.
+    const voiceReady = input.wishMessage
+      ? this.tts.prepare(input.wishMessage, input.voice ?? 'male')
+      : null;
     const track = await this.tracks.resolve(videoId);
+    // An idle room plays this song at once: only there, the add waits (at most
+    // IDLE_WISH_WAIT_MS) for the voice, so the first song's wish is read in the Edge voice.
+    // Everywhere else nothing waits; a late voice is still read over the song's start.
+    if (voiceReady && (await this.idle(actor.roomId)))
+      await this.within(voiceReady, IDLE_WISH_WAIT_MS);
 
     return this.state.mutate(actor.roomId, async (tx, ctx) => {
       const me = await this.state.activeMember(tx, actor);
@@ -175,7 +189,7 @@ export class QueueService {
           addedById: me.id,
           status: 'QUEUED',
           wishMessage: wish,
-          voicePreset: wish ? (input.voicePreset ?? 'radio') : null,
+          voicePreset: wish ? (input.voice ?? 'male') : null,
         },
       });
       await this.activity.log(
@@ -185,6 +199,7 @@ export class QueueService {
         me,
         'track_add',
         `đã thêm "${track.title}"`,
+        { variant: 'one', title: track.title },
       );
       await this.playback.startIfIdle(tx, ctx, actor.roomId);
       return { queueItemId: item.id, title: track.title };
@@ -271,6 +286,9 @@ export class QueueService {
           titles.length === 1
             ? `đã thêm "${titles[0]}"`
             : `đã thêm ${titles.length} bài từ playlist`,
+          titles.length === 1
+            ? { variant: 'one', title: titles[0] }
+            : { variant: 'playlist', count: titles.length },
         );
         await this.playback.startIfIdle(tx, ctx, actor.roomId);
       }
@@ -296,6 +314,7 @@ export class QueueService {
         me,
         'track_remove',
         `đã xóa "${item.track.title}"`,
+        { title: item.track.title },
       );
     });
   }
@@ -322,6 +341,7 @@ export class QueueService {
         pin
           ? `đã ghim "${item.track.title}" phát tiếp theo`
           : `đã bỏ ghim "${item.track.title}"`,
+        { variant: pin ? 'pin' : 'unpin', title: item.track.title },
       );
     });
   }
@@ -333,6 +353,8 @@ export class QueueService {
       if (me.isDevice) throw new AppError('FORBIDDEN');
       const item = await this.item(tx, actor.roomId, queueItemId);
       this.requireQueued(item);
+      // Hearts lift other people's songs; the picker cannot vote for their own.
+      if (item.addedById === me.id) throw new AppError('OWN_SONG');
       const existing = await tx.heart.findUnique({
         where: { queueItemId_memberId: { queueItemId, memberId: me.id } },
       });
@@ -351,6 +373,7 @@ export class QueueService {
           me,
           'track_heart',
           `đã thả tim "${item.track.title}"`,
+          { title: item.track.title },
         );
       }
     });
@@ -371,10 +394,34 @@ export class QueueService {
         where: { id: item.id },
         data: {
           wishMessage: wish,
-          voicePreset: wish ? (input.voicePreset ?? 'radio') : null,
+          voicePreset: wish ? (input.voice ?? 'male') : null,
         },
       });
     });
+    // Made ahead so the speaker has it when the song starts; never awaited.
+    if (input.wishMessage)
+      void this.tts.prepare(input.wishMessage, input.voice ?? 'male');
+  }
+
+  /** Nothing is playing (or about to): an added song would start at once. */
+  private async idle(roomId: string): Promise<boolean> {
+    const ps = await this.prisma.playbackState.findUnique({
+      where: { roomId },
+      select: { currentItemId: true },
+    });
+    return !ps?.currentItemId;
+  }
+
+  /** Waits for `p`, but never longer than `ms`. */
+  private async within(p: Promise<unknown>, ms: number): Promise<void> {
+    let timer: NodeJS.Timeout | undefined;
+    await Promise.race([
+      p,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, ms);
+      }),
+    ]);
+    clearTimeout(timer);
   }
 
   /** R-10: kicked members' waiting tracks are removed. */

@@ -78,11 +78,22 @@ export class SlackController {
     const url = body.response_url;
     if (answer.later && url)
       void answer.later.then((out) =>
-        this.slack.respond(url, {
-          replace_original: true,
-          text: out.text,
-          ...(out.blocks ? { blocks: out.blocks } : {}),
-        }),
+        this.slack.respond(
+          url,
+          out.visibility === 'public'
+            ? // "Đã thêm…" is for the channel; the private "Đang tìm…" stays with the asker.
+              {
+                response_type: 'in_channel',
+                replace_original: false,
+                text: out.text,
+                ...(out.blocks ? { blocks: out.blocks } : {}),
+              }
+            : {
+                replace_original: true,
+                text: out.text,
+                ...(out.blocks ? { blocks: out.blocks } : {}),
+              },
+        ),
       );
     return asResponse(answer.now);
   }

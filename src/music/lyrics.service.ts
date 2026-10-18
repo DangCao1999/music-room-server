@@ -37,6 +37,31 @@ export function parseLrc(lrc: string): { t: number; text: string }[] {
   return out.sort((a, b) => a.t - b.t);
 }
 
+/**
+ * How long the recording behind these timings really is. LRCLIB entries that share a timing
+ * (same line count, same last stamp within 1.5 s) were synced to the same recording; their
+ * median length wins, because one entry's own length is often wrong (a music video's length
+ * copied onto the album timing). Null when no entry shares it.
+ */
+export function recordingLength(
+  lines: { t: number }[],
+  hits: { duration?: number; syncedLyrics?: string | null }[],
+): number | null {
+  if (!lines.length) return null;
+  const last = lines[lines.length - 1].t;
+  const lengths = hits
+    .flatMap((h) => {
+      if (!h.syncedLyrics || !h.duration) return [];
+      const l = parseLrc(h.syncedLyrics);
+      return l.length === lines.length &&
+        Math.abs(l[l.length - 1].t - last) <= 1.5
+        ? [h.duration]
+        : [];
+    })
+    .sort((a, b) => a - b);
+  return lengths.length ? lengths[Math.floor((lengths.length - 1) / 2)] : null;
+}
+
 @Injectable()
 export class LyricsService {
   private readonly logger = new Logger(LyricsService.name);
@@ -131,9 +156,21 @@ export class LyricsService {
     const best = hits.sort((a, b) => score(a) - score(b))[0];
     if (duration && best.duration && Math.abs(best.duration - duration) > 15)
       return null;
-    const synced = best.syncedLyrics ? parseLrc(best.syncedLyrics) : null;
+    let synced = best.syncedLyrics ? parseLrc(best.syncedLyrics) : null;
+    if (synced && !synced.length) synced = null;
+    // Timings made on another cut (a music video with a longer intro / outro than the album
+    // track) would run ahead or behind the video: keep the words, drop the timing.
+    if (synced && duration) {
+      const length = recordingLength(synced, hits);
+      const lastLine = synced[synced.length - 1].t;
+      if (
+        (length && Math.abs(length - duration) > 15) ||
+        lastLine > duration + 2
+      )
+        synced = null;
+    }
     return {
-      synced: synced && synced.length ? synced : null,
+      synced,
       plain: best.plainLyrics?.trim() || null,
     };
   }

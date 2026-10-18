@@ -11,10 +11,27 @@ import {
 import type { Track } from '../generated/prisma/client';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
 import { toTrackSummary } from '../state/views';
+import { InnerTubeProvider } from './innertube.provider';
 import { LastFmService } from './lastfm.service';
+import { songKey } from './title-parser';
+import { TrackCacheService, trackId } from './track-cache.service';
+import { YouTubeProvider } from './youtube.provider';
 
 /** Shown on the room screen (A3). */
-const MAX_TRACKS = 8;
+const MAX_TRACKS = 15;
+/** "Lately" for the room's suggestions: the songs it played within this window lead them. */
+const RECENT_MS = 2 * 3600_000;
+/** Songs played just before the one on air that also lend their YouTube picks. */
+const EARLIER_SEEDS = 2;
+const EARLIER_PICKS = 5;
+/** YouTube's "up next" per song: kept 6 h (checked videos, 1 unit per song). */
+const RELATED_MS = 6 * 3600_000;
+const RELATED_EMPTY_MS = 30 * 60_000;
+const RELATED_KEEP = 300;
+/** YouTube's trending music in Vietnam: one list for every room, kept 3 h (1 unit). */
+const TRENDING_REGION = 'VN';
+const TRENDING_MS = 3 * 3600_000;
+const TRENDING_EMPTY_MS = 5 * 60_000;
 const MAX_SEARCH = 3;
 /** Plays looked at for "the room often plays this next" and "the room's favourites". */
 const HISTORY_SCAN = 2000;
@@ -55,12 +72,94 @@ export class SuggestService {
   /** AI5: per room, the radio's next picks in the AI's order. */
   private readonly plans = new Map<string, { at: number; ids: string[] }>();
 
+  /** YouTube's "up next" per seed track id: known (checked, stored) track ids in its order. */
+  private readonly related = new Map<string, { at: number; ids: string[] }>();
+  private trending: { at: number; ids: string[] } | null = null;
+  private readonly running = new Map<string, Promise<string[]>>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly lastfm: LastFmService,
     private readonly ai: AiService,
+    private readonly youtube: YouTubeProvider,
+    private readonly innertube: InnerTubeProvider,
+    private readonly tracks: TrackCacheService,
     @Inject(ENV) private readonly env: Env,
   ) {}
+
+  // ------------------------------------------------------------ YouTube parts (no transaction)
+
+  /** One fetch at a time per key; everyone else waits for the same answer. */
+  private once(key: string, run: () => Promise<string[]>): Promise<string[]> {
+    let p = this.running.get(key);
+    if (!p) {
+      p = run().finally(() => this.running.delete(key));
+      this.running.set(key, p);
+    }
+    return p;
+  }
+
+  /**
+   * What YouTube would play after this song (YouTube Music's radio, else "Up next"),
+   * checked through the Data API (embeddable, not live; 1 unit) and stored, so each one
+   * is added in one tap. [] when InnerTube or the API is unavailable.
+   */
+  private youtubeRelated(seed: Track): Promise<string[]> {
+    const hit = this.related.get(seed.id);
+    if (
+      hit &&
+      Date.now() - hit.at < (hit.ids.length ? RELATED_MS : RELATED_EMPTY_MS)
+    )
+      return Promise.resolve(hit.ids);
+    return this.once(`related:${seed.id}`, async () => {
+      try {
+        const found = (await this.innertube.upNext(seed.externalId)).slice(
+          0,
+          50,
+        );
+        const checked = found.length
+          ? await this.youtube.checkVideos(found)
+          : [];
+        if (checked === null) return []; // no API right now: not remembered
+        await Promise.all(checked.map((c) => this.tracks.upsert(c)));
+        const ids = checked.map((c) => trackId(c.externalId));
+        this.related.set(seed.id, { at: Date.now(), ids });
+        while (this.related.size > RELATED_KEEP)
+          this.related.delete(this.related.keys().next().value as string);
+        return ids;
+      } catch (e) {
+        this.logger.warn(`YouTube picks for ${seed.id} failed: ${String(e)}`);
+        return [];
+      }
+    });
+  }
+
+  /**
+   * YouTube's trending music in Vietnam, one version per song (the highest-ranked: a hit's
+   * remixes and covers chart too), stored for one-tap adds. Shared by every room.
+   */
+  private trendingIds(): Promise<string[]> {
+    const t = this.trending;
+    if (
+      t &&
+      Date.now() - t.at < (t.ids.length ? TRENDING_MS : TRENDING_EMPTY_MS)
+    )
+      return Promise.resolve(t.ids);
+    return this.once('trending', async () => {
+      const infos = await this.youtube.trendingMusic(TRENDING_REGION);
+      const songs = new Set<string>();
+      const kept = infos.filter((i) => {
+        const song = songKey(i.title, i.channel);
+        if (songs.has(song)) return false;
+        songs.add(song);
+        return true;
+      });
+      await Promise.all(kept.map((i) => this.tracks.upsert(i)));
+      const ids = kept.map((i) => trackId(i.externalId));
+      this.trending = { at: Date.now(), ids };
+      return ids;
+    });
+  }
 
   // ------------------------------------------------------------ Last.fm part (no transaction)
 
@@ -241,6 +340,13 @@ export class SuggestService {
 
   // ------------------------------------------------------------ A3
 
+  /**
+   * The suggestions panel. Seeded by the song on air (or `seedId`), else the song the room
+   * played last within RECENT_MS: YouTube's own "up next" for it leads, mixed with this
+   * room's habits (what it plays next, the same artist), Last.fm's similar songs, a few of
+   * YouTube's picks for the songs played just before, then the room's favourites. Nothing
+   * played lately: YouTube's trending music in Vietnam, with the room's favourites.
+   */
   async forRoom(
     roomId: string,
     seedId: string | null,
@@ -259,14 +365,66 @@ export class SuggestService {
         : null;
       id = item?.trackId ?? null;
     }
-    const seed = id
-      ? await this.prisma.track.findUnique({ where: { id } })
-      : null;
-    const lf = seed ? await this.lastFmPart(seed) : { known: [], unknown: [] };
-    const candidates: Candidate[] = [
-      ...lf.known.map((k) => ({ id: k, reason: 'similar' as const })),
-      ...(await this.dbPart(this.prisma, roomId, seed)),
-    ];
+    const recent = await this.prisma.queueItem.findMany({
+      where: {
+        roomId,
+        status: { in: ['PLAYED', 'SKIPPED', 'PLAYING'] },
+        startedAt: { gte: new Date(Date.now() - RECENT_MS) },
+      },
+      orderBy: { startedAt: 'desc' },
+      take: EARLIER_SEEDS + 2,
+      select: { trackId: true },
+    });
+    id ??= recent[0]?.trackId ?? null;
+    const earlierIds = [...new Set(recent.map((r) => r.trackId))]
+      .filter((t) => t !== id)
+      .slice(0, EARLIER_SEEDS);
+    const [seed, earlier] = await Promise.all([
+      id ? this.prisma.track.findUnique({ where: { id } }) : null,
+      this.prisma.track.findMany({ where: { id: { in: earlierIds } } }),
+    ]);
+
+    const tag = (ids: string[], reason: SuggestionReason): Candidate[] =>
+      ids.map((k) => ({ id: k, reason }));
+    let candidates: Candidate[];
+    let lfUnknown: LastFmPart['unknown'] = [];
+    if (seed) {
+      const [yt, earlierYt, lf, db] = await Promise.all([
+        this.youtubeRelated(seed),
+        Promise.all(earlier.map((t) => this.youtubeRelated(t))),
+        this.lastFmPart(seed),
+        this.dbPart(this.prisma, roomId, seed),
+      ]);
+      lfUnknown = lf.unknown;
+      const byReason = (r: SuggestionReason) =>
+        db.filter((c) => c.reason === r);
+      candidates = [
+        // Two of YouTube's picks for every one from each other source, so its flow leads.
+        ...interleave([
+          [tag(yt, 'youtube'), 2],
+          [byReason('room'), 1],
+          [byReason('artist'), 1],
+          [tag(lf.known, 'similar'), 1],
+          [
+            tag(
+              earlierYt.flatMap((ids) => ids.slice(0, EARLIER_PICKS)),
+              'youtube',
+            ),
+            1,
+          ],
+        ]),
+        ...byReason('popular'),
+      ];
+    } else {
+      const [trending, db] = await Promise.all([
+        this.trendingIds(),
+        this.dbPart(this.prisma, roomId, null),
+      ]);
+      candidates = interleave([
+        [tag(trending, 'trending'), 2],
+        [db, 1],
+      ]);
+    }
     // Nothing the room would refuse (blocked, played within the repeat gap).
     const refused = await refusedTrackIds(this.prisma, roomId, settings);
     const picks = await this.eligible(
@@ -276,14 +434,32 @@ export class SuggestService {
       settings,
       new Set([...(seed ? [seed.id] : []), ...refused]),
     );
+    // One version per song (YouTube's lists hold a hit's remixes and covers too), and never
+    // another version of the song on air.
+    // A song name already worked out for the track (AI1) beats the title heuristic.
+    const keyOf = (t: Track) => t.songKey || songKey(t.title, t.channel);
+    const songs = new Set(seed ? [keyOf(seed)] : []);
     const items: SuggestionView[] = picks
+      .filter(({ t }) => {
+        const song = keyOf(t);
+        if (songs.has(song)) return false;
+        songs.add(song);
+        return true;
+      })
       .slice(0, MAX_TRACKS)
       .map(({ c, t }) => ({
         kind: 'track',
         track: toTrackSummary(t),
         reason: c.reason,
       }));
-    for (const u of lf.unknown.slice(0, MAX_SEARCH))
+    // Last.fm songs to search for, unless a listed video already is that song.
+    const titles = items.map((i) =>
+      i.kind === 'track' ? normalizeQuery(i.track.title) : '',
+    );
+    const searches = lfUnknown.filter(
+      (u) => !titles.some((t) => t.includes(normalizeQuery(u.song))),
+    );
+    for (const u of searches.slice(0, MAX_SEARCH))
       items.push({
         kind: 'search',
         artist: u.artist,
@@ -425,4 +601,24 @@ export class SuggestService {
       this.logger.warn(`radio plan for ${roomId} failed: ${String(e)}`);
     }
   }
+}
+
+/**
+ * Round by round, `n` from each list in turn (lists that run out are skipped), so every
+ * source shows up near the top. Duplicates are removed later (`eligible`).
+ */
+function interleave(lists: [Candidate[], number][]): Candidate[] {
+  const out: Candidate[] = [];
+  const at = lists.map(() => 0);
+  for (let more = true; more; ) {
+    more = false;
+    lists.forEach(([list, n], i) => {
+      for (let k = 0; k < n && at[i] < list.length; k++) {
+        out.push(list[at[i]]);
+        at[i] += 1;
+        more = true;
+      }
+    });
+  }
+  return out;
 }

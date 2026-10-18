@@ -18,6 +18,7 @@ const ERRORS: Partial<Record<ErrorCode, (p: ErrorParams) => string>> = {
   PIN_NOT_SET: () =>
     'Phòng này chưa đặt mã PIN quản trị. Hãy đặt mã trong Cài đặt phòng trên web.',
   ALREADY_QUEUED: () => 'Bài này đã có trong hàng chờ hoặc đang phát.',
+  OWN_SONG: () => 'Không thả tim được bài của chính mình.',
   PLAYED_RECENTLY: (p) =>
     `Bài này vừa phát ${p.minutes} phút trước. Phòng chỉ cho thêm lại sau ${p.gap} phút.`,
   QUEUE_LIMIT: (p) =>
@@ -74,10 +75,13 @@ export const CHAT = {
     '• `/music add <tên bài hoặc link YouTube>` — thêm bài vào hàng chờ',
     '• `/music skip` — bỏ phiếu qua bài',
     '• `/music queue` — 5 bài tiếp theo',
+    '• `@Music Room <câu bất kỳ>` hoặc `/music <câu bất kỳ>` — hỏi DJ: "bài mới của Đen Vâu", "vài bài chill", "còn bao lâu tới bài của tôi". Câu bạn gửi DJ được chuyển cho AI miễn phí.',
+    '• Lệnh chỉ chạy khi gõ ngắn đúng dạng: `skip`, `now`, `queue`, `help`, `here`, `add <tên bài ngắn | link>`; câu dài hơn sẽ do DJ hiểu.',
     '• `@Music Room here` trong một thread — thẻ bỏ phiếu đăng vào thread đó; `/music here` ở kênh — đưa về kênh',
     '• `/music connect <MÃ PHÒNG> <PIN>` / `/music disconnect <PIN>` — quản trị viên nối / bỏ nối kênh (chỉ dùng `/music`, không tag bot kèm PIN)',
   ].join('\n'),
   searching: (q: string) => `🔎 Đang tìm "${q}"…`,
+  askingDj: 'Đang hỏi DJ…',
   noResults: (q: string) =>
     `Không tìm thấy bài nào cho "${q}". Thử tên khác hoặc dán link YouTube.`,
   added: (title: string) => `✅ Đã thêm *${title}* vào hàng chờ.`,

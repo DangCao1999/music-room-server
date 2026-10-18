@@ -13,6 +13,7 @@ import {
   type ItemWithRelations,
   toItemView,
 } from './views';
+import { TtsService } from '../tts/tts.service';
 
 @Injectable()
 export class SnapshotService {
@@ -21,6 +22,7 @@ export class SnapshotService {
     private readonly presence: PresenceService,
     private readonly lease: LeaseService,
     @Inject(ENV) private readonly env: Env,
+    private readonly tts: TtsService,
   ) {}
 
   /** Members that still count for votes: online (or voting from a chat app), not a device (R-25). */
@@ -112,7 +114,9 @@ export class SnapshotService {
         : undefined;
       const blocked = current.skipBlockedUntil?.getTime() ?? null;
       nowPlaying = {
-        item: toItemView(current),
+        item: toItemView(current, (text, voice) =>
+          this.tts.speech(text, voice),
+        ),
         status: ps.status,
         positionSec: estimatePosition(ps, now),
         positionAt: now,

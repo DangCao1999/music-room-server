@@ -10,6 +10,8 @@ import { TasteService } from './taste/taste.service';
 import { UsersService } from './users/users.service';
 import { AiService } from './ai/ai.service';
 import { DjService } from './ai/dj.service';
+import { DjBrainService } from './dj/dj-brain.service';
+import { DjComboService } from './dj/dj-combo.service';
 import { McService } from './ai/mc.service';
 import { ModerationService } from './ai/moderation.service';
 import { LastFmService } from './music/lastfm.service';
@@ -46,12 +48,21 @@ import { SocialService } from './social/social.service';
 import { RoomStateService } from './state/room-state.service';
 import { SnapshotService } from './state/snapshot.service';
 
+import { WishWriterService } from './ai/wish-writer.service';
+import { TtsController } from './tts/tts.controller';
+import { TtsService } from './tts/tts.service';
+
 @Module({})
 export class AppModule {
   static forRoot(env: Env, timing: Timing = DEFAULT_TIMING): DynamicModule {
     return {
       module: AppModule,
-      controllers: [HealthController, RoomsController, SlackController],
+      controllers: [
+        HealthController,
+        RoomsController,
+        SlackController,
+        TtsController,
+      ],
       providers: [
         { provide: ENV, useValue: env },
         { provide: TIMING, useValue: timing },
@@ -69,7 +80,11 @@ export class AppModule {
         AiService,
         ModerationService,
         McService,
+        TtsService,
         DjService,
+        DjBrainService,
+        DjComboService,
+        WishWriterService,
         LastFmService,
         TrackMetaService,
         SuggestService,

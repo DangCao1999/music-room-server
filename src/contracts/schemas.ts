@@ -11,7 +11,10 @@ import {
   PLAYER_ERROR_CODES,
   REACTIONS,
   THEME_IDS,
+  SEARCH_MAX_RESULTS,
+  SEARCH_PAGE_SIZE,
   VOICE_PRESETS,
+  VOICES,
 } from './constants';
 import {
   cleanLine,
@@ -35,6 +38,11 @@ const multiline = (max: number, min = 1) =>
     .max(LIMITS.rawText)
     .transform(cleanMultiline)
     .pipe(z.string().min(min).max(max));
+
+/** Interface languages; each device picks its own (stored on the client only). */
+export const LANGS = ['vi', 'en'] as const;
+export type Lang = (typeof LANGS)[number];
+export const LangSchema = z.enum(LANGS);
 
 export const RoomNameSchema = line(LIMITS.roomName);
 export const DisplayNameSchema = line(LIMITS.displayName);
@@ -124,6 +132,8 @@ export const C2S = {
   'queue:add': z.strictObject({
     input: z.string().trim().min(1).max(LIMITS.input),
     wishMessage: multiline(LIMITS.wish, 0).optional(),
+    voice: z.enum(VOICES).optional(),
+    /** Older clients still send it; the value is ignored. */
     voicePreset: z.enum(VOICE_PRESETS).optional(),
   }),
   'queue:remove': z.strictObject({ queueItemId: Id }),
@@ -132,6 +142,8 @@ export const C2S = {
   'queue:set-message': z.strictObject({
     queueItemId: Id,
     wishMessage: multiline(LIMITS.wish, 0),
+    voice: z.enum(VOICES).optional(),
+    /** Older clients still send it; the value is ignored. */
     voicePreset: z.enum(VOICE_PRESETS).optional(),
   }),
   /** V1: `approve` true (default) = ✅ skip, false = ❌ keep listening (only while a vote is open). */
@@ -143,6 +155,13 @@ export const C2S = {
   'search:query': z.strictObject({
     q: line(LIMITS.query),
     remote: z.boolean().optional(),
+    /** "Xem thêm": 0 = the first SEARCH_PAGE_SIZE results, 1 = the next ones, … */
+    page: z
+      .number()
+      .int()
+      .min(0)
+      .max(SEARCH_MAX_RESULTS / SEARCH_PAGE_SIZE - 1)
+      .optional(),
   }),
   'playback:control': z.strictObject({
     action: z.enum(['play', 'pause', 'skip', 'seek']),
@@ -187,6 +206,10 @@ export const C2S = {
   'auth:me': z.strictObject({}),
   /** L6: rooms the signed-in user owns or has joined. */
   'me:rooms': z.strictObject({}),
+  /** Rooms this device remembers (not signed in): name, who is online, the song on air. */
+  'rooms:status': z.strictObject({
+    codes: z.array(RoomCodeSchema).min(1).max(20),
+  }),
   /** L1: songs saved on this device before signing in, added to the account. */
   'me:favorites-import': z.strictObject({
     videoIds: z.array(z.string().regex(VIDEO_ID)).max(300),
@@ -236,12 +259,28 @@ export const C2S = {
     ]),
     musicOnly: z.boolean(),
   }),
-  /** AI2: songs for a request in plain words ("nhạc chill chiều thứ 6"). */
-  'dj:ask': z.strictObject({ prompt: line(LIMITS.djPrompt) }),
+  /**
+   * "Nhờ MC viết": a wish written by the AI for the sender to edit — for one of my waiting
+   * songs (`queueItemId`) or a song not added yet (`title` / `artist`, adding with a wish).
+   * `hint`: what the sender already typed (kept, names included); `language`: the sender's.
+   */
+  'wish:suggest': z
+    .strictObject({
+      queueItemId: Id.optional(),
+      title: line(LIMITS.input).optional(),
+      artist: line(LIMITS.input).optional(),
+      hint: multiline(LIMITS.wish, 0).optional(),
+      language: LangSchema.optional(),
+    })
+    .refine((v) => v.queueItemId !== undefined || v.title !== undefined, {
+      message: 'queueItemId or title',
+    }),
   /** A8: what the room played since `since` (at most 31 days back). */
   'room:recap': z.strictObject({
     since: z.iso.datetime(),
     tzOffsetMinutes: z.number().int().min(-840).max(840),
+    /** The reader's language for the AI summary (default 'vi'). */
+    language: LangSchema.optional(),
   }),
   /** A5: the playable songs of a YouTube playlist link. */
   'playlist:open': z.strictObject({
@@ -305,6 +344,7 @@ export const ANONYMOUS_COMMANDS: readonly CommandName[] = [
   'auth:google',
   'auth:me',
   'me:rooms',
+  'rooms:status',
   'me:room-delete',
   'me:favorites-import',
   'playlist:mine',

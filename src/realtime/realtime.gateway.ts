@@ -19,7 +19,8 @@ import {
   type CommandInput,
   type CommandName,
 } from '../contracts';
-import { DjService } from '../ai/dj.service';
+import { DjBrainService } from '../dj/dj-brain.service';
+import { WishWriterService } from '../ai/wish-writer.service';
 import { LibraryService } from '../library/library.service';
 import { MembersService, type Session } from '../members/members.service';
 import { YouTubeAccountService } from '../music/youtube-account.service';
@@ -81,12 +82,15 @@ const IP_WINDOW_MS = 60_000;
 /** Extra throttles (review): PIN guesses per member, room-code lookups per IP. */
 export const CLAIM_LIMIT = { count: 10, windowMs: 60_000 };
 export const PEEK_LIMIT = { count: 60, windowMs: 60_000 };
+/** Each saved wish makes an Edge voice (a Python process): keep it to normal use. */
+export const WISH_LIMIT = { count: 10, windowMs: 60_000 };
 /** tracks:lookup may call YouTube for unknown ids: a few per minute is plenty. */
 export const LOOKUP_LIMIT = { count: 10, windowMs: 60_000 };
 /** Lyrics are asked once per song per device (cached on the server). */
 export const LYRICS_LIMIT = { count: 20, windowMs: 60_000 };
 /** AI2: free AI quota is shared by the whole server. */
-export const DJ_LIMIT = { count: 3, windowMs: 3600_000 };
+/** "Nhờ MC viết": one short AI call each, same shared free quota. */
+export const WISH_AI_LIMIT = { count: 10, windowMs: 3600_000 };
 export const RECAP_LIMIT = { count: 20, windowMs: 60_000 };
 /** L2: adding songs / creating playlists, per account. */
 export const PLAYLIST_WRITE_LIMIT = { count: 60, windowMs: 60_000 };
@@ -132,7 +136,8 @@ export class RealtimeGateway
     private readonly suggest: SuggestService,
     private readonly playlists: PlaylistService,
     private readonly lyrics: LyricsService,
-    private readonly djAi: DjService,
+    private readonly djBrain: DjBrainService,
+    private readonly wishWriter: WishWriterService,
     private readonly users: UsersService,
     private readonly personal: PlaylistsService,
     private readonly youtubeAccount: YouTubeAccountService,
@@ -474,6 +479,14 @@ export class RealtimeGateway
     }));
   }
 
+  @SubscribeMessage('rooms:status')
+  roomsStatus(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('rooms:status', s, body, async (input) => {
+      this.limit(`peek:${s.data.ip}`, PEEK_LIMIT);
+      return { rooms: await this.users.roomsStatus(input.codes) };
+    });
+  }
+
   @SubscribeMessage('me:favorites-import')
   importFavorites(
     @ConnectedSocket() s: AppSocket,
@@ -649,20 +662,38 @@ export class RealtimeGateway
     });
   }
 
-  @SubscribeMessage('dj:ask')
-  askDj(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
-    return this.run('dj:ask', s, body, async (input, actor) => {
+  @SubscribeMessage('wish:suggest')
+  suggestWish(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
+    return this.run('wish:suggest', s, body, async (input, actor) => {
       await this.requireMember(actor);
-      this.limit(`dj:${actor.memberId}`, DJ_LIMIT);
-      const room = await this.prisma.room.findUniqueOrThrow({
-        where: { id: actor.roomId },
-        select: { settings: true },
-      });
+      this.limit(`wish-ai:${actor.memberId}`, WISH_AI_LIMIT);
+      let track: { title: string; artist: string | null; song: string | null };
+      if (input.queueItemId) {
+        // Only for my own waiting song, like editing its wish.
+        const item = await this.prisma.queueItem.findFirst({
+          where: { id: input.queueItemId, roomId: actor.roomId },
+          select: {
+            status: true,
+            addedById: true,
+            track: { select: { title: true, artist: true, song: true } },
+          },
+        });
+        if (!item || item.status !== 'QUEUED') throw new AppError('STALE_ITEM');
+        if (item.addedById !== actor.memberId) throw new AppError('FORBIDDEN');
+        track = item.track;
+      } else {
+        // A song about to be added with a wish: its public title is all the AI gets.
+        track = {
+          title: input.title ?? '',
+          artist: input.artist ?? null,
+          song: null,
+        };
+      }
       return {
-        items: await this.djAi.ask(
-          actor.roomId,
-          input.prompt,
-          readSettings(room.settings),
+        text: await this.wishWriter.write(
+          track,
+          input.hint,
+          input.language ?? 'vi',
         ),
       };
     });
@@ -672,7 +703,12 @@ export class RealtimeGateway
   recap(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('room:recap', s, body, (input, actor) => {
       this.limit(`recap:${actor.memberId}`, RECAP_LIMIT);
-      return this.library.recap(actor, input.since, input.tzOffsetMinutes);
+      return this.library.recap(
+        actor,
+        input.since,
+        input.tzOffsetMinutes,
+        input.language ?? 'vi',
+      );
     });
   }
 
@@ -821,9 +857,10 @@ export class RealtimeGateway
 
   @SubscribeMessage('queue:set-message')
   setMessage(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
-    return this.run('queue:set-message', s, body, (input, actor) =>
-      this.queue.setMessage(actor, input),
-    );
+    return this.run('queue:set-message', s, body, (input, actor) => {
+      this.limit(`wish:${actor.memberId}`, WISH_LIMIT);
+      return this.queue.setMessage(actor, input);
+    });
   }
 
   @SubscribeMessage('queue:vote-skip')
@@ -838,7 +875,12 @@ export class RealtimeGateway
   searchQuery(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
     return this.run('search:query', s, body, async (input, actor) => {
       await this.requireMember(actor);
-      return this.search.search(actor.memberId, input.q, input.remote);
+      return this.search.search(
+        actor.memberId,
+        input.q,
+        input.remote,
+        input.page ?? 0,
+      );
     });
   }
 
@@ -876,9 +918,11 @@ export class RealtimeGateway
 
   @SubscribeMessage('chat:send')
   chat(@ConnectedSocket() s: AppSocket, @MessageBody() body: unknown) {
-    return this.run('chat:send', s, body, (input, actor) =>
-      this.social.chat(actor, input.content),
-    );
+    return this.run('chat:send', s, body, async (input, actor) => {
+      const saved = await this.social.chat(actor, input.content);
+      // "@DJ": answered in the background, as a chat message of its own.
+      this.djBrain.onRoomChat(actor, saved);
+    });
   }
 
   @SubscribeMessage('room:reaction')

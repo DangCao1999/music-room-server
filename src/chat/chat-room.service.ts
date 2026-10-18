@@ -315,6 +315,7 @@ export class ChatRoomService {
           m,
           'user_join',
           'đã vào phòng từ Slack',
+          { variant: 'slack' },
         );
         return m;
       });
@@ -357,6 +358,15 @@ export class ChatRoomService {
       socketId: `chat:${platform}`,
       ip: `chat:${platform}`,
     };
+  }
+
+  /** "@Music Room <câu>" for the DJ (spec 2026-10-18-dj-chat): who acts, as the web would see them. */
+  async asMember(
+    roomId: string,
+    user: ChatUser,
+  ): Promise<{ member: Member; actor: Actor }> {
+    const member = await this.member(roomId, user);
+    return { member, actor: this.actor(member, user.platform) };
   }
 
   // ------------------------------------------------------------ actions

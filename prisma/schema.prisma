@@ -257,6 +257,10 @@ model ChatMessage {
   /// copied at send time so history survives renames / kicks
   displayName String
   content     String
+  /// "member" or "dj" (the "@DJ" assistant's answer; memberId = "dj")
+  kind        String   @default("member")
+  /// kind "dj": the DjReply (contracts/dj.ts), worded by each client
+  payload     Json?
   createdAt   DateTime @default(now())
 
   @@index([roomId, createdAt])
@@ -279,6 +283,8 @@ model ActivityLog {
 model SearchCache {
   key       String   @id
   trackIds  String[]
+  /// YouTube had more songs after these ("Xem thêm" can fetch them).
+  more      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
 

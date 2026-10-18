@@ -28,3 +28,6 @@ src/generated/
 coverage/
 .env.*
 !.env.example
+
+# Edge TTS (Python edge-tts), installed by `npm run tts:install`
+/.python
