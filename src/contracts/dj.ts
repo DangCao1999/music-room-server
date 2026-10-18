@@ -71,7 +71,10 @@ export interface DjReply {
   /** guide myItem / added: the queue item. */
   queueItemId?: string;
   info?: DjInfo;
-  /** added: the song, its place in the queue (1 = next) and when it should start. */
+  /**
+   * added: the song, its place in the queue (1 = next; 0 = it started at once, the room was
+   * idle) and when it should start.
+   */
   track?: TrackSummary;
   position?: number;
   etaSec?: number | null;
